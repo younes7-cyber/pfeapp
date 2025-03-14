@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "556746272305",
+    "project_id": "fir-317ff",
+    "storage_bucket": "fir-317ff.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:556746272305:android:72dcc7386fef97c60d6f10",
+        "android_client_info": {
+          "package_name": "com.example.pfeapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDkJWi4y78QIKVlDsffCKaIsZikap-Fq10"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
