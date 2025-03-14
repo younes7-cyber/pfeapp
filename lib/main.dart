@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:pfeapp/websocket_service.dart'; // Import du fichier WebSocket
 import 'package:pfeapp/channel/channel.dart';
 import 'package:pfeapp/channel/create_channel.dart';
 import 'package:pfeapp/completeprofiile/complete.dart';
@@ -23,8 +22,6 @@ import 'podcast/podcast.dart';
 import 'listen/listen.dart';
 
 void main() {
-  final webSocketService = WebSocketService();
-  webSocketService.connect(); // Connexion WebSocket au démarrage
   runApp(const MyApp());
 }
 
