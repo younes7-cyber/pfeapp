@@ -1,4 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:pfeapp/constants.dart';
+import 'package:awesome_dialog/awesome_dialog.dart';
 
 class SignUppage extends StatefulWidget {
   const SignUppage({super.key});
@@ -10,6 +13,20 @@ class SignUppage extends StatefulWidget {
 class _SignUppageState extends State<SignUppage> {
   bool _obscureText = true;
   bool __obscureText = true;
+  TextEditingController email = TextEditingController();
+  TextEditingController pass = TextEditingController();
+  TextEditingController confirm = TextEditingController();
+  void showError(String message) {
+    AwesomeDialog(
+      context: context,
+      dialogType: DialogType.error,
+      animType: AnimType.rightSlide,
+      title: 'Erreur',
+      desc: message,
+      // btnOkOnPress: () {},
+    ).show();
+  }
+
   @override
   Widget build(BuildContext context) {
     final Size sizee = MediaQuery.of(context).size;
@@ -21,21 +38,21 @@ class _SignUppageState extends State<SignUppage> {
           children: [
             Positioned(
               left: sizee.width * 0.3,
-              top: sizee.height * 0.05,
+              top: sizee.height * 0.02,
               child: SizedBox(
                 height: sizee.height * 0.2,
                 child: SizedBox(
                   width: sizee.width * 0.4,
                   height: sizee.height * 0.2,
-                  child: Image.asset(
-                    "images/11.png",
+                  child: Image.network(
+                    s11,
                     fit: BoxFit.fill,
                   ),
                 ),
               ),
             ),
             Positioned(
-                top: sizee.height * 0.28,
+                top: sizee.height * 0.23,
                 left: sizee.width * 0.3,
                 child: SizedBox(
                   height: sizee.height * 0.07,
@@ -48,7 +65,7 @@ class _SignUppageState extends State<SignUppage> {
                   ),
                 )),
             Positioned(
-              top: sizee.height * 0.37,
+              top: sizee.height * 0.32,
               left: sizee.width * 0.1,
               child: const SizedBox(
                   child: Text(
@@ -58,12 +75,13 @@ class _SignUppageState extends State<SignUppage> {
               )),
             ),
             Positioned(
-              top: sizee.height * 0.395,
+              top: sizee.height * 0.345,
               left: sizee.width * 0.07,
               right: sizee.width * 0.07,
               child: SizedBox(
                 width: sizee.width - 60,
                 child: TextField(
+                  controller: email,
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: const Color(0xFFD9D9D9),
@@ -74,8 +92,8 @@ class _SignUppageState extends State<SignUppage> {
                     prefixIcon: Padding(
                       padding: EdgeInsets.all(sizee.width *
                           0.028), // Ajustez le padding selon vos besoins
-                      child: Image.asset(
-                        "images/gmail.png", // Remplacez par le chemin de votre icône
+                      child: Image.network(
+                        s12, // Remplacez par le chemin de votre icône
                         width: sizee.width *
                             0.05, // Ajustez la taille selon vos besoins
                         height: sizee.width * 0.05,
@@ -103,7 +121,7 @@ class _SignUppageState extends State<SignUppage> {
               ),
             ),
             Positioned(
-              top: sizee.height * 0.485,
+              top: sizee.height * 0.455,
               left: sizee.width * 0.1,
               child: const SizedBox(
                   child: Text(
@@ -113,12 +131,13 @@ class _SignUppageState extends State<SignUppage> {
               )),
             ),
             Positioned(
-              top: sizee.height * 0.51,
+              top: sizee.height * 0.48,
               left: sizee.width * 0.07,
               right: sizee.width * 0.07,
               child: SizedBox(
                 width: sizee.width - 60,
                 child: TextField(
+                  controller: pass,
                   obscureText: _obscureText,
                   decoration: InputDecoration(
                     filled: true,
@@ -127,8 +146,8 @@ class _SignUppageState extends State<SignUppage> {
                     hintStyle: const TextStyle(color: Colors.grey),
                     prefixIcon: Padding(
                       padding: EdgeInsets.all(sizee.width * 0.028),
-                      child: Image.asset(
-                        "images/look.png",
+                      child: Image.network(
+                        s13,
                         width: sizee.width * 0.05,
                         height: sizee.width * 0.05,
                       ),
@@ -142,8 +161,8 @@ class _SignUppageState extends State<SignUppage> {
                       },
                       child: Padding(
                         padding: EdgeInsets.all(sizee.width * 0.028),
-                        child: Image.asset(
-                          "images/view.png",
+                        child: Image.network(
+                          s14,
                           width: sizee.width * 0.05,
                           height: sizee.width * 0.05,
                         ),
@@ -187,6 +206,7 @@ class _SignUppageState extends State<SignUppage> {
               child: SizedBox(
                 width: sizee.width - 60,
                 child: TextField(
+                  controller: confirm,
                   obscureText: __obscureText,
                   decoration: InputDecoration(
                     filled: true,
@@ -195,8 +215,8 @@ class _SignUppageState extends State<SignUppage> {
                     hintStyle: const TextStyle(color: Colors.grey),
                     prefixIcon: Padding(
                       padding: EdgeInsets.all(sizee.width * 0.028),
-                      child: Image.asset(
-                        "images/look.png",
+                      child: Image.network(
+                        s13,
                         width: sizee.width * 0.05,
                         height: sizee.width * 0.05,
                       ),
@@ -210,8 +230,8 @@ class _SignUppageState extends State<SignUppage> {
                       },
                       child: Padding(
                         padding: EdgeInsets.all(sizee.width * 0.028),
-                        child: Image.asset(
-                          "images/view.png",
+                        child: Image.network(
+                          s14,
                           width: sizee.width * 0.05,
                           height: sizee.width * 0.05,
                         ),
@@ -252,8 +272,54 @@ class _SignUppageState extends State<SignUppage> {
                 height: sizee.height * 0.075,
                 width: sizee.width * 0.65,
                 child: MaterialButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/complete');
+                  onPressed: () async {
+                    if (email.text.isEmpty ||
+                        pass.text.isEmpty ||
+                        confirm.text.isEmpty) {
+                      showError("All fields must be completed");
+
+                      return;
+                    }
+
+                    if (!email.text.endsWith("@gmail.com")) {
+                      showError("The email must end with @gmail.com");
+
+                      return;
+                    }
+
+                    if (pass.text != confirm.text) {
+                      showError("Passwords do not match");
+
+                      return;
+                    }
+
+                    try {
+                      final userExists = (await FirebaseAuth.instance
+                              .fetchSignInMethodsForEmail(email.text))
+                          .isNotEmpty;
+                      if (userExists) {
+                        showError("This email is already in use");
+
+                        return;
+                      }
+
+                      await FirebaseAuth.instance
+                          .createUserWithEmailAndPassword(
+                        email: email.text,
+                        password: pass.text,
+                      );
+                      FirebaseAuth.instance.currentUser!
+                          .sendEmailVerification();
+                      Navigator.pushNamed(context, '/verif');
+                    } on FirebaseAuthException catch (e) {
+                      setState(() {
+                        showError(e.message ?? "An error has occurred");
+                      });
+                    } catch (e) {
+                      setState(() {
+                        showError("An error has occurred");
+                      });
+                    }
                   },
                   child: const Text(
                     "Sign Up",
@@ -283,14 +349,14 @@ class _SignUppageState extends State<SignUppage> {
                   ),
                   child: MaterialButton(
                     onPressed: () {
-                      // Navigator.pushNamed(context, '/LogIn');
+                      //
                     },
                     child: Row(
                       children: [
                         Padding(
                           padding: EdgeInsets.all(sizee.width * 0.02),
-                          child: Image.asset(
-                            "images/google.png",
+                          child: Image.network(
+                            s15,
                             width: sizee.width * 0.09,
                             height: sizee.width * 0.09,
                           ),
@@ -326,8 +392,8 @@ class _SignUppageState extends State<SignUppage> {
                       children: [
                         Padding(
                           padding: EdgeInsets.all(sizee.width * 0.02),
-                          child: Image.asset(
-                            "images/facebook.png",
+                          child: Image.network(
+                            s16,
                             width: sizee.width * 0.07,
                             height: sizee.width * 0.07,
                           ),

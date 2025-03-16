@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pfeapp/constants.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -25,8 +26,8 @@ class _HomepageState extends State<Homepage> {
                   child: SizedBox(
                     width: size.width * 0.8,
                     height: size.height * 0.35, // Reduced height
-                    child: Image.asset(
-                      "images/home.png",
+                    child: Image.network(
+                      homeImage,
                       fit: BoxFit.fill,
                     ),
                   ),
