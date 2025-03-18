@@ -15,7 +15,6 @@ class _VerifpageState extends State<Verifpage> {
   bool _isVerified = false;
   int _countdownSeconds = 0;
   Timer? _countdownTimer;
-  String _message = "We sent a verification email. Please check your inbox.";
   @override
   void initState() {
     super.initState();
@@ -62,16 +61,13 @@ class _VerifpageState extends State<Verifpage> {
         await user.sendEmailVerification();
         setState(() {
           _isResendDisabled = true;
-          _message = "Verification email sent! Check your inbox.";
         });
 
         // Start countdown and re-enable button after 30 seconds
         _startCountdown();
       }
     } catch (e) {
-      setState(() {
-        _message = "An error occurred. Please try again.";
-      });
+      setState(() {});
     }
   }
 

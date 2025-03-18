@@ -82,7 +82,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:pfeapp/constants.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
@@ -100,8 +99,7 @@ class _LoginPageState extends State<LoginPage> {
   String? errorMessage;
   bool _obscureText = true;
   bool _rememberMe = false;
-  final FlutterSecureStorage _secureStorage = FlutterSecureStorage();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+
   Future<void> saveUser(String email) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('email', email);

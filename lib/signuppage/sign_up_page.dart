@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:pfeapp/constants.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+/*import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';*/
 
 class SignUppage extends StatefulWidget {
   const SignUppage({super.key});
@@ -400,7 +400,7 @@ class _SignUppageState extends State<SignUppage> {
                     ),
                   )),
                 ),
-                Positioned(
+                /*Positioned(
                   top: sizee.height * 0.81,
                   left: sizee.width * 0.2,
                   child: SizedBox(
@@ -431,7 +431,7 @@ class _SignUppageState extends State<SignUppage> {
                             // Get authentication details
                             final GoogleSignInAuthentication googleAuth =
                                 await googleUser.authentication;
-                            final credential = GoogleAuthProvider.credential(
+                            GoogleAuthProvider.credential(
                               accessToken: googleAuth.accessToken,
                               idToken: googleAuth.idToken,
                             );
@@ -457,8 +457,6 @@ class _SignUppageState extends State<SignUppage> {
                             }
 
                             // Sign up with Google
-                            final userCredential = await FirebaseAuth.instance
-                                .signInWithCredential(credential);
 
                             // Send email verification
                             await FirebaseAuth.instance.currentUser!
@@ -596,7 +594,7 @@ class _SignUppageState extends State<SignUppage> {
                       ),
                     ),
                   ),
-                ),
+                ),*/
                 Positioned(
                   top: sizee.height * 0.925,
                   left: sizee.width * 0.43,
