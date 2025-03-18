@@ -52,6 +52,12 @@ class _VerifpageState extends State<Verifpage> {
   void _resendVerificationEmail() async {
     try {
       User? user = FirebaseAuth.instance.currentUser;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password reset email sent. Please check your inbox.'),
+          backgroundColor: Color(0xFF754CEF),
+        ),
+      );
       if (user != null && !user.emailVerified) {
         await user.sendEmailVerification();
         setState(() {
@@ -117,7 +123,7 @@ class _VerifpageState extends State<Verifpage> {
                     onPressed: () {
                       // Navigate to complete profile page
                       Navigator.pushNamedAndRemoveUntil(
-                          context, '/Complete', (route) => false);
+                          context, '/complete', (route) => false);
                     },
                     child: Text(
                       "Complete Profile",
@@ -131,6 +137,7 @@ class _VerifpageState extends State<Verifpage> {
               ),
             ] else ...[
               // Show unverified UI
+
               Positioned(
                 top: si.height * 0.05,
                 left: si.width * 0.1,

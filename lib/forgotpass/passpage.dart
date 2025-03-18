@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:pfeapp/constants.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class Passpage extends StatefulWidget {
   const Passpage({super.key});
@@ -8,6 +10,64 @@ class Passpage extends StatefulWidget {
 }
 
 class _PasspageState extends State<Passpage> {
+  // Add a controller for the email TextField
+  final TextEditingController _emailController = TextEditingController();
+  // Add a form key to validate the form
+  final _formKey = GlobalKey<FormState>();
+  // Add variable to track loading state during API call
+  bool _isLoading = false;
+
+  // Function to send reset password email
+  Future<void> _sendResetPassword() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        // Show loading indicator
+        setState(() {
+          _isLoading = true;
+        });
+
+        // Get the email from the controller
+        final email = _emailController.text.trim();
+
+        // Call Firebase Auth to send password reset email
+        await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('Password reset email sent. Please check your inbox.'),
+            backgroundColor: Color(0xFF754CEF),
+          ),
+        );
+
+        // Navigate to reset page
+        Navigator.pushNamed(context, '/reset');
+      } catch (e) {
+        // Show error message if sending fails
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('Error sending password reset email: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } finally {
+        // Hide loading indicator
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    // Clean up the controller when the widget is disposed
+    _emailController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final Size si = MediaQuery.of(context).size;
@@ -25,8 +85,8 @@ class _PasspageState extends State<Passpage> {
                       Navigator.pushNamedAndRemoveUntil(
                           context, '/LogIn', (route) => false);
                     },
-                    icon: Image.asset(
-                      "images/retour.png",
+                    icon: Image.network(
+                      s18,
                       width: si.width * 0.09,
                       height: si.width * 0.09,
                     ),
@@ -69,47 +129,68 @@ class _PasspageState extends State<Passpage> {
                 top: si.height * 0.425,
                 left: si.width * 0.07,
                 right: si.width * 0.07,
-                child: SizedBox(
-                  width: si.width - 60,
-                  child: TextField(
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: const Color(0xFFD9D9D9),
-
-                      hintText: "Enter Email",
-                      hintStyle: const TextStyle(color: Colors.grey),
-                      // Utilisation d'une image depuis les assets comme prefixIcon
-                      prefixIcon: Padding(
-                        padding: EdgeInsets.all(si.width *
-                            0.028), // Ajustez le padding selon vos besoins
-                        child: Image.asset(
-                          "images/gmail.png", // Remplacez par le chemin de votre icône
-                          width: si.width *
-                              0.05, // Ajustez la taille selon vos besoins
-                          height: si.width * 0.05,
+                child: Form(
+                  key: _formKey,
+                  child: SizedBox(
+                    width: si.width - 60,
+                    child: TextFormField(
+                      controller: _emailController,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: const Color(0xFFD9D9D9),
+                        hintText: "Enter Email",
+                        hintStyle: const TextStyle(color: Colors.grey),
+                        prefixIcon: Padding(
+                          padding: EdgeInsets.all(si.width * 0.028),
+                          child: Image.network(
+                            s12,
+                            width: si.width * 0.05,
+                            height: si.width * 0.05,
+                          ),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(
+                              Radius.circular(si.width * 0.05)),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFD9D9D9)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(
+                              Radius.circular(si.width * 0.05)),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFD9D9D9)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(
+                              Radius.circular(si.width * 0.05)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFD9D9D9),
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(
+                              Radius.circular(si.width * 0.05)),
+                          borderSide: const BorderSide(
+                            color: Colors.red,
+                          ),
                         ),
                       ),
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.all(Radius.circular(si.width * 0.05)),
-                        borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.all(Radius.circular(si.width * 0.05)),
-                        borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.all(Radius.circular(si.width * 0.05)),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFD9D9D9),
-                        ),
-                      ),
+                      // Add the validator
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your email';
+                        }
+                        if (!value.endsWith('@gmail.com')) {
+                          return 'The email must end with @gmail.com';
+                        }
+                        return null;
+                      },
                     ),
                   ),
                 ),
               ),
+
+              // Update the submit button to show loading indicator when processing
               Positioned(
                 top: si.height * 0.53,
                 left: si.width * 0.18,
@@ -121,14 +202,15 @@ class _PasspageState extends State<Passpage> {
                     borderRadius: BorderRadius.circular(si.width * 0.05),
                   ),
                   child: MaterialButton(
-                    onPressed: () {
-                      // Implement login logic
-                    },
-                    child: Text(
-                      "Submit",
-                      style: TextStyle(
-                          color: Colors.white, fontSize: si.width * 0.042),
-                    ),
+                    onPressed: _isLoading ? null : _sendResetPassword,
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                            "Submit",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: si.width * 0.042),
+                          ),
                   ),
                 ),
               ),

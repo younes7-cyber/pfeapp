@@ -22,6 +22,8 @@ import 'package:pfeapp/profil/modif.dart';
 import 'package:pfeapp/profil/modif1.dart';
 import 'package:pfeapp/profil/stat.dart';
 import 'package:pfeapp/profil/your_chaine.dart';
+import 'package:pfeapp/forgotpass/reset.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,6 +39,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  Widget _initialScreen = const LoginPage();
   @override
   void initState() {
     super.initState();
@@ -47,13 +50,25 @@ class _MyAppState extends State<MyApp> {
         print('User is signed in!');
       }
     });
+    checkAutoLogin();
+  }
+
+  Future<void> checkAutoLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? savedEmail = prefs.getString('email');
+
+    if (savedEmail != null) {
+      setState(() {
+        _initialScreen = const Podlypage(); // Redirection automatique
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: const Homepage(),
+      home: _initialScreen,
       routes: {
         '/SignUp': (context) => const SignUppage(),
         '/LogIn': (context) => const LoginPage(),
@@ -75,6 +90,7 @@ class _MyAppState extends State<MyApp> {
         '/stat': (context) => const Statpage(),
         '/about': (context) => const Aboutpage(),
         '/verif': (context) => const Verifpage(),
+        '/reset': (context) => const Resetpage(),
       },
     );
   }
