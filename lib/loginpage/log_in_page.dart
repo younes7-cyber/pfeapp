@@ -105,6 +105,13 @@ class _LoginPageState extends State<LoginPage> {
     await prefs.setString('email', email);
   }
 
+/*
+  Future<void> logout() async {
+    await FirebaseAuth.instance.signOut();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('email'); // Supprime l'utilisateur sauvegardé
+  }
+*/
 // Replace your current build method with this implementation that adds form validation
   @override
   Widget build(BuildContext context) {
@@ -141,10 +148,17 @@ class _LoginPageState extends State<LoginPage> {
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                     ),
-                    child: ClipOval(
-                      child: Image.network(
-                        s19,
-                        fit: BoxFit.cover,
+                    child: GestureDetector(
+                      onTap: () async {
+                        // await logout();
+                        Navigator.pushNamedAndRemoveUntil(
+                            context, '/LogIn', (route) => false);
+                      },
+                      child: ClipOval(
+                        child: Image.network(
+                          s19,
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                   ),

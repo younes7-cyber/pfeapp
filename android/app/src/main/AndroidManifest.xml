@@ -6,6 +6,9 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
     <uses-permission android:name="android.permission.INTERNET" />
+    <queries>
+    <provider  android:authorities="com.facebook.katana.provider.PlatformProvider"   />
+    </queries>
     <application
         android:label="pfeapp"
         android:name="${applicationName}"
@@ -13,7 +16,7 @@
         android:usesCleartextTraffic="true"
         android:icon="@mipmap/ic_launcher">
         <meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/facebook_app_id"/>
-    
+        <meta-data android:name="com.facebook.sdk.ClientToken" android:value="@string/facebook_client_token" />
     <activity android:name="com.facebook.FacebookActivity"
         android:configChanges=
                 "keyboard|keyboardHidden|screenLayout|screenSize|orientation"

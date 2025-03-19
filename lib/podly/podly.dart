@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class Podlypage extends StatefulWidget {
   const Podlypage({super.key});
@@ -8,6 +10,12 @@ class Podlypage extends StatefulWidget {
 }
 
 class _PodlypageState extends State<Podlypage> {
+  Future<void> logout() async {
+    await FirebaseAuth.instance.signOut();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('email'); // Supprime l'utilisateur sauvegardé
+  }
+
   final List<Map<String, String>> po = [
     {
       "img": "images/qq.png",
@@ -1683,12 +1691,19 @@ class _PodlypageState extends State<Podlypage> {
               Positioned(
                 top: x.height * 0.815,
                 left: x.width * 0.15,
-                child: Text(
-                  "Log Out",
-                  style: TextStyle(
-                      fontSize: x.width * 0.045,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red),
+                child: GestureDetector(
+                  onTap: () async {
+                    await logout();
+                    Navigator.pushNamedAndRemoveUntil(
+                        context, '/LogIn', (route) => false);
+                  },
+                  child: Text(
+                    "Log Out",
+                    style: TextStyle(
+                        fontSize: x.width * 0.045,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red),
+                  ),
                 ),
               ),
             ]);
