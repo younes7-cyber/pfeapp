@@ -1,88 +1,9 @@
-/*  Positioned(
-                  top: siz.height * 0.72,
-                  left: siz.width * 0.16,
-                  child: Container(
-                    width: siz.width * 0.7,
-                    height: siz.height * 0.003, // Épaisseur de la ligne
-                    color: Colors.black,
-                  )),
-              Positioned(
-                top: siz.height * 0.74,
-                left: siz.width * 0.18,
-                child: Container(
-                  height: siz.height * 0.075,
-                  width: siz.width * 0.65,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(siz.width * 0.05),
-                  ),
-                  child: MaterialButton(
-                    onPressed: () {
-                      // Navigator.pushNamed(context, '/SignUp');
-                    },
-                    child: Row(
-                      // mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.all(siz.width * 0.02),
-                          child: Image.network(
-                            s15,
-                            width: siz.width * 0.09,
-                            height: siz.width * 0.09,
-                          ),
-                        ),
-                        Text(
-                          "Continue With Google",
-                          style: TextStyle(
-                              color: Colors.black, fontSize: siz.width * 0.04),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: siz.height * 0.82,
-                left: siz.width * 0.2,
-                child: SizedBox(
-                  child: Container(
-                    height: siz.height * 0.055,
-                    width: siz.width * 0.8,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(siz.width * 0.05),
-                    ),
-                    child: MaterialButton(
-                      onPressed: () {
-                        // Navigator.pushNamed(context, '/LogIn');
-                      },
-                      child: Row(
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.all(siz.width * 0.02),
-                            child: Image.network(
-                              s16,
-                              width: siz.width * 0.07,
-                              height: siz.width * 0.07,
-                            ),
-                          ),
-                          Text(
-                            "Continue With Facebook",
-                            style: TextStyle(
-                                color: Colors.black,
-                                fontSize: siz.width * 0.04),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-           */
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:pfeapp/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -99,20 +20,85 @@ class _LoginPageState extends State<LoginPage> {
   String? errorMessage;
   bool _obscureText = true;
   bool _rememberMe = false;
+  Future<void> signInWithGoogle() async {
+    try {
+      setState(() {
+        errorMessage = null;
+      });
+
+      // Initialiser Google Sign-In
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      await googleSignIn.signOut(); // Déconnexion pour éviter les conflits
+
+      // Sélection d'un compte Google
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        print("Connexion Google annulée par l'utilisateur");
+        return;
+      }
+
+      print("Email Google sélectionné: ${googleUser.email}");
+
+      // Vérifier si l'email existe déjà dans Firebase
+      List<String> signInMethods = await FirebaseAuth.instance
+          .fetchSignInMethodsForEmail(googleUser.email);
+
+      if (signInMethods.isEmpty) {
+        // L'email n'existe pas, afficher un message d'erreur
+        setState(() {
+          errorMessage =
+              "Aucun compte n'existe avec cet email. Veuillez d'abord vous inscrire.";
+        });
+        return;
+      }
+
+      // L'email existe, récupérer l'authentification Google
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Connexion Firebase avec Google
+      final UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+
+      if (userCredential.user != null) {
+        if (_rememberMe) {
+          await saveUser(googleUser.email);
+        }
+        Navigator.pushNamed(context, '/podly');
+      }
+    } on FirebaseAuthException catch (e) {
+      print("Firebase Auth Error: ${e.code} - ${e.message}");
+      setState(() {
+        switch (e.code) {
+          case 'account-exists-with-different-credential':
+            errorMessage =
+                "Un compte existe déjà avec cet email, mais avec une autre méthode d'authentification.";
+            break;
+          case 'invalid-credential':
+            errorMessage =
+                "Les informations de connexion Google sont invalides.";
+            break;
+          default:
+            errorMessage = "Erreur d'authentification: ${e.message}";
+        }
+      });
+    } catch (e) {
+      print("Erreur générale: $e");
+      setState(() {
+        errorMessage = "Une erreur inattendue est survenue.";
+      });
+    }
+  }
 
   Future<void> saveUser(String email) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('email', email);
   }
 
-/*
-  Future<void> logout() async {
-    await FirebaseAuth.instance.signOut();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('email'); // Supprime l'utilisateur sauvegardé
-  }
-*/
-// Replace your current build method with this implementation that adds form validation
   @override
   Widget build(BuildContext context) {
     final Size siz = MediaQuery.of(context).size;
@@ -148,17 +134,10 @@ class _LoginPageState extends State<LoginPage> {
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                     ),
-                    child: GestureDetector(
-                      onTap: () async {
-                        // await logout();
-                        Navigator.pushNamedAndRemoveUntil(
-                            context, '/LogIn', (route) => false);
-                      },
-                      child: ClipOval(
-                        child: Image.network(
-                          s19,
-                          fit: BoxFit.cover,
-                        ),
+                    child: ClipOval(
+                      child: Image.network(
+                        s19,
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
@@ -507,7 +486,86 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ],
                   ),
-                )
+                ),
+                Positioned(
+                    top: siz.height * 0.72,
+                    left: siz.width * 0.16,
+                    child: Container(
+                      width: siz.width * 0.7,
+                      height: siz.height * 0.003, // Épaisseur de la ligne
+                      color: Colors.black,
+                    )),
+                Positioned(
+                  top: siz.height * 0.74,
+                  left: siz.width * 0.18,
+                  child: Container(
+                    height: siz.height * 0.075,
+                    width: siz.width * 0.65,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(siz.width * 0.05),
+                    ),
+                    child: MaterialButton(
+                      onPressed: () {
+                        signInWithGoogle();
+                      },
+                      child: Row(
+                        // mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.all(siz.width * 0.02),
+                            child: Image.network(
+                              s15,
+                              width: siz.width * 0.09,
+                              height: siz.width * 0.09,
+                            ),
+                          ),
+                          Text(
+                            "Continue With Google",
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontSize: siz.width * 0.04),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: siz.height * 0.82,
+                  left: siz.width * 0.2,
+                  child: SizedBox(
+                    child: Container(
+                      height: siz.height * 0.055,
+                      width: siz.width * 0.8,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(siz.width * 0.05),
+                      ),
+                      child: MaterialButton(
+                        onPressed: () {},
+                        child: Row(
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.all(siz.width * 0.02),
+                              child: Image.network(
+                                s16,
+                                width: siz.width * 0.07,
+                                height: siz.width * 0.07,
+                              ),
+                            ),
+                            Text(
+                              "Continue With Facebook",
+                              style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: siz.width * 0.04),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

@@ -15,17 +15,11 @@ class _PasspageState extends State<Passpage> {
   // Add a form key to validate the form
   final _formKey = GlobalKey<FormState>();
   // Add variable to track loading state during API call
-  bool _isLoading = false;
 
   // Function to send reset password email
   Future<void> _sendResetPassword() async {
     if (_formKey.currentState!.validate()) {
       try {
-        // Show loading indicator
-        setState(() {
-          _isLoading = true;
-        });
-
         // Get the email from the controller
         final email = _emailController.text.trim();
 
@@ -54,9 +48,6 @@ class _PasspageState extends State<Passpage> {
         );
       } finally {
         // Hide loading indicator
-        setState(() {
-          _isLoading = false;
-        });
       }
     }
   }
@@ -92,7 +83,16 @@ class _PasspageState extends State<Passpage> {
                     ),
                   )),
               Positioned(
-                top: si.height * 0.26,
+                top: si.height * 0.12,
+                left: si.width * 0.15,
+                child: Container(
+                  width: si.width * 0.7,
+                  height: si.width * 0.7,
+                  child: Image.network(s20, fit: BoxFit.cover),
+                ),
+              ),
+              Positioned(
+                top: si.height * 0.46,
                 left: si.width * 0.1,
                 child: Text(
                   "Forgot Your Password",
@@ -101,7 +101,7 @@ class _PasspageState extends State<Passpage> {
                 ),
               ),
               Positioned(
-                top: si.height * 0.32,
+                top: si.height * 0.52,
                 left: si.width * 0.1,
                 child: const Text(
                   "Don't Worry! Enter Your Email,And We'll Help You",
@@ -109,7 +109,7 @@ class _PasspageState extends State<Passpage> {
                 ),
               ),
               Positioned(
-                top: si.height * 0.34,
+                top: si.height * 0.54,
                 left: si.width * 0.1,
                 child: const Text(
                   " Reset Your Password",
@@ -117,7 +117,7 @@ class _PasspageState extends State<Passpage> {
                 ),
               ),
               Positioned(
-                top: si.height * 0.4,
+                top: si.height * 0.6,
                 left: si.width * 0.1,
                 child: const Text(
                   "Email",
@@ -126,7 +126,7 @@ class _PasspageState extends State<Passpage> {
                 ),
               ),
               Positioned(
-                top: si.height * 0.425,
+                top: si.height * 0.625,
                 left: si.width * 0.07,
                 right: si.width * 0.07,
                 child: Form(
@@ -192,7 +192,7 @@ class _PasspageState extends State<Passpage> {
 
               // Update the submit button to show loading indicator when processing
               Positioned(
-                top: si.height * 0.53,
+                top: si.height * 0.73,
                 left: si.width * 0.18,
                 child: Container(
                   height: si.height * 0.075,
@@ -202,15 +202,12 @@ class _PasspageState extends State<Passpage> {
                     borderRadius: BorderRadius.circular(si.width * 0.05),
                   ),
                   child: MaterialButton(
-                    onPressed: _isLoading ? null : _sendResetPassword,
-                    child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : Text(
-                            "Submit",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: si.width * 0.042),
-                          ),
+                    onPressed: _sendResetPassword,
+                    child: Text(
+                      "Submit",
+                      style: TextStyle(
+                          color: Colors.white, fontSize: si.width * 0.042),
+                    ),
                   ),
                 ),
               ),

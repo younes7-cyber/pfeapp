@@ -523,6 +523,14 @@ class _SignUppageState extends State<SignUppage> {
                   ),
                 ),
                 Positioned(
+                    top: sizee.height * 0.81,
+                    left: sizee.width * 0.16,
+                    child: Container(
+                      width: sizee.width * 0.7,
+                      height: sizee.height * 0.003, // Épaisseur de la ligne
+                      color: Colors.black,
+                    )),
+                Positioned(
                   top: sizee.height * 0.715,
                   left: sizee.width * 0.18,
                   child: SizedBox(
@@ -591,7 +599,7 @@ class _SignUppageState extends State<SignUppage> {
                   )),
                 ),
                 Positioned(
-                  top: sizee.height * 0.81,
+                  top: sizee.height * 0.815,
                   left: sizee.width * 0.2,
                   child: SizedBox(
                     child: Container(
@@ -631,7 +639,7 @@ class _SignUppageState extends State<SignUppage> {
 
 // Replace the existing Facebook button code with this:
                 Positioned(
-                  top: sizee.height * 0.869,
+                  top: sizee.height * 0.874,
                   left: sizee.width * 0.2,
                   child: SizedBox(
                     child: Container(
@@ -668,7 +676,7 @@ class _SignUppageState extends State<SignUppage> {
                   ),
                 ),
                 Positioned(
-                  top: sizee.height * 0.925,
+                  top: sizee.height * 0.93,
                   left: sizee.width * 0.43,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,

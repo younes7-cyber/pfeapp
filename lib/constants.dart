@@ -18,4 +18,7 @@ const String s17 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/verif.jpg";
 const String s18 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/retour.png";
- const String s19 ="https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/person.jpg";   
+const String s19 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/person.jpg";
+const String s20 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/1.png";

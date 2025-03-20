@@ -138,7 +138,18 @@ class _VerifpageState extends State<Verifpage> {
                 top: si.height * 0.05,
                 left: si.width * 0.1,
                 child: IconButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    try {
+                      User? user = FirebaseAuth.instance.currentUser;
+                      if (user != null) {
+                        await user.delete(); // 🔥 Supprime le compte
+                        print("Compte supprimé avec succès !");
+                      }
+                    } catch (e) {
+                      print("Erreur lors de la suppression du compte : $e");
+                    }
+
+                    // Redirige vers la page d'inscription
                     Navigator.pushNamedAndRemoveUntil(
                         context, '/SignUp', (route) => false);
                   },
@@ -150,7 +161,16 @@ class _VerifpageState extends State<Verifpage> {
                 ),
               ),
               Positioned(
-                top: si.height * 0.26,
+                top: si.height * 0.12,
+                left: si.width * 0.15,
+                child: Container(
+                  width: si.width * 0.7,
+                  height: si.width * 0.7,
+                  child: Image.network(s20, fit: BoxFit.cover),
+                ),
+              ),
+              Positioned(
+                top: si.height * 0.46,
                 left: si.width * 0.1,
                 child: Container(
                   width: si.width * 0.9,
@@ -164,7 +184,7 @@ class _VerifpageState extends State<Verifpage> {
                 ),
               ),
               Positioned(
-                top: si.height * 0.5,
+                top: si.height * 0.7,
                 left: si.width * 0.18,
                 child: Container(
                   height: si.height * 0.075,
@@ -194,7 +214,7 @@ class _VerifpageState extends State<Verifpage> {
                 ),
               ),
               Positioned(
-                top: si.height * 0.6,
+                top: si.height * 0.8,
                 left: si.width * 0.18,
                 child: Container(
                   height: si.height * 0.07,
