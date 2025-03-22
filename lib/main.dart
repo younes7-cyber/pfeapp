@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'signuppage/sign_up_page.dart';
 import 'signuppage/verif.dart';
 import 'loginpage/log_in_page.dart';
@@ -26,7 +27,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialisation de Firebase
   await Firebase.initializeApp();
+
+  // Initialisation de Supabase
+  await Supabase.initialize(
+    url:
+        'https://migwbqbtfzszopvhdzre.supabase.co', // Remplacez par l'URL de votre projet Supabase
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pZ3dicWJ0Znpzem9wdmhkenJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5MjI3OTgsImV4cCI6MjA1NzQ5ODc5OH0.78NEfAWjrlWsjo_l9ZBLuKzNv13ikUWCBqE0DyCeZSA', // Remplacez par votre clé anonyme
+  );
+
   runApp(const MyApp());
 }
 
@@ -42,13 +54,13 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+    /*   FirebaseAuth.instance.authStateChanges().listen((User? user) {
       if (user == null) {
         print('User is currently signed out!');
       } else {
         print('User is signed in!');
       }
-    });
+    });*/
     checkAutoLogin();
   }
 

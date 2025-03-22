@@ -3,6 +3,11 @@ import 'package:drop_down_list/drop_down_list.dart';
 import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:pfeapp/constants.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:io';
 
 class Completepage extends StatefulWidget {
   const Completepage({super.key});
@@ -12,7 +17,20 @@ class Completepage extends StatefulWidget {
 }
 
 class _CompletepageState extends State<Completepage> {
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
   final TextEditingController _countryController = TextEditingController();
+
+  final _formKey = GlobalKey<FormState>();
+
+  // Form validation error messages
+  String? _firstNameError;
+  String? _lastNameError;
+  String? _ageError;
+  String? _countryError;
+
+  bool _isLoading = false;
 
   final List<SelectedListItem<String>> _listOfCountries = [
     SelectedListItem<String>(data: "Afghanistan"),
@@ -162,39 +180,33 @@ class _CompletepageState extends State<Completepage> {
     SelectedListItem<String>(data: "Zambia"),
     SelectedListItem<String>(data: "Zimbabwe"),
   ];
-  String? _selectedImagePath; // Variable pour stocker le chemin de l'image
+
+  String? _selectedImagePath;
+  File? _selectedImageFile;
+
+  // Supabase client instance
+
+  // Firestore instance
+  final _firestore = FirebaseFirestore.instance;
+
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _ageController.dispose();
+    _countryController.dispose();
+    super.dispose();
+  }
+
   Future<bool> requestPermissions() async {
     if (await Permission.storage.request().isGranted) {
       return true;
     } else {
-      // Montrer un dialogue si les permissions sont refusées
-      if (context.mounted) {
-        /*
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text('Permission nécessaire'),
-              content: Text('L\'accès au stockage est nécessaire pour sélectionner des images.'),
-              actions: <Widget>[
-                TextButton(
-                  child: Text('OK'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            );
-          },
-        );
-    */
-      }
       return false;
     }
   }
 
   void _pickImage() async {
-    // Vérifier les permissions avant d'ouvrir le picker
     if (await requestPermissions()) {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.image,
@@ -203,8 +215,172 @@ class _CompletepageState extends State<Completepage> {
       if (result != null && result.files.isNotEmpty) {
         setState(() {
           _selectedImagePath = result.files.single.path;
+          _selectedImageFile = File(_selectedImagePath!);
         });
       }
+    }
+  }
+
+  bool _validateForm() {
+    bool isValid = true;
+
+    // Validate first name
+    if (_firstNameController.text.trim().isEmpty) {
+      setState(() {
+        _firstNameError = "First name must not be empty";
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _firstNameError = null;
+      });
+    }
+
+    // Validate last name
+    if (_lastNameController.text.trim().isEmpty) {
+      setState(() {
+        _lastNameError = "Last name must not be empty";
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _lastNameError = null;
+      });
+    }
+
+    // Validate age
+    if (_ageController.text.trim().isEmpty) {
+      setState(() {
+        _ageError = "Age must not be empty";
+      });
+      isValid = false;
+    } else if (int.tryParse(_ageController.text.trim()) == null) {
+      setState(() {
+        _ageError = "Age must be numeric";
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _ageError = null;
+      });
+    }
+
+    // Validate country
+    if (_countryController.text.trim().isEmpty) {
+      setState(() {
+        _countryError = "Country must not be empty";
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _countryError = null;
+      });
+    }
+    return isValid;
+  }
+
+  Future<String?> _uploadImageToSupabase() async {
+    if (_selectedImageFile == null) return null;
+
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid ??
+          DateTime.now().millisecondsSinceEpoch.toString();
+      final fileName =
+          'profile/${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      // Upload de l'image sur Supabase
+      final response = await Supabase.instance.client.storage
+          .from('pfeapp')
+          .upload(fileName, _selectedImageFile!);
+
+      // Debug the response to see what's happening
+      print('Upload response: $response');
+
+      // Récupération de l'URL publique
+      final publicUrl = Supabase.instance.client.storage
+          .from('pfeapp')
+          .getPublicUrl(fileName);
+
+      print('Public URL: $publicUrl');
+
+      // Make sure the URL is actually valid before returning it
+      if (publicUrl.isNotEmpty) {
+        print('Image uploaded successfully: $publicUrl');
+        return publicUrl;
+      } else {
+        print('Failed to get public URL.');
+        return null;
+      }
+    } catch (e) {
+      // Be more specific about the error
+      debugPrint('Error uploading image to Supabase: $e');
+      return null;
+    }
+  }
+
+  Future<void> _saveUserData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      final userId = user?.uid;
+
+      if (userId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("No authenticated user found")));
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      String photoUrl =
+          "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/ano.jpg";
+
+      if (_selectedImageFile != null) {
+        debugPrint('Selected file exists, uploading to Supabase...');
+        final uploadedUrl = await _uploadImageToSupabase();
+        print('Uploaded URL: $uploadedUrl');
+
+        if (uploadedUrl != null && uploadedUrl.isNotEmpty) {
+          photoUrl = uploadedUrl; // Utilisation de l'URL de l'image uploadée
+          print('Using uploaded URL: $photoUrl');
+        } else {
+          print('Failed to upload the image, using default URL: $photoUrl');
+        }
+      } else {
+        print('No image selected, using default URL: $photoUrl');
+      }
+
+      // Création des données utilisateur
+      final userData = {
+        'userId': userId,
+        'firstName': _firstNameController.text.trim(),
+        'lastName': _lastNameController.text.trim(),
+        'age': int.parse(_ageController.text.trim()),
+        'country': _countryController.text.trim(),
+        'photoUrl': photoUrl, // Utilise l'URL finale
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+
+      // Enregistrement dans Firestore
+      await _firestore.collection('users').add(userData);
+
+      if (context.mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/podly', (route) => false);
+      }
+    } catch (e) {
+      debugPrint('Error saving user data: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -213,10 +389,13 @@ class _CompletepageState extends State<Completepage> {
     final Size s = MediaQuery.of(context).size;
     return Scaffold(
       body: SafeArea(
-        child: Container(
+        child: Form(
+          key: _formKey,
+          child: Container(
             decoration: const BoxDecoration(color: Colors.white),
             child: Stack(
               children: [
+                // Back button
                 Positioned(
                   top: s.height * 0.03,
                   left: s.width * 0.07,
@@ -225,13 +404,14 @@ class _CompletepageState extends State<Completepage> {
                       Navigator.pushNamedAndRemoveUntil(
                           context, '/SignUp', (route) => false);
                     },
-                    icon: Image.asset(
-                      "images/retour.png",
+                    icon: Image.network(
+                      s18,
                       width: s.width * 0.09,
                       height: s.width * 0.09,
                     ),
                   ),
                 ),
+                // Title
                 Positioned(
                     top: s.height * 0.1,
                     left: s.width * 0.1,
@@ -257,13 +437,30 @@ class _CompletepageState extends State<Completepage> {
                         )
                       ],
                     )),
+
+                // First Name Field
                 Positioned(
                   top: s.height * 0.3,
                   left: s.width * 0.1,
-                  child: const Text(
-                    "First Name",
-                    style: TextStyle(
-                        color: Colors.black, fontWeight: FontWeight.bold),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "First Name",
+                        style: TextStyle(
+                            color: Colors.black, fontWeight: FontWeight.bold),
+                      ),
+                      _firstNameError != null
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                _firstNameError!,
+                                style: const TextStyle(
+                                    color: Colors.red, fontSize: 12),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ],
                   ),
                 ),
                 Positioned(
@@ -273,20 +470,18 @@ class _CompletepageState extends State<Completepage> {
                   child: SizedBox(
                     width: s.width - 60,
                     child: TextField(
+                      controller: _firstNameController,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: const Color(0xFFD9D9D9),
-
                         hintText: "Enter First Name",
                         hintStyle: const TextStyle(color: Colors.grey),
                         // Utilisation d'une image depuis les assets comme prefixIcon
                         prefixIcon: Padding(
-                          padding: EdgeInsets.all(s.width *
-                              0.028), // Ajustez le padding selon vos besoins
-                          child: Image.asset(
-                            "images/person.png", // Remplacez par le chemin de votre icône
-                            width: s.width *
-                                0.05, // Ajustez la taille selon vos besoins
+                          padding: EdgeInsets.all(s.width * 0.028),
+                          child: Image.network(
+                            s22,
+                            width: s.width * 0.05,
                             height: s.width * 0.05,
                           ),
                         ),
@@ -305,22 +500,44 @@ class _CompletepageState extends State<Completepage> {
                         focusedBorder: OutlineInputBorder(
                           borderRadius:
                               BorderRadius.all(Radius.circular(s.width * 0.05)),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFD9D9D9),
-                          ),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFD9D9D9)),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.all(Radius.circular(s.width * 0.05)),
+                          borderSide: const BorderSide(color: Colors.red),
                         ),
                       ),
                     ),
                   ),
                 ),
+
+                // Last Name Field
                 Positioned(
-                    top: s.height * 0.42,
-                    left: s.width * 0.1,
-                    child: const Text(
-                      "Last Name",
-                      style: TextStyle(
-                          color: Colors.black, fontWeight: FontWeight.bold),
-                    )),
+                  top: s.height * 0.42,
+                  left: s.width * 0.1,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Last Name",
+                        style: TextStyle(
+                            color: Colors.black, fontWeight: FontWeight.bold),
+                      ),
+                      _lastNameError != null
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                _lastNameError!,
+                                style: const TextStyle(
+                                    color: Colors.red, fontSize: 12),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ],
+                  ),
+                ),
                 Positioned(
                   top: s.height * 0.445,
                   left: s.width * 0.07,
@@ -328,6 +545,7 @@ class _CompletepageState extends State<Completepage> {
                   child: SizedBox(
                     width: s.width - 60,
                     child: TextField(
+                      controller: _lastNameController,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: const Color(0xFFD9D9D9),
@@ -335,14 +553,12 @@ class _CompletepageState extends State<Completepage> {
                         hintStyle: const TextStyle(color: Colors.grey),
                         prefixIcon: Padding(
                           padding: EdgeInsets.all(s.width * 0.028),
-                          child: Image.asset(
-                            "images/person.png",
+                          child: Image.network(
+                            s22,
                             width: s.width * 0.05,
                             height: s.width * 0.05,
                           ),
                         ),
-                        // Correction de la syntaxe du suffixIcon
-
                         border: OutlineInputBorder(
                           borderRadius:
                               BorderRadius.all(Radius.circular(s.width * 0.05)),
@@ -358,22 +574,44 @@ class _CompletepageState extends State<Completepage> {
                         focusedBorder: OutlineInputBorder(
                           borderRadius:
                               BorderRadius.all(Radius.circular(s.width * 0.05)),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFD9D9D9),
-                          ),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFD9D9D9)),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.all(Radius.circular(s.width * 0.05)),
+                          borderSide: const BorderSide(color: Colors.red),
                         ),
                       ),
                     ),
                   ),
                 ),
+
+                // Age Field
                 Positioned(
-                    top: s.height * 0.53,
-                    left: s.width * 0.1,
-                    child: const Text(
-                      "Age",
-                      style: TextStyle(
-                          color: Colors.black, fontWeight: FontWeight.bold),
-                    )),
+                  top: s.height * 0.53,
+                  left: s.width * 0.1,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Age",
+                        style: TextStyle(
+                            color: Colors.black, fontWeight: FontWeight.bold),
+                      ),
+                      _ageError != null
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                _ageError!,
+                                style: const TextStyle(
+                                    color: Colors.red, fontSize: 12),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ],
+                  ),
+                ),
                 Positioned(
                   top: s.height * 0.555,
                   left: s.width * 0.07,
@@ -381,6 +619,8 @@ class _CompletepageState extends State<Completepage> {
                   child: SizedBox(
                     width: s.width - 60,
                     child: TextField(
+                      controller: _ageController,
+                      keyboardType: TextInputType.number,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: const Color(0xFFD9D9D9),
@@ -388,14 +628,12 @@ class _CompletepageState extends State<Completepage> {
                         hintStyle: const TextStyle(color: Colors.grey),
                         prefixIcon: Padding(
                           padding: EdgeInsets.all(s.width * 0.028),
-                          child: Image.asset(
-                            "images/age.png",
+                          child: Image.network(
+                            s23,
                             width: s.width * 0.05,
                             height: s.width * 0.05,
                           ),
                         ),
-                        // Correction de la syntaxe du suffixIcon
-
                         border: OutlineInputBorder(
                           borderRadius:
                               BorderRadius.all(Radius.circular(s.width * 0.05)),
@@ -411,21 +649,42 @@ class _CompletepageState extends State<Completepage> {
                         focusedBorder: OutlineInputBorder(
                           borderRadius:
                               BorderRadius.all(Radius.circular(s.width * 0.05)),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFD9D9D9),
-                          ),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFD9D9D9)),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.all(Radius.circular(s.width * 0.05)),
+                          borderSide: const BorderSide(color: Colors.red),
                         ),
                       ),
                     ),
                   ),
                 ),
+
+                // Country Field
                 Positioned(
                   top: s.height * 0.64,
                   left: s.width * 0.1,
-                  child: const Text(
-                    "Country",
-                    style: TextStyle(
-                        color: Colors.black, fontWeight: FontWeight.bold),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Country",
+                        style: TextStyle(
+                            color: Colors.black, fontWeight: FontWeight.bold),
+                      ),
+                      _countryError != null
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                _countryError!,
+                                style: const TextStyle(
+                                    color: Colors.red, fontSize: 12),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ],
                   ),
                 ),
                 Positioned(
@@ -439,20 +698,28 @@ class _CompletepageState extends State<Completepage> {
                     title: "Countries",
                   ),
                 ),
+
+                // Photo Field
                 Positioned(
                   top: s.height * 0.75,
                   left: s.width * 0.1,
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Image.asset(
-                        "images/photo.png",
-                        width: s.width * 0.05,
-                        height: s.width * 0.05,
-                      ),
-                      const Text(
-                        "   Photos",
-                        style: TextStyle(
-                            color: Colors.black, fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          Image.network(
+                            s25,
+                            width: s.width * 0.05,
+                            height: s.width * 0.05,
+                          ),
+                          const Text(
+                            "   Photos",
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -463,41 +730,39 @@ class _CompletepageState extends State<Completepage> {
                   child: Row(
                     children: [
                       GestureDetector(
-                        onTap:
-                            _pickImage, // Appelle la fonction pour ouvrir le gestionnaire de fichiers
+                        onTap: _pickImage, // Open file manager
                         child: Container(
                           width: s.width * 0.07,
                           height: s.width * 0.07,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(s.width * 0.05),
                           ),
-                          child: Image.asset("images/add.png"),
+                          child: Image.network(s26),
                         ),
                       ),
                       Container(
-                          width: s.width *
-                              0.05), // Espace entre l'image et le texte
+                          width:
+                              s.width * 0.05), // Space between image and text
                       Container(
                         width: s.width * 0.7,
-                        height: s.width *
-                            0.13, // Largeur ajustable pour afficher le chemin
-
+                        height: s.width * 0.13,
                         decoration: BoxDecoration(
-                            color: const Color(0xFFD9D9D9),
-                            borderRadius:
-                                BorderRadius.circular(s.width * 0.05)),
+                          color: const Color(0xFFD9D9D9),
+                          borderRadius: BorderRadius.circular(s.width * 0.05),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        alignment: Alignment.centerLeft,
                         child: Text(
                           _selectedImagePath ?? "",
-                          style: const TextStyle(
-                              color: Colors.black,
-                              backgroundColor: Color(0xFFD9D9D9)),
-                          overflow: TextOverflow
-                              .ellipsis, // Coupe le texte si trop long
+                          style: const TextStyle(color: Colors.black),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
                 ),
+
+                // Submit Button
                 Positioned(
                   top: s.height * 0.87,
                   left: s.width * 0.18,
@@ -509,20 +774,28 @@ class _CompletepageState extends State<Completepage> {
                       borderRadius: BorderRadius.circular(s.width * 0.05),
                     ),
                     child: MaterialButton(
-                      onPressed: () {
-                        Navigator.pushNamedAndRemoveUntil(
-                            context, '/podly', (route) => false);
-                      },
-                      child: Text(
-                        "Done",
-                        style: TextStyle(
-                            color: Colors.white, fontSize: s.width * 0.042),
-                      ),
+                      onPressed: _isLoading
+                          ? null
+                          : () {
+                              if (_validateForm()) {
+                                _saveUserData();
+                              }
+                            },
+                      child: _isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : Text(
+                              "Done",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: s.width * 0.042),
+                            ),
                     ),
                   ),
                 ),
               ],
-            )),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -533,8 +806,9 @@ class _CompletepageState extends State<Completepage> {
     required List<SelectedListItem<String>> items,
     required String title,
   }) {
+    final Size s = MediaQuery.of(context).size;
     return SizedBox(
-      width: MediaQuery.of(context).size.width - 60,
+      width: s.width - 60,
       child: TextField(
         controller: controller,
         readOnly: true,
@@ -544,24 +818,23 @@ class _CompletepageState extends State<Completepage> {
           hintText: hint,
           hintStyle: const TextStyle(color: Colors.grey),
           prefixIcon: Padding(
-            padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.028),
-            child: Image.asset("images/map.png",
-                width: MediaQuery.of(context).size.width * 0.05,
-                height: MediaQuery.of(context).size.width * 0.05),
+            padding: EdgeInsets.all(s.width * 0.028),
+            child: Image.network(
+              s24,
+              width: s.width * 0.05,
+              height: s.width * 0.05,
+            ),
           ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.all(
-                Radius.circular(MediaQuery.of(context).size.width * 0.05)),
+            borderRadius: BorderRadius.all(Radius.circular(s.width * 0.05)),
             borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(
-                Radius.circular(MediaQuery.of(context).size.width * 0.05)),
+            borderRadius: BorderRadius.all(Radius.circular(s.width * 0.05)),
             borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(
-                Radius.circular(MediaQuery.of(context).size.width * 0.05)),
+            borderRadius: BorderRadius.all(Radius.circular(s.width * 0.05)),
             borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
           ),
         ),
