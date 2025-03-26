@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'signuppage/sign_up_page.dart';
 import 'signuppage/verif.dart';
@@ -54,13 +54,16 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    /*   FirebaseAuth.instance.authStateChanges().listen((User? user) {
+    firebase_auth.FirebaseAuth.instance
+        .authStateChanges()
+        .listen((firebase_auth.User? user) {
       if (user == null) {
         print('User is currently signed out!');
       } else {
         print('User is signed in!');
       }
-    });*/
+    });
+
     checkAutoLogin();
   }
 
@@ -92,7 +95,7 @@ class _MyAppState extends State<MyApp> {
         '/play': (context) => const Playlistpage(),
         '/podcast': (context) => const Podcastpage(),
         '/listen': (context) => const Listenpage(),
-        '/ch': (context) => const CreateChannelpage(),
+        '/ch': (context) => const CreateChannelPage(),
         '/po': (context) => const Createpodcastpage(),
         '/pl': (context) => const Createplaylistpage(),
         '/modif': (context) => const Modifpage(),

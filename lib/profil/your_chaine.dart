@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:pfeapp/constants.dart';
 
 class YourChainepage extends StatefulWidget {
   const YourChainepage({super.key});
@@ -55,12 +58,42 @@ class _YourChainepageState extends State<YourChainepage>
     {"img": "images/k.png", "tit": "Need A Freind", "tite": "70 Podcast"},
     {"img": "images/xx.png", "tit": "Music", "tite": "15 Podcast"},
   ];
+  bool hasError = false;
+  List<Map<String, dynamic>> channels = [];
+
   bool isPressed = false;
   bool showWhiteContainer = false;
   late int r = 1;
   void initState() {
     super.initState();
     _tabController1 = TabController(length: 2, vsync: this);
+    fetchChannels();
+  }
+
+  Future<void> fetchChannels() async {
+    try {
+      final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('channels')
+          .where('userId', isEqualTo: currentUserId)
+          .get();
+
+      // Ajout des logs pour déboguer
+      debugPrint('Nombre de chaînes trouvées : ${querySnapshot.docs.length}');
+      debugPrint(
+          'Données des chaînes : ${querySnapshot.docs.map((doc) => doc.data()).toList()}');
+
+      setState(() {
+        channels = querySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des chaînes : $e');
+      setState(() {
+        hasError = true;
+      });
+    }
   }
 
   late TabController _tabController1;
@@ -76,6 +109,64 @@ class _YourChainepageState extends State<YourChainepage>
   @override
   Widget build(BuildContext context) {
     final Size v = MediaQuery.of(context).size;
+
+    if (hasError) {
+      return const Scaffold(
+        body: Center(
+          child: Text('Une erreur est survenue.'),
+        ),
+      );
+    }
+
+    if (channels.isEmpty) {
+      return Scaffold(
+          body: SafeArea(
+              child: Container(
+                  decoration: BoxDecoration(color: Colors.white),
+                  width: double.infinity, // Added to provide width constraint
+                  height: double.infinity, // Added to provide height constraint
+
+                  child: Column(children: [
+                    SizedBox(
+                      height: v.height * 0.15,
+                    ),
+                    SizedBox(
+                      height: v.height * 0.3,
+                      width: v.width * 0.7,
+                      child: Container(
+                        child: Image.network(
+                          s27,
+                          fit: BoxFit.fill,
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      height: v.height * 0.1,
+                    ),
+                    Container(
+                      height: v.height * 0.075,
+                      width: v.width * 0.6,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF754CEF),
+                        borderRadius: BorderRadius.circular(v.width * 0.05),
+                      ),
+                      child: MaterialButton(
+                        onPressed: () {
+                          Navigator.pushNamedAndRemoveUntil(
+                            context,
+                            '/ch',
+                            (route) => false,
+                          );
+                        },
+                        child: Text(
+                          "Create",
+                          style: TextStyle(
+                              color: Colors.white, fontSize: v.width * 0.042),
+                        ),
+                      ),
+                    ),
+                  ]))));
+    }
     return Scaffold(
         body: SafeArea(
       child: Container(
