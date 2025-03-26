@@ -62,9 +62,8 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
   }
 
   Future<String> _uploadImageToSupabase() async {
-    // Si aucune image n'est sélectionnée, retourner l'URL par défaut
     if (_selectedImageFile == null) {
-      return s21; // URL par défaut (par exemple : un lien vers une image par défaut)
+      return s21; // Retourner l'URL par défaut si aucune image n'est sélectionnée
     }
 
     try {
@@ -73,15 +72,15 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
       final fileName =
           'channel/${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-      // Upload de l'image sur Supabase
-      /*final response = await Supabase.instance.client.storage
+      // Téléverser l'image sur Supabase
+      await Supabase.instance.client.storage
           .from('pfeapp')
           .upload(fileName, _selectedImageFile!);
 
-      // Vérification de la réponse de l'upload
-         if (response.error != null) {
+      // Vérification de la réponse
+      /*  if (response.error != null) {
       debugPrint('Upload error: ${response.error!.message}');
-      return s21; // En cas d'erreur, utiliser l'URL par défaut
+      return s21; // En cas d'erreur, retourner l'URL par défaut
     }*/
 
       // Récupération de l'URL publique
@@ -89,16 +88,14 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
           .from('pfeapp')
           .getPublicUrl(fileName);
 
-      // Vérifier si l'URL publique est valide
       if (publicUrl.isNotEmpty) {
         debugPrint('Image uploaded successfully: $publicUrl');
         return publicUrl; // Retourner l'URL publique
       } else {
         debugPrint('Failed to get public URL.');
-        return s21; // Utiliser l'URL par défaut si aucune URL publique n'est générée
+        return s21; // Retourner l'URL par défaut si aucune URL publique
       }
     } catch (e) {
-      // Gestion des erreurs
       debugPrint('Error uploading image to Supabase: $e');
       return s21; // Retourner l'URL par défaut en cas d'erreur
     }
@@ -129,12 +126,13 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
         'createdAt': FieldValue.serverTimestamp(),
       };
 
-      // Sauvegarder les données dans Firestore
-      await _firestore.collection('channels').add(channelData);
+      final docRef = await _firestore.collection('channels').add(channelData);
+      final channelId = docRef.id; // Récupérer l'ID généré par Firestore
+      print("Channel created with ID: $channelId");
 
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(context, '/podly', (route) => false,
-            arguments: {'selectedIndex': 2});
+            arguments: {'selectedIndex': 4});
       }
     } catch (e) {
       debugPrint("Channel save error: $e");

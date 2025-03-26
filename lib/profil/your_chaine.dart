@@ -530,7 +530,7 @@ class _YourChainepageState extends State<YourChainepage>
                                         ),
                                       ),
                                     ),
-                                    SizedBox(width: v.width * 0.02),
+                                    SizedBox(width: v.width * 0.01),
                                     Column(
                                       mainAxisSize: MainAxisSize.min,
                                       crossAxisAlignment:
@@ -549,7 +549,7 @@ class _YourChainepageState extends State<YourChainepage>
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
-                                        SizedBox(height: v.width * 0.01),
+                                        SizedBox(height: v.width * 0.015),
                                       ],
                                     ),
                                     SizedBox(
@@ -768,7 +768,7 @@ class _YourChainepageState extends State<YourChainepage>
                                       ],
                                     ),
                                     SizedBox(
-                                      width: v.width * 0.04,
+                                      width: v.width * 0.03,
                                     ),
                                     Column(
                                         mainAxisAlignment:
