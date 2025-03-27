@@ -1,8 +1,13 @@
+import 'dart:io';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:drop_down_list/drop_down_list.dart';
-import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:drop_down_list/drop_down_list.dart';
+import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:pfeapp/constants.dart';
 
 class Createplaylistpage extends StatefulWidget {
@@ -13,31 +18,34 @@ class Createplaylistpage extends StatefulWidget {
 }
 
 class _CreateplaylistpageState extends State<Createplaylistpage> {
-  final TextEditingController _playController = TextEditingController();
   final List<SelectedListItem<String>> play = [
     SelectedListItem<String>(data: "Education"),
     SelectedListItem<String>(data: "Needs a freinds"),
     SelectedListItem<String>(data: "Nesdds a freinds"),
     SelectedListItem<String>(data: "Music"),
   ];
-  String? _selectedImagePath; // Variable pour stocker le chemin de l'image
-  Future<bool> requestPermissions() async {
-    if (await Permission.storage.request().isGranted) {
-      return true;
-    } else {
-      // Montrer un dialogue si les permissions sont refusées
-      if (context.mounted) {}
-      return false;
-    }
+  final _nameController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _playlistController = TextEditingController();
+  String? _selectedImagePath;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    _playlistController.dispose();
+    super.dispose();
   }
 
-  void _pickImage() async {
-    // Vérifier les permissions avant d'ouvrir le picker
-    if (await requestPermissions()) {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-      );
+  Future<bool> _requestPermission() async {
+    final status = await Permission.storage.request();
+    return status.isGranted;
+  }
 
+  Future<void> _pickImage() async {
+    if (await _requestPermission()) {
+      final result = await FilePicker.platform.pickFiles(type: FileType.image);
       if (result != null && result.files.isNotEmpty) {
         setState(() {
           _selectedImagePath = result.files.single.path;
@@ -55,6 +63,84 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
       o = args;
     } else {
       o = 0; // Valeur par défaut si aucun argument n'est passé
+    }
+  }
+
+  Future<String> _uploadImageToSupabase() async {
+    if (_selectedImagePath == null) {
+      return s21; // Retourner l'URL par défaut si aucune image n'est sélectionnée
+    }
+
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid ??
+          DateTime.now().millisecondsSinceEpoch.toString();
+      final fileName =
+          'playlist/${userId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      // Convertir le chemin de l'image en un fichier
+      final file = File(_selectedImagePath!);
+
+      // Téléverser l'image sur Supabase
+      await Supabase.instance.client.storage
+          .from('pfeapp')
+          .upload(fileName, file);
+
+      // Récupérer l'URL publique
+      final publicUrl = Supabase.instance.client.storage
+          .from('pfeapp')
+          .getPublicUrl(fileName);
+
+      if (publicUrl.isNotEmpty) {
+        debugPrint('Image uploaded successfully: $publicUrl');
+        return publicUrl; // Retourner l'URL publique
+      } else {
+        debugPrint('Failed to get public URL.');
+        return s21; // Retourner l'URL par défaut si aucune URL publique
+      }
+    } catch (e) {
+      debugPrint('Error uploading image to Supabase: $e');
+      return s21; // Retourner l'URL par défaut en cas d'erreur
+    }
+  }
+
+  Future<void> _saveChannelData() async {
+    final name = _nameController.text.trim();
+    final description = _descriptionController.text.trim();
+    final playlist = _playlistController.text.trim();
+    if (name.isEmpty || description.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all required fields.')),
+      );
+      return;
+    }
+
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please fill all required fields.')),
+        );
+        return;
+      }
+
+      // Obtenir l'URL de l'image (soit uploadée, soit l'URL par défaut)
+      final photoUrl = await _uploadImageToSupabase();
+
+      final channelData = {
+        'userId': currentUser.uid,
+        'name': name,
+        'description': description,
+        'photoUrl': photoUrl, // URL de l'image (ou URL par défaut)
+        'createdAt': FieldValue.serverTimestamp(),
+        'podcast': playlist.isNotEmpty ? playlist : null,
+      };
+
+      await _firestore.collection('playlist').add(channelData);
+    } catch (e) {
+      debugPrint("Channel save error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all required fields.')),
+      );
     }
   }
 
@@ -109,6 +195,7 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
                 child: SizedBox(
                   width: c.width - 60,
                   child: TextField(
+                    controller: _nameController,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: const Color(0xFFD9D9D9),
@@ -163,6 +250,7 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
                 child: SizedBox(
                   width: c.width - 60,
                   child: TextField(
+                    controller: _descriptionController,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: const Color(0xFFD9D9D9),
@@ -215,7 +303,7 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
                 left: c.width * 0.07,
                 right: c.width * 0.07,
                 child: _buildDropDownField1(
-                  controller: _playController,
+                  controller: _playlistController,
                   hint: "Select Podcast",
                   items: play,
                   title: "Podcast",
@@ -291,6 +379,7 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
                   ),
                   child: MaterialButton(
                     onPressed: () {
+                      _saveChannelData;
                       Navigator.pushNamedAndRemoveUntil(
                           context, '/podly', (route) => false);
                     },
@@ -343,6 +432,7 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
                 child: SizedBox(
                   width: c.width - 60,
                   child: TextField(
+                    controller: _nameController,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: const Color(0xFFD9D9D9),
@@ -397,6 +487,7 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
                 child: SizedBox(
                   width: c.width - 60,
                   child: TextField(
+                    controller: _descriptionController,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: const Color(0xFFD9D9D9),
@@ -449,7 +540,7 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
                 left: c.width * 0.07,
                 right: c.width * 0.07,
                 child: _buildDropDownField1(
-                  controller: _playController,
+                  controller: _playlistController,
                   hint: "Select Podcast",
                   items: play,
                   title: "Podcast",
@@ -524,7 +615,8 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
                     borderRadius: BorderRadius.circular(c.width * 0.05),
                   ),
                   child: MaterialButton(
-                    onPressed: () {
+                    onPressed: () async {
+                      await _saveChannelData();
                       Navigator.pushNamedAndRemoveUntil(
                           context, '/podly', (route) => false);
                     },

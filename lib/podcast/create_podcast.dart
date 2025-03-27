@@ -1,8 +1,12 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:drop_down_list/drop_down_list.dart';
-import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:io';
+import 'package:drop_down_list/drop_down_list.dart';
+import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:pfeapp/constants.dart';
 
 class Createpodcastpage extends StatefulWidget {
@@ -13,8 +17,6 @@ class Createpodcastpage extends StatefulWidget {
 }
 
 class _CreatepodcastpageState extends State<Createpodcastpage> {
-  final TextEditingController _catController = TextEditingController();
-  final TextEditingController _playController = TextEditingController();
   final List<SelectedListItem<String>> _listOfCat = [
     SelectedListItem<String>(data: "Education"),
     SelectedListItem<String>(data: "History"),
@@ -39,25 +41,32 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
     SelectedListItem<String>(data: "Nesdds a freinds"),
     SelectedListItem<String>(data: "Music"),
   ];
+  final _nameController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _categoryController = TextEditingController();
+  final _playlistController = TextEditingController();
+
   String? _selectedAudioPath;
-  String? _selectedImagePath; // Variable pour stocker le chemin de l'image
-  Future<bool> requestPermissions() async {
-    if (await Permission.storage.request().isGranted) {
-      return true;
-    } else {
-      // Montrer un dialogue si les permissions sont refusées
-      if (context.mounted) {}
-      return false;
-    }
+  String? _selectedImagePath;
+
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    _categoryController.dispose();
+    _playlistController.dispose();
+    super.dispose();
   }
 
-  void _pickImage() async {
-    // Vérifier les permissions avant d'ouvrir le picker
-    if (await requestPermissions()) {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-      );
+  Future<bool> _requestPermission() async {
+    final status = await Permission.storage.request();
+    return status.isGranted;
+  }
 
+  Future<void> _pickImage() async {
+    if (await _requestPermission()) {
+      final result = await FilePicker.platform.pickFiles(type: FileType.image);
       if (result != null && result.files.isNotEmpty) {
         setState(() {
           _selectedImagePath = result.files.single.path;
@@ -66,13 +75,9 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
     }
   }
 
-  void _pickAudio() async {
-    // Vérifier les permissions avant d'ouvrir le picker
-    if (await requestPermissions()) {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.audio,
-      );
-
+  Future<void> _pickAudio() async {
+    if (await _requestPermission()) {
+      final result = await FilePicker.platform.pickFiles(type: FileType.audio);
       if (result != null && result.files.isNotEmpty) {
         setState(() {
           _selectedAudioPath = result.files.single.path;
@@ -90,6 +95,119 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
       y = args;
     } else {
       y = 0; // Valeur par défaut si aucun argument n'est passé
+    }
+  }
+
+  Future<String> _uploadFileToSupabase(String path, String folder) async {
+    if (path.isEmpty) {
+      debugPrint("No file selected for upload.");
+      return ''; // Retourne une chaîne vide si aucun fichier n'est fourni
+    }
+
+    try {
+      // Générer un nom unique pour le fichier
+      final userId = FirebaseAuth.instance.currentUser?.uid ??
+          DateTime.now().millisecondsSinceEpoch.toString();
+      final fileName =
+          '$folder/${userId}_${DateTime.now().millisecondsSinceEpoch}_${path.split('/').last}';
+      final file = File(path);
+
+      // Téléverser le fichier sur Supabase
+      await Supabase.instance.client.storage
+          .from('pfeapp')
+          .upload(fileName, file);
+
+      // Récupérer l'URL publique
+      final publicUrl = Supabase.instance.client.storage
+          .from('pfeapp')
+          .getPublicUrl(fileName);
+
+      if (publicUrl.isNotEmpty) {
+        debugPrint('File uploaded successfully: $publicUrl');
+        return publicUrl; // Retourner l'URL publique si disponible
+      } else {
+        debugPrint('Failed to generate public URL for the file.');
+        return ''; // Retourner une chaîne vide si l'URL publique ne peut être générée
+      }
+    } catch (e) {
+      debugPrint('Error uploading file to Supabase: $e');
+      return ''; // Retourner une chaîne vide en cas d'erreur
+    }
+  }
+
+  Future<void> _createPodcast() async {
+    // Récupération des valeurs saisies par l'utilisateur
+    final name = _nameController.text.trim();
+    final description = _descriptionController.text.trim();
+    final category = _categoryController.text.trim();
+    final playlist = _playlistController.text.trim();
+
+    // Validation des champs obligatoires
+    if (name.isEmpty ||
+        description.isEmpty ||
+        category.isEmpty ||
+        _selectedAudioPath == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all required fields.')),
+      );
+      return;
+    }
+
+    try {
+      // Récupérer l'utilisateur actuel
+      final currentUser = FirebaseAuth.instance.currentUser;
+      final userId = currentUser?.uid ?? '';
+
+      // Téléverser la photo (ou utiliser l'URL par défaut)
+      final photoUrl = _selectedImagePath != null
+          ? await _uploadFileToSupabase(_selectedImagePath!, 'podcast/photo')
+          : 'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/ano.jpg';
+
+      // Téléverser le fichier audio
+      final audioUrl = await _uploadFileToSupabase(
+        _selectedAudioPath!,
+        'podcast/audio',
+      );
+
+      // Vérifier si le téléversement audio a échoué
+      if (audioUrl.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Audio upload failed. Please try again.')),
+        );
+        return;
+      }
+
+      // Préparer les données à enregistrer dans Firestore
+      final podcastData = {
+        'idUser': userId, // Enregistrement de l'ID utilisateur
+        'name': name,
+        'description': description,
+        'category': category,
+        'playlist':
+            playlist.isNotEmpty ? playlist : null, // Playlist optionnelle
+        'urlFile': audioUrl, // URL du fichier audio
+        'urlPhoto': photoUrl, // URL de la photo
+        'dateCreation': FieldValue.serverTimestamp(), // Timestamp de création
+      };
+
+      // Ajouter les données dans Firestore
+      await _firestore.collection('podcast').add(podcastData);
+
+      // Afficher un message de succès
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Podcast created successfully!')),
+      );
+
+      // Retourner à l'écran précédent
+      Navigator.pop(context);
+    } catch (e) {
+      // Gestion des erreurs
+      debugPrint('Error creating podcast: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Error creating podcast. Please try again.')),
+      );
     }
   }
 
@@ -143,6 +261,7 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
               child: SizedBox(
                 width: c.width - 60,
                 child: TextField(
+                  controller: _nameController,
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: const Color(0xFFD9D9D9),
@@ -197,6 +316,7 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
               child: SizedBox(
                 width: c.width - 60,
                 child: TextField(
+                  controller: _descriptionController,
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: const Color(0xFFD9D9D9),
@@ -250,7 +370,7 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
               right: c.width * 0.07,
               child: Row(children: [
                 _buildDropDownField(
-                  controller: _catController,
+                  controller: _categoryController,
                   hint: "Select Category",
                   items: _listOfCat,
                   title: "Category",
@@ -271,7 +391,7 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
               left: c.width * 0.07,
               right: c.width * 0.07,
               child: _buildDropDownField1(
-                controller: _playController,
+                controller: _playlistController,
                 hint: "Select Playlist",
                 items: play,
                 title: "Playlist",
@@ -404,7 +524,8 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
                   borderRadius: BorderRadius.circular(c.width * 0.05),
                 ),
                 child: MaterialButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    await _createPodcast(); // Assurez-vous que la fonction est exécutée
                     Navigator.pushNamedAndRemoveUntil(
                         context, '/podly', (route) => false);
                   },
@@ -457,6 +578,7 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
               child: SizedBox(
                 width: c.width - 60,
                 child: TextField(
+                  controller: _nameController,
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: const Color(0xFFD9D9D9),
@@ -511,6 +633,7 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
               child: SizedBox(
                 width: c.width - 60,
                 child: TextField(
+                  controller: _descriptionController,
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: const Color(0xFFD9D9D9),
@@ -564,7 +687,7 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
               right: c.width * 0.07,
               child: Row(children: [
                 _buildDropDownField(
-                  controller: _catController,
+                  controller: _categoryController,
                   hint: "Select Category",
                   items: _listOfCat,
                   title: "Category",
@@ -585,7 +708,7 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
               left: c.width * 0.07,
               right: c.width * 0.07,
               child: _buildDropDownField1(
-                controller: _playController,
+                controller: _playlistController,
                 hint: "Select Playlist",
                 items: play,
                 title: "Playlist",
@@ -718,7 +841,8 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
                   borderRadius: BorderRadius.circular(c.width * 0.05),
                 ),
                 child: MaterialButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    await _createPodcast(); // Assurez-vous que la fonction est exécutée
                     Navigator.pushNamedAndRemoveUntil(
                         context, '/podly', (route) => false);
                   },
