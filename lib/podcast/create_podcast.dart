@@ -35,21 +35,50 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
     SelectedListItem<String>(data: "Art"),
     SelectedListItem<String>(data: "Sciences"),
   ];
-  final List<SelectedListItem<String>> play = [
-    SelectedListItem<String>(data: "Education"),
-    SelectedListItem<String>(data: "Needs a freinds"),
-    SelectedListItem<String>(data: "Nesdds a freinds"),
-    SelectedListItem<String>(data: "Music"),
-  ];
+  List<SelectedListItem<PlaylistItem>> play = [];
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _categoryController = TextEditingController();
   final _playlistController = TextEditingController();
+  String?
+      _selectedPlaylistId; // Variable pour stocker l'ID de la playlist sélectionnée
 
   String? _selectedAudioPath;
   String? _selectedImagePath;
+  @override
+  void initState() {
+    super.initState();
+    _loadPlaylists();
+  }
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  Future<void> _loadPlaylists() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser
+          ?.uid; // Remplacez par la logique pour obtenir l'utilisateur actuel.
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('playlist')
+          .where('userId', isEqualTo: currentUser)
+          .get();
+
+      // Créer une liste d'éléments avec `name` et `id`.
+      final List<SelectedListItem<PlaylistItem>> fetchedPlaylists =
+          querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        final name = data['name'] ?? 'Unknown Playlist'; // Nom de la playlist
+        final id = doc.id; // ID unique du document
+        return SelectedListItem<PlaylistItem>(
+          data: PlaylistItem(id: id, name: name),
+        );
+      }).toList();
+
+      setState(() {
+        play.addAll(fetchedPlaylists);
+      });
+    } catch (e) {
+      print('Error loading playlists: $e');
+    }
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -140,7 +169,6 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
     final name = _nameController.text.trim();
     final description = _descriptionController.text.trim();
     final category = _categoryController.text.trim();
-    final playlist = _playlistController.text.trim();
 
     // Validation des champs obligatoires
     if (name.isEmpty ||
@@ -184,16 +212,26 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
         'name': name,
         'description': description,
         'category': category,
-        'playlist':
-            playlist.isNotEmpty ? playlist : null, // Playlist optionnelle
         'urlFile': audioUrl, // URL du fichier audio
         'urlPhoto': photoUrl, // URL de la photo
         'dateCreation': FieldValue.serverTimestamp(), // Timestamp de création
       };
 
       // Ajouter les données dans Firestore
-      await _firestore.collection('podcast').add(podcastData);
+      //  await _firestore.collection('podcast').add(podcastData);
+      DocumentReference docRef = await FirebaseFirestore.instance
+          .collection('podcasts')
+          .add(podcastData);
 
+      await docRef
+          .update({'id': docRef.id}); // Ajoute l'ID au document lui-même
+      if (_selectedPlaylistId != null && _selectedPlaylistId!.isNotEmpty) {
+        await FirebaseFirestore.instance.collection('playinpod').add({
+          'podcastId': docRef.id,
+          'playlistId':
+              _selectedPlaylistId, // Utilisation directe de la variable
+        });
+      }
       // Afficher un message de succès
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Podcast created successfully!')),
@@ -929,7 +967,7 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
   Widget _buildDropDownField1({
     required TextEditingController controller,
     required String hint,
-    required List<SelectedListItem<String>> items,
+    required List<SelectedListItem<PlaylistItem>> items,
     required String title,
   }) {
     return SizedBox(
@@ -978,10 +1016,18 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
               onSelected: (List<dynamic> selectedItems) {
                 if (selectedItems.isNotEmpty) {
                   final selectedItem =
-                      selectedItems.first as SelectedListItem<String>;
+                      selectedItems.first as SelectedListItem<PlaylistItem>;
+                  final playlistItem = selectedItem.data;
+
                   setState(() {
-                    controller.text = selectedItem.data;
+                    _selectedPlaylistId =
+                        playlistItem.id; // Stocke l'ID sélectionné
+                    _playlistController.text =
+                        playlistItem.name; // Affiche uniquement le nom
                   });
+
+                  print('Selected Playlist ID: ${playlistItem.id}');
+                  print('Selected Playlist Name: ${playlistItem.name}');
                 }
               },
               enableMultipleSelection: false,
@@ -991,4 +1037,11 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
       ),
     );
   }
+}
+
+class PlaylistItem {
+  final String id;
+  final String name;
+
+  PlaylistItem({required this.id, required this.name});
 }

@@ -29,7 +29,7 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
   final _playlistController = TextEditingController();
   String? _selectedImagePath;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -103,7 +103,7 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
     }
   }
 
-  Future<void> _saveChannelData() async {
+  Future<void> _saveplaylistData() async {
     final name = _nameController.text.trim();
     final description = _descriptionController.text.trim();
     final playlist = _playlistController.text.trim();
@@ -126,7 +126,7 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
       // Obtenir l'URL de l'image (soit uploadée, soit l'URL par défaut)
       final photoUrl = await _uploadImageToSupabase();
 
-      final channelData = {
+      final playlistData = {
         'userId': currentUser.uid,
         'name': name,
         'description': description,
@@ -135,7 +135,11 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
         'podcast': playlist.isNotEmpty ? playlist : null,
       };
 
-      await _firestore.collection('playlist').add(channelData);
+      DocumentReference docRef = await FirebaseFirestore.instance
+          .collection('playlist')
+          .add(playlistData);
+
+      await docRef.update({'id': docRef.id});
     } catch (e) {
       debugPrint("Channel save error: $e");
       ScaffoldMessenger.of(context).showSnackBar(
@@ -378,10 +382,17 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
                     borderRadius: BorderRadius.circular(c.width * 0.05),
                   ),
                   child: MaterialButton(
-                    onPressed: () {
-                      _saveChannelData;
-                      Navigator.pushNamedAndRemoveUntil(
-                          context, '/podly', (route) => false);
+                    onPressed: () async {
+                      try {
+                        await _saveplaylistData(); // Make sure to await the method
+                        Navigator.pushNamedAndRemoveUntil(
+                            context, '/podly', (route) => false);
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                              content: Text('Failed to create playlist: $e')),
+                        );
+                      }
                     },
                     child: Text(
                       "Done",
@@ -616,9 +627,16 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
                   ),
                   child: MaterialButton(
                     onPressed: () async {
-                      await _saveChannelData();
-                      Navigator.pushNamedAndRemoveUntil(
-                          context, '/podly', (route) => false);
+                      try {
+                        await _saveplaylistData(); // Make sure to await the method
+                        Navigator.pushNamedAndRemoveUntil(
+                            context, '/podly', (route) => false);
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                              content: Text('Failed to create playlist: $e')),
+                        );
+                      }
                     },
                     child: Text(
                       "Done",
