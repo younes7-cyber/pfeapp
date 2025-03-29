@@ -326,6 +326,7 @@ class _CompletepageState extends State<Completepage> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       final userId = user?.uid;
+      final email = FirebaseAuth.instance.currentUser?.email;
 
       if (userId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -357,6 +358,7 @@ class _CompletepageState extends State<Completepage> {
       // Création des données utilisateur
       final userData = {
         'userId': userId,
+        'email': email,
         'firstName': _firstNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
         'age': int.parse(_ageController.text.trim()),

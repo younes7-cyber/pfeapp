@@ -215,6 +215,11 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
         'urlFile': audioUrl, // URL du fichier audio
         'urlPhoto': photoUrl, // URL de la photo
         'dateCreation': FieldValue.serverTimestamp(), // Timestamp de création
+        'vue': 0,
+        'likes': 0,
+        'unlikes': 0,
+        'comments': 0,
+        'shares': 0,
       };
 
       // Ajouter les données dans Firestore
@@ -230,6 +235,14 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
           'podcastId': docRef.id,
           'playlistId':
               _selectedPlaylistId, // Utilisation directe de la variable
+          'date': FieldValue.serverTimestamp(),
+        });
+        await FirebaseFirestore.instance
+            .collection('playlist')
+            .doc(_selectedPlaylistId)
+            .update({
+          'podcast': FieldValue.increment(1),
+          'date': FieldValue.serverTimestamp(),
         });
       }
       // Afficher un message de succès
@@ -1020,10 +1033,9 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
                   final playlistItem = selectedItem.data;
 
                   setState(() {
-                    _selectedPlaylistId =
-                        playlistItem.id; // Stocke l'ID sélectionné
+                    _selectedPlaylistId = playlistItem.id; // Stocke l'ID
                     _playlistController.text =
-                        playlistItem.name; // Affiche uniquement le nom
+                        playlistItem.name; // Affiche le nom
                   });
 
                   print('Selected Playlist ID: ${playlistItem.id}');
@@ -1044,4 +1056,6 @@ class PlaylistItem {
   final String name;
 
   PlaylistItem({required this.id, required this.name});
+  @override
+  String toString() => name; // Retourne le nom de la playlist
 }

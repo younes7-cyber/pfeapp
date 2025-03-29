@@ -1,11 +1,10 @@
-import 'dart:io';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:io';
 import 'package:drop_down_list/drop_down_list.dart';
 import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:pfeapp/constants.dart';
@@ -18,17 +17,46 @@ class Createplaylistpage extends StatefulWidget {
 }
 
 class _CreateplaylistpageState extends State<Createplaylistpage> {
-  final List<SelectedListItem<String>> play = [
-    SelectedListItem<String>(data: "Education"),
-    SelectedListItem<String>(data: "Needs a freinds"),
-    SelectedListItem<String>(data: "Nesdds a freinds"),
-    SelectedListItem<String>(data: "Music"),
-  ];
+  List<SelectedListItem<PlaylistItem>> play = [];
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _playlistController = TextEditingController();
   String? _selectedImagePath;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  String? _selectedPlaylistId;
+  @override
+  void initState() {
+    super.initState();
+    _loadPlaylists();
+  }
+
+  Future<void> _loadPlaylists() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser
+          ?.uid; // Remplacez par la logique pour obtenir l'utilisateur actuel.
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('podcasts')
+          .where('idUser', isEqualTo: currentUser)
+          .get();
+
+      // Créer une liste d'éléments avec `name` et `id`.
+      final List<SelectedListItem<PlaylistItem>> fetchedPlaylists =
+          querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        final name = data['name'] ?? 'Unknown Playlist'; // Nom de la playlist
+        final id = doc.id; // ID unique du document
+        return SelectedListItem<PlaylistItem>(
+          data: PlaylistItem(id: id, name: name),
+        );
+      }).toList();
+
+      setState(() {
+        play.addAll(fetchedPlaylists);
+      });
+    } catch (e) {
+      print('Error loading playlists: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -106,7 +134,7 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
   Future<void> _saveplaylistData() async {
     final name = _nameController.text.trim();
     final description = _descriptionController.text.trim();
-    final playlist = _playlistController.text.trim();
+
     if (name.isEmpty || description.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill all required fields.')),
@@ -132,7 +160,7 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
         'description': description,
         'photoUrl': photoUrl, // URL de l'image (ou URL par défaut)
         'createdAt': FieldValue.serverTimestamp(),
-        'podcast': playlist.isNotEmpty ? playlist : null,
+        'podcast': 0,
       };
 
       DocumentReference docRef = await FirebaseFirestore.instance
@@ -140,10 +168,29 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
           .add(playlistData);
 
       await docRef.update({'id': docRef.id});
+
+      // Ajouter un podcast à la playlist si un ID de podcast est sélectionné
+      if (_selectedPlaylistId != null && _selectedPlaylistId!.isNotEmpty) {
+        await FirebaseFirestore.instance.collection('playinpod').add({
+          'playlistId': docRef.id,
+          'podcastId':
+              _selectedPlaylistId, // Utilisation directe de la variable
+          'date': FieldValue.serverTimestamp(),
+        });
+
+        // Incrémenter le champ "podcast" de la playlist concernée
+        await FirebaseFirestore.instance
+            .collection('playlist')
+            .doc(docRef.id)
+            .update({
+          'podcast': FieldValue.increment(1),
+          'date': FieldValue.serverTimestamp(),
+        });
+      }
     } catch (e) {
       debugPrint("Channel save error: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields.')),
+        const SnackBar(content: Text('An error occurred while saving data.')),
       );
     }
   }
@@ -656,7 +703,7 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
   Widget _buildDropDownField1({
     required TextEditingController controller,
     required String hint,
-    required List<SelectedListItem<String>> items,
+    required List<SelectedListItem<PlaylistItem>> items,
     required String title,
   }) {
     return SizedBox(
@@ -671,7 +718,7 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
           hintStyle: const TextStyle(color: Colors.grey),
           prefixIcon: Padding(
             padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.028),
-            child: Image.network(s30,
+            child: Image.network(s33,
                 width: MediaQuery.of(context).size.width * 0.05,
                 height: MediaQuery.of(context).size.width * 0.05),
           ),
@@ -705,10 +752,17 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
               onSelected: (List<dynamic> selectedItems) {
                 if (selectedItems.isNotEmpty) {
                   final selectedItem =
-                      selectedItems.first as SelectedListItem<String>;
+                      selectedItems.first as SelectedListItem<PlaylistItem>;
+                  final playlistItem = selectedItem.data;
+
                   setState(() {
-                    controller.text = selectedItem.data;
+                    _selectedPlaylistId = playlistItem.id; // Stocke l'ID
+                    _playlistController.text =
+                        playlistItem.name; // Affiche le nom
                   });
+
+                  print('Selected Playlist ID: ${playlistItem.id}');
+                  print('Selected Playlist Name: ${playlistItem.name}');
                 }
               },
               enableMultipleSelection: false,
@@ -718,4 +772,13 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
       ),
     );
   }
+}
+
+class PlaylistItem {
+  final String id;
+  final String name;
+
+  PlaylistItem({required this.id, required this.name});
+  @override
+  String toString() => name; // Retourne le nom de la playlist
 }

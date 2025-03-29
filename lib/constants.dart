@@ -48,3 +48,13 @@ const String s32 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/cate.png";
 const String s33 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/playl.png";
+const String s34 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/set.png";
+const String s35 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/modif1.png";
+const String s36 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/aa.png";
+const String s37 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/like.png";
+const String s38 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/comment.png";

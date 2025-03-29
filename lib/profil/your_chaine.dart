@@ -60,7 +60,8 @@ class _YourChainepageState extends State<YourChainepage>
   ];
   bool hasError = false;
   List<Map<String, dynamic>> channels = [];
-
+  List<Map<String, dynamic>> podcast = [];
+  List<Map<String, dynamic>> playlist = [];
   bool isPressed = false;
   bool showWhiteContainer = false;
   late int r = 1;
@@ -68,6 +69,8 @@ class _YourChainepageState extends State<YourChainepage>
     super.initState();
     _tabController1 = TabController(length: 2, vsync: this);
     fetchChannels();
+    fetchpodcasts();
+    fetchplaylists();
   }
 
   Future<void> fetchChannels() async {
@@ -85,6 +88,58 @@ class _YourChainepageState extends State<YourChainepage>
 
       setState(() {
         channels = querySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des chaînes : $e');
+      setState(() {
+        hasError = true;
+      });
+    }
+  }
+
+  Future<void> fetchpodcasts() async {
+    try {
+      final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('podcasts')
+          .where('idUser', isEqualTo: currentUserId)
+          .get();
+
+      // Ajout des logs pour déboguer
+      debugPrint('Nombre de podcast trouvées : ${querySnapshot.docs.length}');
+      debugPrint(
+          'Données des podcast : ${querySnapshot.docs.map((doc) => doc.data()).toList()}');
+
+      setState(() {
+        podcast = querySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des chaînes : $e');
+      setState(() {
+        hasError = true;
+      });
+    }
+  }
+
+  Future<void> fetchplaylists() async {
+    try {
+      final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('playlist')
+          .where('userId', isEqualTo: currentUserId)
+          .get();
+
+      // Ajout des logs pour déboguer
+      debugPrint('Nombre de playlist trouvées : ${querySnapshot.docs.length}');
+      debugPrint(
+          'Données des playlist : ${querySnapshot.docs.map((doc) => doc.data()).toList()}');
+
+      setState(() {
+        playlist = querySnapshot.docs
             .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
       });
@@ -189,8 +244,8 @@ class _YourChainepageState extends State<YourChainepage>
                             context, '/podly', (route) => false,
                             arguments: {'selectedIndex': 4});
                       },
-                      icon: Image.asset(
-                        "images/retour.png",
+                      icon: Image.network(
+                        s18,
                         width: v.width * 0.07,
                         height: v.width * 0.07,
                       ),
@@ -200,8 +255,8 @@ class _YourChainepageState extends State<YourChainepage>
                       top: v.height * 0.01,
                       right: v.width * 0.03,
                       child: PopupMenuButton(
-                        icon: Image.asset(
-                          "images/set.png",
+                        icon: Image.network(
+                          s34,
                           width: v.width * 0.06,
                           height: v.width * 0.06,
                         ),
@@ -218,8 +273,8 @@ class _YourChainepageState extends State<YourChainepage>
                               ),
                               child: Row(
                                 children: [
-                                  Image.asset(
-                                    "images/modif1.png",
+                                  Image.network(
+                                    s35,
                                     width: v.width * 0.05,
                                     height: v.width * 0.05,
                                   ),
@@ -295,7 +350,7 @@ class _YourChainepageState extends State<YourChainepage>
                         height: v.width * 0.07,
                         decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(v.width * 0.2)),
-                        child: Image.asset("images/add.png"),
+                        child: Image.network(s26),
                       )),
                   Positioned(
                       top: v.height * 0.25,
@@ -401,7 +456,7 @@ class _YourChainepageState extends State<YourChainepage>
                       child: Row(
                         children: [
                           SizedBox(width: v.width * 0.01), // Marge à gauche
-                          Image.asset("images/podcast.png",
+                          Image.network(s30,
                               width: v.width * 0.06, height: v.width * 0.06),
                           SizedBox(
                               width: v.width *
@@ -421,7 +476,7 @@ class _YourChainepageState extends State<YourChainepage>
                       child: Row(
                         children: [
                           SizedBox(width: v.width * 0.04), // Marge à gauche
-                          Image.asset("images/playl.png",
+                          Image.network(s33,
                               width: v.width * 0.06, height: v.width * 0.06),
                           SizedBox(
                               width: v.width *
@@ -450,9 +505,9 @@ class _YourChainepageState extends State<YourChainepage>
               child: TabBarView(
                 controller: _tabController1,
                 children: [
-                  Column(
-                    children: [
-                      // See All header for Podcast
+                  Column(children: [
+                    // See All header for Podcast
+                    if (podcast.isNotEmpty) ...[
                       Padding(
                         padding: EdgeInsets.symmetric(),
                         child: Row(
@@ -486,8 +541,8 @@ class _YourChainepageState extends State<YourChainepage>
 
                                     print(r);
                                   },
-                                  icon: Image.asset(
-                                    "images/aa.png",
+                                  icon: Image.network(
+                                    s36,
                                     width: v.width * 0.04,
                                     height: v.width * 0.04,
                                   ),
@@ -499,9 +554,9 @@ class _YourChainepageState extends State<YourChainepage>
                       ),
                       Expanded(
                         child: ListView.builder(
-                          itemCount: pod.length,
+                          itemCount: podcast.length,
                           itemBuilder: (context, index) {
-                            final item = pod[index];
+                            final item = podcast[index];
                             return Container(
                               margin: EdgeInsets.all(v.width * 0.02),
                               decoration: BoxDecoration(
@@ -525,7 +580,8 @@ class _YourChainepageState extends State<YourChainepage>
                                         borderRadius: BorderRadius.circular(
                                             v.width * 0.04),
                                         image: DecorationImage(
-                                          image: AssetImage(item["img"]!),
+                                          image:
+                                              NetworkImage(item["urlPhoto"]!),
                                           fit: BoxFit.cover,
                                         ),
                                       ),
@@ -536,11 +592,10 @@ class _YourChainepageState extends State<YourChainepage>
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        SizedBox(height: v.width * 0.0),
                                         SizedBox(
                                           width: v.width * 0.35,
                                           child: Text(
-                                            item["tit"]!,
+                                            item["name"]!,
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: v.width * 0.04,
@@ -567,8 +622,7 @@ class _YourChainepageState extends State<YourChainepage>
                                                 Row(
                                                   children: [
                                                     SizedBox(
-                                                      child: Image.asset(
-                                                          "images/like.png"),
+                                                      child: Image.network(s37),
                                                       width: v.width * 0.05,
                                                       height: v.width * 0.05,
                                                     ),
@@ -576,7 +630,7 @@ class _YourChainepageState extends State<YourChainepage>
                                                       width: v.width * 0.01,
                                                     ),
                                                     Text(
-                                                      item["like"]!,
+                                                      item["likes"].toString(),
                                                       style: TextStyle(
                                                           fontSize:
                                                               v.width * 0.035,
@@ -593,8 +647,7 @@ class _YourChainepageState extends State<YourChainepage>
                                                 Row(
                                                   children: [
                                                     SizedBox(
-                                                      child: Image.asset(
-                                                          "images/view.png"),
+                                                      child: Image.network(s14),
                                                       width: v.width * 0.05,
                                                       height: v.width * 0.05,
                                                     ),
@@ -602,7 +655,7 @@ class _YourChainepageState extends State<YourChainepage>
                                                       width: v.width * 0.01,
                                                     ),
                                                     Text(
-                                                      item["view"]!,
+                                                      item["vue"].toString(),
                                                       style: TextStyle(
                                                           fontSize:
                                                               v.width * 0.035,
@@ -619,8 +672,7 @@ class _YourChainepageState extends State<YourChainepage>
                                                 Row(
                                                   children: [
                                                     SizedBox(
-                                                      child: Image.asset(
-                                                          "images/comment.png"),
+                                                      child: Image.network(s38),
                                                       width: v.width * 0.05,
                                                       height: v.width * 0.05,
                                                     ),
@@ -628,7 +680,8 @@ class _YourChainepageState extends State<YourChainepage>
                                                       width: v.width * 0.01,
                                                     ),
                                                     Text(
-                                                      item["com"]!,
+                                                      item["comments"]
+                                                          .toString(),
                                                       style: TextStyle(
                                                           fontSize:
                                                               v.width * 0.035,
@@ -648,8 +701,8 @@ class _YourChainepageState extends State<YourChainepage>
                                         Navigator.pushNamed(context, '/modif',
                                             arguments: 4);
                                       },
-                                      icon: Image.asset(
-                                        "images/set.png",
+                                      icon: Image.network(
+                                        s34,
                                         width: v.width * 0.05,
                                         height: v.width * 0.05,
                                       ),
@@ -662,10 +715,46 @@ class _YourChainepageState extends State<YourChainepage>
                         ),
                       ),
                     ],
-                  ),
-                  Column(
-                    children: [
-                      // See All header for Podcast
+                    if (podcast.isEmpty) ...[
+                      Column(children: [
+                        SizedBox(
+                          height: v.height * 0.05,
+                        ),
+                        SizedBox(
+                          width: v.width * 0.7,
+                          height: v.height * 0.3,
+                          child: Container(
+                            child: Image.network(s28),
+                          ),
+                        ),
+                        Text("No Podcast Please Upload",
+                            style: TextStyle(
+                                fontSize: v.width * 0.04,
+                                fontWeight: FontWeight.bold)),
+                      ])
+                    ],
+                  ]),
+                  Column(children: [
+                    // See All header for Podcast
+                    if (playlist.isEmpty) ...[
+                      Column(children: [
+                        SizedBox(
+                          height: v.height * 0.05,
+                        ),
+                        SizedBox(
+                          width: v.width * 0.7,
+                          height: v.height * 0.3,
+                          child: Container(
+                            child: Image.network(s28),
+                          ),
+                        ),
+                        Text("No Playlist Please Create",
+                            style: TextStyle(
+                                fontSize: v.width * 0.04,
+                                fontWeight: FontWeight.bold)),
+                      ])
+                    ],
+                    if (playlist.isNotEmpty) ...[
                       Padding(
                         padding: EdgeInsets.symmetric(),
                         child: Row(
@@ -699,8 +788,8 @@ class _YourChainepageState extends State<YourChainepage>
 
                                     print(r);
                                   },
-                                  icon: Image.asset(
-                                    "images/aa.png",
+                                  icon: Image.network(
+                                    s36,
                                     width: v.width * 0.04,
                                     height: v.width * 0.04,
                                   ),
@@ -713,9 +802,9 @@ class _YourChainepageState extends State<YourChainepage>
                       Expanded(
                         child: // Playlist tab
                             ListView.builder(
-                          itemCount: play.length,
+                          itemCount: playlist.length,
                           itemBuilder: (context, index) {
-                            final item = play[index];
+                            final item = playlist[index];
                             return Container(
                               margin: EdgeInsets.all(v.width * 0.02),
                               decoration: BoxDecoration(
@@ -741,7 +830,8 @@ class _YourChainepageState extends State<YourChainepage>
                                         borderRadius: BorderRadius.circular(
                                             v.width * 0.04),
                                         image: DecorationImage(
-                                          image: AssetImage(item["img"]!),
+                                          image:
+                                              NetworkImage(item["photoUrl"]!),
                                           fit: BoxFit.cover,
                                         ),
                                       ),
@@ -756,7 +846,7 @@ class _YourChainepageState extends State<YourChainepage>
                                         SizedBox(
                                           width: v.width * 0.3,
                                           child: Text(
-                                            item["tit"]!,
+                                            item["name"]!,
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: v.width * 0.04,
@@ -781,15 +871,29 @@ class _YourChainepageState extends State<YourChainepage>
                                                 SizedBox(
                                                   height: v.width * 0.02,
                                                 ),
-                                                Text(
-                                                  item["tite"]!,
-                                                  style: TextStyle(
-                                                    fontSize: v.width * 0.035,
+                                                Row(children: [
+                                                  Text(
+                                                    item["podcast"]!.toString(),
+                                                    style: TextStyle(
+                                                      fontSize: v.width * 0.035,
+                                                    ),
+                                                    maxLines: 4,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
-                                                  maxLines: 4,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
+                                                  SizedBox(
+                                                    width: v.width * 0.03,
+                                                  ),
+                                                  Text(
+                                                    "Podcast",
+                                                    style: TextStyle(
+                                                      fontSize: v.width * 0.035,
+                                                    ),
+                                                    maxLines: 4,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ])
                                               ]))
                                         ]),
                                     IconButton(
@@ -797,8 +901,8 @@ class _YourChainepageState extends State<YourChainepage>
                                         Navigator.pushNamed(context, '/modif',
                                             arguments: 5);
                                       },
-                                      icon: Image.asset(
-                                        "images/set.png",
+                                      icon: Image.network(
+                                        s34,
                                         width: v.width * 0.05,
                                         height: v.width * 0.05,
                                       ),
@@ -811,7 +915,7 @@ class _YourChainepageState extends State<YourChainepage>
                         ),
                       ),
                     ],
-                  ),
+                  ]),
                 ],
               ),
             ),
