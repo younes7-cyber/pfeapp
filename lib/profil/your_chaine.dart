@@ -11,53 +11,6 @@ class YourChainepage extends StatefulWidget {
 
 class _YourChainepageState extends State<YourChainepage>
     with SingleTickerProviderStateMixin {
-  final List<Map<String, String>> pod = [
-    {
-      "img": "images/qq.png",
-      "tit": "The Joe Rogen..JJJJJ",
-      "cat": "music",
-      "like": "100K",
-      "view": "4k",
-      "com": "400",
-    },
-    {
-      "img": "images/ss.png",
-      "tit": "Needs A Freinds",
-      "cat": "music",
-      "like": "900",
-      "view": "3.8k",
-      "com": "400",
-    },
-    {
-      "img": "images/dd.png",
-      "tit": "Follow Your Dream",
-      "cat": "music",
-      "like": "700",
-      "view": "3.2k",
-      "com": "400",
-    },
-    {
-      "img": "images/a.png",
-      "tit": "The Joe Rogen...",
-      "cat": "music",
-      "like": "500",
-      "view": "2.8k",
-      "com": "400",
-    },
-    {
-      "img": "images/b.png",
-      "tit": "The Joe Rogen...",
-      "cat": "music",
-      "like": "200",
-      "view": "1k",
-      "com": "400",
-    },
-  ];
-  final List<Map<String, String>> play = [
-    {"img": "images/k.png", "tit": "Need A Freind", "tite": "63 Podcast"},
-    {"img": "images/k.png", "tit": "Need A Freind", "tite": "70 Podcast"},
-    {"img": "images/xx.png", "tit": "Music", "tite": "15 Podcast"},
-  ];
   bool hasError = false;
   List<Map<String, dynamic>> channels = [];
   List<Map<String, dynamic>> podcast = [];
@@ -568,7 +521,13 @@ class _YourChainepageState extends State<YourChainepage>
                               height: v.width * 0.3,
                               child: GestureDetector(
                                 onTap: () {
-                                  Navigator.pushNamed(context, '/podcast');
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/podcast',
+                                    arguments: {
+                                      'idpod': item["id"]
+                                    }, // Envoie l'ID
+                                  );
                                 },
                                 child: Row(
                                   children: [

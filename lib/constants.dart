@@ -58,3 +58,23 @@ const String s37 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/like.png";
 const String s38 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/comment.png";
+const String s39 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/like1.png";
+const String s40 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/unlik.png";
+const String s41 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/unlike.png";
+const String s42 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/sav.png";
+const String s43 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/save.png";
+const String s44 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/playlist.png";
+const String s45 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/par.png";
+const String s46 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/prec.png";
+const String s47 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/suiv.png";
+const String s48 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/play1.png";

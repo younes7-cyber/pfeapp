@@ -1,7 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
+import 'package:pfeapp/constants.dart';
 
 class Listenpage extends StatefulWidget {
   const Listenpage({super.key});
@@ -12,48 +14,7 @@ class Listenpage extends StatefulWidget {
 
 class _ListenpageState extends State<Listenpage>
     with SingleTickerProviderStateMixin {
-  List<Map<String, String>> pod = [
-    {
-      "img": "images/qq.png",
-      "tit": "The Joe Rogen..JJJJJ",
-      "cat": "music",
-      "like": "100K",
-      "view": "400k",
-      "com": "400",
-    },
-    {
-      "img": "images/ss.png",
-      "tit": "Needs A Freinds",
-      "cat": "music",
-      "like": "900",
-      "view": "3.8k",
-      "com": "400",
-    },
-    {
-      "img": "images/dd.png",
-      "tit": "Follow Your Dream",
-      "cat": "music",
-      "like": "700",
-      "view": "3.2k",
-      "com": "400",
-    },
-    {
-      "img": "images/a.png",
-      "tit": "The Joe Rogen...",
-      "cat": "music",
-      "like": "500",
-      "view": "2.8k",
-      "com": "400",
-    },
-    {
-      "img": "images/b.png",
-      "tit": "The Joe Rogen...",
-      "cat": "music",
-      "like": "200",
-      "view": "1k",
-      "com": "400",
-    },
-  ];
+  String? idpod;
 
   bool isLiked = false;
   bool isUnliked = false;
@@ -62,6 +23,9 @@ class _ListenpageState extends State<Listenpage>
   TextEditingController commentController = TextEditingController();
   TextEditingController replyController = TextEditingController();
   String? replyingTo;
+  List<Map<String, dynamic>> podcast = [];
+  List<Map<String, dynamic>> playlist = [];
+  List<Map<String, dynamic>> playinpod = [];
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -69,15 +33,135 @@ class _ListenpageState extends State<Listenpage>
       _precacheImages();
       _imagesPreCached = true;
     }
+
+    final arguments =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+    if (arguments != null && arguments.containsKey('idpod')) {
+      setState(() {
+        idpod = arguments['idpod'];
+      });
+
+      // Vérifier que idpod n'est pas null avant d'appeler les fonctions
+      if (idpod != null) {
+        fetchPodcastsById(idpod!);
+        fetchPlaylistsByPodcastId(idpod!);
+      }
+    }
+  }
+
+// 1️⃣ Fonction pour récupérer les podcasts filtrés par idpod
+  Future<void> fetchPodcastsById(String idpod) async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('podcasts')
+          .where('id', isEqualTo: idpod)
+          .get();
+
+      setState(() {
+        podcast = querySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+
+      debugPrint("Podcasts récupérés : ${podcast.length}");
+    } catch (e) {
+      debugPrint("Erreur lors du chargement des podcasts : $e");
+    }
+  }
+
+  Future<void> fetchPlaylistsByPodcastId(String idpod) async {
+    try {
+      // 1️⃣ Récupérer les `playlistId` associés au `idpod`
+      final playinPodSnapshot = await FirebaseFirestore.instance
+          .collection('playinpod')
+          .where('podcastId', isEqualTo: idpod)
+          .get();
+
+      final List<Map<String, dynamic>> playinPodData = playinPodSnapshot.docs
+          .map((doc) => {
+                "podcastId": doc['podcastId'],
+                "playlistId": doc['playlistId'],
+              })
+          .toList();
+
+      final List<String> playlistIds =
+          playinPodData.map((item) => item["playlistId"] as String).toList();
+
+      debugPrint("Playlists trouvées dans playinpod : $playlistIds");
+
+      if (playlistIds.isNotEmpty) {
+        // 2️⃣ Récupérer les playlists correspondant aux `playlistId`
+        final playlistSnapshot = await FirebaseFirestore.instance
+            .collection('playlist')
+            .where(FieldPath.documentId, whereIn: playlistIds)
+            .get();
+
+        List<Map<String, dynamic>> loadedPlaylists = playlistSnapshot.docs
+            .map((doc) => {
+                  "id": doc.id,
+                  ...doc.data(),
+                })
+            .toList();
+
+        // 3️⃣ Associer les podcasts aux playlists
+        final playinPodSnapshot2 = await FirebaseFirestore.instance
+            .collection('playinpod')
+            .where('playlistId', whereIn: playlistIds)
+            .get();
+
+        Map<String, List<String>> podcastToPlaylists = {};
+        for (var doc in playinPodSnapshot2.docs) {
+          String podcastId = doc['podcastId'];
+          String playlistId = doc['playlistId'];
+
+          if (!podcastToPlaylists.containsKey(podcastId)) {
+            podcastToPlaylists[podcastId] = [];
+          }
+          podcastToPlaylists[podcastId]!.add(playlistId);
+        }
+
+        final List<String> podcastIds = podcastToPlaylists.keys.toList();
+        debugPrint("Podcasts liés aux playlists trouvés : $podcastIds");
+
+        if (podcastIds.isNotEmpty) {
+          // 4️⃣ Récupérer les podcasts avec `podcastIds`
+          final podcastSnapshot = await FirebaseFirestore.instance
+              .collection('podcasts')
+              .where(FieldPath.documentId, whereIn: podcastIds)
+              .get();
+
+          List<Map<String, dynamic>> loadedPodcasts =
+              podcastSnapshot.docs.map((doc) {
+            final podcastData = doc.data() as Map<String, dynamic>;
+            final podcastId = doc.id;
+            return {
+              "id": podcastId,
+              "playlistIds": podcastToPlaylists[podcastId] ?? [],
+              ...podcastData,
+            };
+          }).toList();
+
+          setState(() {
+            playlist = loadedPlaylists;
+            playinpod = loadedPodcasts;
+          });
+
+          debugPrint("Podcasts finaux récupérés : ${playinpod.length}");
+        }
+      }
+    } catch (e) {
+      debugPrint("Erreur lors du chargement des playlists : $e");
+    }
   }
 
   void _precacheImages() {
-    precacheImage(AssetImage("images/like.png"), context);
-    precacheImage(AssetImage("images/like1.png"), context);
-    precacheImage(AssetImage("images/unlike.png"), context);
-    precacheImage(AssetImage("images/unlik.png"), context);
-    precacheImage(AssetImage("images/sav.png"), context);
-    precacheImage(AssetImage("images/save.png"), context);
+    precacheImage(NetworkImage(s37), context);
+    precacheImage(NetworkImage(s39), context);
+    precacheImage(NetworkImage(s41), context);
+    precacheImage(NetworkImage(s40), context);
+    precacheImage(NetworkImage(s42), context);
+    precacheImage(NetworkImage(s43), context);
   }
 
   void _toggleLike() {
@@ -420,90 +504,124 @@ class _ListenpageState extends State<Listenpage>
     return Scaffold(
         endDrawer: Drawer(
           backgroundColor: Colors.white,
-          child: ListView.builder(
+          child: ListView(
             padding: EdgeInsets.all(c.width * 0.02),
-            itemCount: pod.length,
-            itemBuilder: (context, index) {
-              final isFirst = index == 0;
-              final item = pod[index];
+            children: playlist.map((playlistItem) {
+              final playlistName = playlistItem["name"];
+              final playlistId = playlistItem["id"];
 
-              return Container(
-                margin: EdgeInsets.all(c.width * 0.02),
-                decoration: BoxDecoration(
-                  color: isFirst ? Colors.black12 : Colors.transparent,
-                  borderRadius: BorderRadius.circular(c.width * 0.04),
-                  border: Border.all(color: Colors.black12),
-                ),
-                width: c.width * 0.95,
-                height: c.width * 0.3,
-                child: Row(
-                  children: [
-                    SizedBox(width: c.width * 0.02),
-                    Image.asset("images/play1.png",
-                        width: c.width * 0.07, height: c.width * 0.07),
-                    SizedBox(width: c.width * 0.02),
-                    Container(
-                      height: c.width * 0.2,
-                      width: c.width * 0.18,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(c.width * 0.04),
-                        image: DecorationImage(
-                          image: AssetImage(item["img"]!),
-                          fit: BoxFit.cover,
-                        ),
+              final associatedPodcasts = playinpod
+                  .where((podcast) =>
+                      (podcast["playlistIds"] as List).contains(playlistId))
+                  .toList();
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: c.width * 0.02),
+                    child: Text(
+                      playlistName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: c.width * 0.05,
                       ),
                     ),
-                    SizedBox(width: c.width * 0.02),
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                  ...associatedPodcasts.map((item) {
+                    return Container(
+                      margin: EdgeInsets.all(c.width * 0.02),
+                      decoration: BoxDecoration(
+                        //  color: isFirst ? Colors.black12 : Colors.transparent,
+                        color: item["id"] == idpod
+                            ? Colors.black12
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(c.width * 0.04),
+                        border: Border.all(color: Colors.black12),
+                      ),
+                      width: c.width * 0.95,
+                      height: c.width * 0.3,
+                      child: Row(
                         children: [
-                          Text(
-                            item["tit"]!,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: c.width * 0.035,
+                          SizedBox(width: c.width * 0.02),
+                          Image.network(s48,
+                              width: c.width * 0.07, height: c.width * 0.07),
+                          SizedBox(width: c.width * 0.02),
+                          Container(
+                            height: c.width * 0.2,
+                            width: c.width * 0.18,
+                            decoration: BoxDecoration(
+                              borderRadius:
+                                  BorderRadius.circular(c.width * 0.04),
+                              image: DecorationImage(
+                                image: NetworkImage(item["urlPhoto"]!),
+                                fit: BoxFit.cover,
+                              ),
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(width: c.width * 0.02),
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item["name"]!,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: c.width * 0.035,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  Image.network(s37,
+                                      width: c.width * 0.05,
+                                      height: c.width * 0.05),
+                                  SizedBox(width: c.width * 0.01),
+                                  Text(
+                                    item["likes"].toString(),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  Image.network(s14,
+                                      width: c.width * 0.05,
+                                      height: c.width * 0.05),
+                                  SizedBox(width: c.width * 0.01),
+                                  Text(
+                                    item["vue"].toString(),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  Image.network(s38,
+                                      width: c.width * 0.05,
+                                      height: c.width * 0.05),
+                                  SizedBox(width: c.width * 0.01),
+                                  Text(
+                                    item["comments"].toString(),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Row(
-                          children: [
-                            Image.asset("images/like.png",
-                                width: c.width * 0.05, height: c.width * 0.05),
-                            SizedBox(width: c.width * 0.01),
-                            Text(item["like"]!),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            Image.asset("images/view.png",
-                                width: c.width * 0.05, height: c.width * 0.05),
-                            SizedBox(width: c.width * 0.01),
-                            Text(item["view"]!),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            Image.asset("images/comment.png",
-                                width: c.width * 0.05, height: c.width * 0.05),
-                            SizedBox(width: c.width * 0.01),
-                            Text(item["com"]!),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                    );
+                  }).toList(),
+                ],
               );
-            },
+            }).toList(),
           ),
         ),
         body: SafeArea(
@@ -520,12 +638,10 @@ class _ListenpageState extends State<Listenpage>
                                 left: c.width * 0.03,
                                 child: IconButton(
                                   onPressed: () {
-                                    Navigator.pushNamedAndRemoveUntil(
-                                        context, '/podly', (route) => false,
-                                        arguments: {'selectedIndex': 0});
+                                    Navigator.pop(context);
                                   },
-                                  icon: Image.asset(
-                                    "images/retour.png",
+                                  icon: Image.network(
+                                    s18,
                                     width: c.width * 0.07,
                                     height: c.width * 0.07,
                                   ),
@@ -537,7 +653,7 @@ class _ListenpageState extends State<Listenpage>
                                 child: GestureDetector(
                                   onTap: () =>
                                       Scaffold.of(context).openEndDrawer(),
-                                  child: Image.asset("images/playlist.png",
+                                  child: Image.network(s44,
                                       width: c.width * 0.06,
                                       height: c.width * 0.06),
                                 ),
@@ -606,10 +722,8 @@ class _ListenpageState extends State<Listenpage>
                                           child: Padding(
                                             padding:
                                                 EdgeInsets.all(c.width * 0.02),
-                                            child: Image.asset(
-                                              isLiked
-                                                  ? "images/like.png"
-                                                  : "images/like1.png",
+                                            child: Image.network(
+                                              isLiked ? s37 : s39,
                                               width: c.width * 0.05,
                                               height: c.width * 0.05,
                                               // Désactiver le caching pour forcer le rechargement
@@ -629,10 +743,8 @@ class _ListenpageState extends State<Listenpage>
                                           child: Padding(
                                             padding:
                                                 EdgeInsets.all(c.width * 0.02),
-                                            child: Image.asset(
-                                              isUnliked
-                                                  ? "images/unlik.png"
-                                                  : "images/unlike.png",
+                                            child: Image.network(
+                                              isUnliked ? s40 : s41,
                                               width: c.width * 0.05,
                                               height: c.width * 0.05,
                                               gaplessPlayback: true,
@@ -651,8 +763,8 @@ class _ListenpageState extends State<Listenpage>
                                           child: Padding(
                                             padding:
                                                 EdgeInsets.all(c.width * 0.02),
-                                            child: Image.asset(
-                                              "images/comment.png",
+                                            child: Image.network(
+                                              s38,
                                               width: c.width * 0.05,
                                               height: c.width * 0.05,
                                             ),
@@ -670,10 +782,8 @@ class _ListenpageState extends State<Listenpage>
                                           child: Padding(
                                             padding:
                                                 EdgeInsets.all(c.width * 0.02),
-                                            child: Image.asset(
-                                              isSaved
-                                                  ? "images/sav.png"
-                                                  : "images/save.png",
+                                            child: Image.network(
+                                              isSaved ? s42 : s43,
                                               width: c.width * 0.05,
                                               height: c.width * 0.05,
                                               gaplessPlayback: true,
@@ -694,8 +804,8 @@ class _ListenpageState extends State<Listenpage>
                                           child: Padding(
                                             padding:
                                                 EdgeInsets.all(c.width * 0.02),
-                                            child: Image.asset(
-                                              "images/par.png",
+                                            child: Image.network(
+                                              s45,
                                               width: c.width * 0.05,
                                               height: c.width * 0.05,
                                             ),
@@ -796,8 +906,8 @@ class _ListenpageState extends State<Listenpage>
                                       child: Stack(
                                         alignment: Alignment.center,
                                         children: [
-                                          Image.asset(
-                                            "images/prec.png",
+                                          Image.network(
+                                            s46,
                                             width: c.width *
                                                 0.08, // Adjust size using width/height
                                             height: c.width * 0.08,
@@ -837,8 +947,8 @@ class _ListenpageState extends State<Listenpage>
                                       child: Stack(
                                         alignment: Alignment.center,
                                         children: [
-                                          Image.asset(
-                                            "images/suiv.png",
+                                          Image.network(
+                                            s47,
                                             width: c.width *
                                                 0.08, // Adjust size using width/height
                                             height: c.width * 0.08,

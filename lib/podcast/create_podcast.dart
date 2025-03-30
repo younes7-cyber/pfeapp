@@ -220,6 +220,7 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
         'unlikes': 0,
         'comments': 0,
         'shares': 0,
+        'save':0,
       };
 
       // Ajouter les données dans Firestore

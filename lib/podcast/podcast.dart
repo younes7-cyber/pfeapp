@@ -9,6 +9,19 @@ class Podcastpage extends StatefulWidget {
 
 class _PodcastpageState extends State<Podcastpage>
     with SingleTickerProviderStateMixin {
+  // Récupération de l'ID
+  String? idpod;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final arguments =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+    if (arguments != null) {
+      idpod = arguments['idpod'];
+    }
+  }
+
   final List<Map<String, String>> po = [
     {
       "img": "images/qq.png",
@@ -147,9 +160,7 @@ class _PodcastpageState extends State<Podcastpage>
                         borderRadius: BorderRadius.circular(w.width * 0.05)),
                     child: IconButton(
                       onPressed: () {
-                        Navigator.pushNamedAndRemoveUntil(
-                            context, '/podly', (route) => false,
-                            arguments: {'selectedIndex': 0});
+                        Navigator.pop(context);
                       },
                       icon: Image.asset(
                         "images/retour.png",
@@ -213,7 +224,11 @@ class _PodcastpageState extends State<Podcastpage>
                 right: w.width * 0.03,
                 child: IconButton(
                   onPressed: () {
-                    Navigator.pushNamed(context, '/listen');
+                    Navigator.pushNamed(
+                      context,
+                      '/listen',
+                      arguments: {'idpod': idpod},
+                    );
                   },
                   icon: Image.asset(
                     "images/play1.png",

@@ -161,6 +161,8 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
         'photoUrl': photoUrl, // URL de l'image (ou URL par défaut)
         'createdAt': FieldValue.serverTimestamp(),
         'podcast': 0,
+        'shares': 0,
+        'save': 0,
       };
 
       DocumentReference docRef = await FirebaseFirestore.instance
