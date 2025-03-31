@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'package:pfeapp/constants.dart';
+import 'package:marquee/marquee.dart';
 
 class Listenpage extends StatefulWidget {
   const Listenpage({super.key});
@@ -16,41 +18,18 @@ class _ListenpageState extends State<Listenpage>
     with SingleTickerProviderStateMixin {
   String? idpod;
 
-  bool isLiked = false;
-  bool isUnliked = false;
-  bool isSaved = false;
-  bool _imagesPreCached = false;
   TextEditingController commentController = TextEditingController();
   TextEditingController replyController = TextEditingController();
   String? replyingTo;
   List<Map<String, dynamic>> podcast = [];
   List<Map<String, dynamic>> playlist = [];
   List<Map<String, dynamic>> playinpod = [];
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_imagesPreCached) {
-      _precacheImages();
-      _imagesPreCached = true;
-    }
-
-    final arguments =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-
-    if (arguments != null && arguments.containsKey('idpod')) {
-      setState(() {
-        idpod = arguments['idpod'];
-      });
-
-      // Vérifier que idpod n'est pas null avant d'appeler les fonctions
-      if (idpod != null) {
-        fetchPodcastsById(idpod!);
-        fetchPlaylistsByPodcastId(idpod!);
-      }
-    }
   }
 
-// 1️⃣ Fonction pour récupérer les podcasts filtrés par idpod
   Future<void> fetchPodcastsById(String idpod) async {
     try {
       final querySnapshot = await FirebaseFirestore.instance
@@ -153,39 +132,6 @@ class _ListenpageState extends State<Listenpage>
     } catch (e) {
       debugPrint("Erreur lors du chargement des playlists : $e");
     }
-  }
-
-  void _precacheImages() {
-    precacheImage(NetworkImage(s37), context);
-    precacheImage(NetworkImage(s39), context);
-    precacheImage(NetworkImage(s41), context);
-    precacheImage(NetworkImage(s40), context);
-    precacheImage(NetworkImage(s42), context);
-    precacheImage(NetworkImage(s43), context);
-  }
-
-  void _toggleLike() {
-    setState(() {
-      isLiked = !isLiked;
-      if (isLiked) {
-        isUnliked = false;
-      }
-    });
-  }
-
-  void _toggleUnlike() {
-    setState(() {
-      isUnliked = !isUnliked;
-      if (isUnliked) {
-        isLiked = false;
-      }
-    });
-  }
-
-  void _toggleSave() {
-    setState(() {
-      isSaved = !isSaved;
-    });
   }
 
   final List<Comment> comments = [
@@ -404,6 +350,8 @@ class _ListenpageState extends State<Listenpage>
     );
   }
 
+  bool isLoading = true;
+
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool isPlaying = false;
   String currentTime = "0:00";
@@ -414,6 +362,245 @@ class _ListenpageState extends State<Listenpage>
   void initState() {
     super.initState();
     _initAudioPlayer();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      setState(() => isLoading = true);
+
+      final arguments =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+      if (arguments != null && arguments.containsKey('idpod')) {
+        idpod = arguments['idpod'];
+
+        if (idpod != null) {
+          await fetchPodcastsById(idpod!);
+          await fetchPlaylistsByPodcastId(idpod!);
+        }
+      }
+
+      setState(() => isLoading = false);
+    });
+
+    _fetchLikeStatus();
+    _fetchUnlikeStatus();
+    _fetchsaveStatus();
+  }
+
+  bool isSaved = false;
+  bool isLiked = false;
+  bool isUnliked = false;
+  String likeIcon = s37; // Icône de like par défaut
+  String unlikeIcon = s41; // Icône d'unlike par défaut
+  String saveIcon = s42; // Icône de like par défaut
+  final currentUser = FirebaseAuth.instance.currentUser?.uid;
+  Future<void> _fetchLikeStatus() async {
+    final likeRef = FirebaseFirestore.instance.collection('like');
+    final likeQuery = await likeRef
+        .where('iduser', isEqualTo: currentUser)
+        .where('idpod', isEqualTo: idpod)
+        .get();
+
+    setState(() {
+      isLiked = likeQuery.docs.isNotEmpty;
+      likeIcon = isLiked ? s39 : s37;
+    });
+  }
+
+  Future<void> _fetchsaveStatus() async {
+    final saveRef = FirebaseFirestore.instance.collection('myplaylist');
+    final saveQuery = await saveRef
+        .where('iduser', isEqualTo: currentUser)
+        .where('idpod', isEqualTo: idpod)
+        .get();
+
+    setState(() {
+      isSaved = saveQuery.docs.isNotEmpty;
+      saveIcon = isSaved ? s43 : s42;
+    });
+  }
+
+  Future<void> _fetchUnlikeStatus() async {
+    final unlikeRef = FirebaseFirestore.instance.collection('unlike');
+    final unlikeQuery = await unlikeRef
+        .where('iduser', isEqualTo: currentUser)
+        .where('idpod', isEqualTo: idpod)
+        .get();
+
+    setState(() {
+      isUnliked = unlikeQuery.docs.isNotEmpty;
+      unlikeIcon = isUnliked ? s40 : s41;
+    });
+  }
+
+  void _toggleLike() async {
+    final likeRef = FirebaseFirestore.instance.collection('like');
+    final unlikeRef = FirebaseFirestore.instance.collection('unlike');
+
+    if (!isLiked) {
+      // Ajouter le like
+      await likeRef.add({
+        'iduser': currentUser,
+        'idpod': idpod,
+        'dateCreation': FieldValue.serverTimestamp(),
+      });
+      await FirebaseFirestore.instance
+          .collection('podcasts')
+          .doc(idpod)
+          .update({
+        'likes': FieldValue.increment(1),
+      });
+      setState(() {
+        isLiked = true;
+        likeIcon = s39;
+      });
+
+      // Supprimer l'unlike s'il existe
+      if (isUnliked) {
+        final unlikeQuery = await unlikeRef
+            .where('iduser', isEqualTo: currentUser)
+            .where('idpod', isEqualTo: idpod)
+            .get();
+        for (var doc in unlikeQuery.docs) {
+          await doc.reference.delete();
+          await FirebaseFirestore.instance
+              .collection('podcasts')
+              .doc(idpod)
+              .update({
+            'unlikes': FieldValue.increment(-1),
+          });
+        }
+        setState(() {
+          isUnliked = false;
+          unlikeIcon = s41;
+        });
+      }
+    } else {
+      // Supprimer le like
+      final likeQuery = await likeRef
+          .where('iduser', isEqualTo: currentUser)
+          .where('idpod', isEqualTo: idpod)
+          .get();
+      for (var doc in likeQuery.docs) {
+        await doc.reference.delete();
+        await FirebaseFirestore.instance
+            .collection('podcasts')
+            .doc(idpod)
+            .update({
+          'likes': FieldValue.increment(-1),
+        });
+      }
+      setState(() {
+        isLiked = false;
+        likeIcon = s37;
+      });
+    }
+  }
+
+  void _toggleSave() async {
+    final saveRef = FirebaseFirestore.instance.collection('myplaylist');
+
+    if (!isSaved) {
+      // Ajouter le like
+      await saveRef.add({
+        'iduser': currentUser,
+        'idpod': idpod,
+        'dateCreation': FieldValue.serverTimestamp(),
+      });
+      await FirebaseFirestore.instance
+          .collection('podcasts')
+          .doc(idpod)
+          .update({
+        'save': FieldValue.increment(1),
+      });
+      setState(() {
+        isSaved = true;
+        saveIcon = s43;
+      });
+    } else {
+      // Supprimer le like
+      final saveQuery = await saveRef
+          .where('iduser', isEqualTo: currentUser)
+          .where('idpod', isEqualTo: idpod)
+          .get();
+      for (var doc in saveQuery.docs) {
+        await doc.reference.delete();
+        await FirebaseFirestore.instance
+            .collection('podcasts')
+            .doc(idpod)
+            .update({
+          'save': FieldValue.increment(-1),
+        });
+      }
+      setState(() {
+        isSaved = false;
+        saveIcon = s42;
+      });
+    }
+  }
+
+  void _toggleUnlike() async {
+    final likeRef = FirebaseFirestore.instance.collection('like');
+    final unlikeRef = FirebaseFirestore.instance.collection('unlike');
+
+    if (!isUnliked) {
+      // Ajouter l'unlike
+      await unlikeRef.add({
+        'iduser': currentUser,
+        'idpod': idpod,
+        'dateCreation': FieldValue.serverTimestamp(),
+      });
+      await FirebaseFirestore.instance
+          .collection('podcasts')
+          .doc(idpod)
+          .update({
+        'unlikes': FieldValue.increment(1),
+      });
+      setState(() {
+        isUnliked = true;
+        unlikeIcon = s40;
+      });
+
+      // Supprimer le like s'il existe
+      if (isLiked) {
+        final likeQuery = await likeRef
+            .where('iduser', isEqualTo: currentUser)
+            .where('idpod', isEqualTo: idpod)
+            .get();
+        for (var doc in likeQuery.docs) {
+          await doc.reference.delete();
+          await FirebaseFirestore.instance
+              .collection('podcasts')
+              .doc(idpod)
+              .update({
+            'likes': FieldValue.increment(-1),
+            'dateCreation': FieldValue.serverTimestamp(),
+          });
+        }
+        setState(() {
+          isLiked = false;
+          likeIcon = s37;
+        });
+      }
+    } else {
+      // Supprimer l'unlike
+      final unlikeQuery = await unlikeRef
+          .where('iduser', isEqualTo: currentUser)
+          .where('idpod', isEqualTo: idpod)
+          .get();
+      for (var doc in unlikeQuery.docs) {
+        await doc.reference.delete();
+        await FirebaseFirestore.instance
+            .collection('podcasts')
+            .doc(idpod)
+            .update({
+          'unlikes': FieldValue.increment(-1),
+          'dateCreation': FieldValue.serverTimestamp(),
+        });
+      }
+      setState(() {
+        isUnliked = false;
+        unlikeIcon = s41;
+      });
+    }
   }
 
   Future<void> _initAudioPlayer() async {
@@ -630,23 +817,23 @@ class _ListenpageState extends State<Listenpage>
                     decoration: BoxDecoration(color: Colors.white),
                     child: Column(children: [
                       SizedBox(
-                          height: c.height * 0.2,
-                          child: Stack(
-                            children: [
-                              Positioned(
-                                top: c.height * 0.01,
-                                left: c.width * 0.03,
-                                child: IconButton(
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                  },
-                                  icon: Image.network(
-                                    s18,
-                                    width: c.width * 0.07,
-                                    height: c.width * 0.07,
-                                  ),
+                          height: c.height * 0.15,
+                          child: Stack(children: [
+                            Positioned(
+                              top: c.height * 0.01,
+                              left: c.width * 0.03,
+                              child: IconButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                icon: Image.network(
+                                  s18,
+                                  width: c.width * 0.07,
+                                  height: c.width * 0.07,
                                 ),
                               ),
+                            ),
+                            if (playinpod.any((p) => p["id"] == idpod)) ...[
                               Positioned(
                                 top: c.height * 0.025,
                                 right: c.width * 0.04,
@@ -658,36 +845,85 @@ class _ListenpageState extends State<Listenpage>
                                       height: c.width * 0.06),
                                 ),
                               ),
-                              Positioned(
-                                  top: c.height * 0.04,
-                                  left: c.width * 0.17,
-                                  child: Container(
-                                    width: c.width * 0.7,
-                                    child: Text(
-                                      "Collection Mr Beast 2024",
-                                      style: TextStyle(
-                                        fontSize: c.width * 0.05,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      maxLines: 3,
+                              SizedBox(
+                                height: c.height * 0.2,
+                                child: Stack(children: [
+                                  Positioned(
+                                    top: c.height * 0.04,
+                                    left: c.width * 0.17,
+                                    child: Container(
+                                      width: c.width * 0.7,
+                                      height: c.width *
+                                          0.06, // Définit une hauteur pour éviter les bugs d'affichage
+
+                                      child: isLoading
+                                          ? Center(
+                                              child: Text(
+                                                  "")) // Affiche un loader pendant le chargement
+                                          : Marquee(
+                                              text: playinpod
+                                                  .firstWhere(
+                                                      (p) => p["id"] == idpod,
+                                                      orElse: () => {
+                                                            "playlistIds": []
+                                                          })["playlistIds"]
+                                                  .map((pid) =>
+                                                      playlist.firstWhere(
+                                                          (pl) =>
+                                                              pl["id"] == pid,
+                                                          orElse: () => {
+                                                                "name":
+                                                                    "Inconnue"
+                                                              })["name"])
+                                                  .join(
+                                                      "     •     "), // Séparer par un symbole
+                                              style: TextStyle(
+                                                fontSize: c.width * 0.05,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              scrollAxis: Axis
+                                                  .horizontal, // Faire défiler horizontalement
+                                              blankSpace:
+                                                  50.0, // Espacement avant la répétition
+                                              velocity:
+                                                  30.0, // Vitesse du défilement
+                                              pauseAfterRound: Duration(
+                                                  seconds:
+                                                      1), // Pause après un tour
+                                              startPadding:
+                                                  10.0, // Espace initial
+                                              accelerationDuration: Duration(
+                                                  seconds:
+                                                      1), // Accélération au démarrage
+                                              accelerationCurve: Curves.easeIn,
+                                              decelerationDuration: Duration(
+                                                  milliseconds:
+                                                      500), // Décélération à la fin
+                                              decelerationCurve: Curves.easeOut,
+                                            ),
                                     ),
-                                  )),
-                            ],
-                          )),
+                                  ),
+                                ]),
+                              ),
+                            ]
+                          ])),
                       SizedBox(
                         width: c.width * 0.85,
                         height: c.width * 0.85,
-                        child: Container(
-                          height: c.width * 0.85,
-                          width: c.width * 0.85,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(c.width * 0.04),
-                            image: DecorationImage(
-                              image: AssetImage("images/his.jpg"),
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
+                        child: isLoading
+                            ? Center(child: Text(""))
+                            : Container(
+                                height: c.width * 0.85,
+                                width: c.width * 0.85,
+                                decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(c.width * 0.04),
+                                  image: DecorationImage(
+                                    image: NetworkImage(podcast[0]["urlPhoto"]),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
                       ),
                       SizedBox(
                         height: c.height * 0.2,
@@ -700,14 +936,28 @@ class _ListenpageState extends State<Listenpage>
                                 children: [
                                   Container(
                                     width: c.width * 0.9,
-                                    child: Text(
-                                      "Episode 1 |history Of Algeria",
-                                      style: TextStyle(
-                                        fontSize: c.width * 0.05,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      maxLines: 3,
-                                    ),
+                                    height: c.height * 0.05,
+                                    child: isLoading
+                                        ? Center(child: Text(""))
+                                        : Marquee(
+                                            text: podcast[0]["name"],
+                                            style: TextStyle(
+                                              fontSize: c.width * 0.05,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            scrollAxis: Axis.horizontal,
+                                            blankSpace: 20.0,
+                                            velocity: 30.0,
+                                            pauseAfterRound:
+                                                Duration(seconds: 1),
+                                            startPadding: 10.0,
+                                            accelerationDuration:
+                                                Duration(seconds: 1),
+                                            accelerationCurve: Curves.linear,
+                                            decelerationDuration:
+                                                Duration(seconds: 1),
+                                            decelerationCurve: Curves.easeOut,
+                                          ),
                                   ),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.start,
@@ -723,7 +973,7 @@ class _ListenpageState extends State<Listenpage>
                                             padding:
                                                 EdgeInsets.all(c.width * 0.02),
                                             child: Image.network(
-                                              isLiked ? s37 : s39,
+                                              likeIcon,
                                               width: c.width * 0.05,
                                               height: c.width * 0.05,
                                               // Désactiver le caching pour forcer le rechargement
@@ -744,7 +994,7 @@ class _ListenpageState extends State<Listenpage>
                                             padding:
                                                 EdgeInsets.all(c.width * 0.02),
                                             child: Image.network(
-                                              isUnliked ? s40 : s41,
+                                              unlikeIcon,
                                               width: c.width * 0.05,
                                               height: c.width * 0.05,
                                               gaplessPlayback: true,
@@ -783,7 +1033,7 @@ class _ListenpageState extends State<Listenpage>
                                             padding:
                                                 EdgeInsets.all(c.width * 0.02),
                                             child: Image.network(
-                                              isSaved ? s42 : s43,
+                                              saveIcon,
                                               width: c.width * 0.05,
                                               height: c.width * 0.05,
                                               gaplessPlayback: true,

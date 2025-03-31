@@ -24,6 +24,7 @@ import 'package:pfeapp/profil/stat.dart';
 import 'package:pfeapp/profil/your_chaine.dart';
 import 'package:pfeapp/forgotpass/reset.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pfeapp/homepage/homepage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,7 +51,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  Widget _initialScreen = const LoginPage();
+  Widget _initialScreen = const Homepage();
   @override
   void initState() {
     super.initState();
@@ -84,6 +85,7 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       home: _initialScreen,
       routes: {
+        '/home': (context) => const Homepage(),
         '/SignUp': (context) => const SignUppage(),
         '/LogIn': (context) => const LoginPage(),
         '/complete': (context) => const Completepage(),

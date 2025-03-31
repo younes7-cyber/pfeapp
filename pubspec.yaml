@@ -53,6 +53,7 @@ dependencies:
   flutter_facebook_auth: ^7.1.1
   flutter_secure_storage: ^9.2.4
   shared_preferences: ^2.5.2
+  marquee: ^2.3.0
 
 dev_dependencies:
   flutter_test:
