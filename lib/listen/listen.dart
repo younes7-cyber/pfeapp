@@ -2,8 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'dart:io';
 import 'package:pfeapp/constants.dart';
 import 'package:marquee/marquee.dart';
 
@@ -361,7 +359,7 @@ class _ListenpageState extends State<Listenpage>
   @override
   void initState() {
     super.initState();
-    _initAudioPlayer();
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       setState(() => isLoading = true);
 
@@ -374,6 +372,7 @@ class _ListenpageState extends State<Listenpage>
         if (idpod != null) {
           await fetchPodcastsById(idpod!);
           await fetchPlaylistsByPodcastId(idpod!);
+          _initAudioPlayer();
         }
       }
 
@@ -603,20 +602,13 @@ class _ListenpageState extends State<Listenpage>
     }
   }
 
+  bool hasViewed = false;
   Future<void> _initAudioPlayer() async {
     try {
-      if (await Permission.storage.request().isGranted) {
-        String filePath =
-            "/storage/emulated/0/Telegram/Telegram Files/25 févr. à 19.21​.aac";
-
-        if (await File(filePath).exists()) {
-          await _audioPlayer.setFilePath(filePath);
-          print("Audio file loaded successfully!");
-        } else {
-          print("File not found: $filePath");
-        }
-      } else {
-        print("Storage permission denied.");
+      if (podcast.isNotEmpty && podcast[0]['urlFile'] != null) {
+        String url = podcast[0]['urlFile'];
+        debugPrint("URL du fichier audio : $url");
+        await _audioPlayer.setUrl(url);
       }
 
       _audioPlayer.durationStream.listen((duration) {
@@ -634,6 +626,10 @@ class _ListenpageState extends State<Listenpage>
             currentTime = _formatDuration(position);
             currentPosition = position.inMilliseconds / duration.inMilliseconds;
           });
+          if (currentPosition >= 0.2 && !hasViewed) {
+            hasViewed = true;
+            _registerView();
+          }
         }
       });
 
@@ -644,6 +640,31 @@ class _ListenpageState extends State<Listenpage>
       });
     } catch (e) {
       print('Error loading audio file: $e');
+    }
+  }
+
+  Future _registerView() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null || idpod == null) return;
+
+    final vuesCollection = FirebaseFirestore.instance.collection('vues');
+    final querySnapshot = await vuesCollection
+        .where('userId', isEqualTo: userId)
+        .where('idpod', isEqualTo: idpod)
+        .get();
+
+    if (querySnapshot.docs.isEmpty) {
+      await vuesCollection.add({
+        'userId': userId,
+        'idpod': idpod,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      await FirebaseFirestore.instance
+          .collection('podcasts')
+          .doc(idpod)
+          .update({
+        'vue': FieldValue.increment(1),
+      });
     }
   }
 
@@ -728,81 +749,91 @@ class _ListenpageState extends State<Listenpage>
                       ),
                       width: c.width * 0.95,
                       height: c.width * 0.3,
-                      child: Row(
-                        children: [
-                          SizedBox(width: c.width * 0.02),
-                          Image.network(s48,
-                              width: c.width * 0.07, height: c.width * 0.07),
-                          SizedBox(width: c.width * 0.02),
-                          Container(
-                            height: c.width * 0.2,
-                            width: c.width * 0.18,
-                            decoration: BoxDecoration(
-                              borderRadius:
-                                  BorderRadius.circular(c.width * 0.04),
-                              image: DecorationImage(
-                                image: NetworkImage(item["urlPhoto"]!),
-                                fit: BoxFit.cover,
+                      child: GestureDetector(
+                        onTap: () {
+                          idpod = item["id"];
+                          Navigator.pushReplacementNamed(
+                            context,
+                            '/listen',
+                            arguments: {'idpod': idpod},
+                          );
+                        },
+                        child: Row(
+                          children: [
+                            SizedBox(width: c.width * 0.02),
+                            Image.network(s48,
+                                width: c.width * 0.07, height: c.width * 0.07),
+                            SizedBox(width: c.width * 0.02),
+                            Container(
+                              height: c.width * 0.2,
+                              width: c.width * 0.18,
+                              decoration: BoxDecoration(
+                                borderRadius:
+                                    BorderRadius.circular(c.width * 0.04),
+                                image: DecorationImage(
+                                  image: NetworkImage(item["urlPhoto"]!),
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
-                          ),
-                          SizedBox(width: c.width * 0.02),
-                          Expanded(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item["name"]!,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: c.width * 0.035,
+                            SizedBox(width: c.width * 0.02),
+                            Expanded(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item["name"]!,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: c.width * 0.035,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                                ],
+                              ),
+                            ),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Row(
+                                  children: [
+                                    Image.network(s37,
+                                        width: c.width * 0.05,
+                                        height: c.width * 0.05),
+                                    SizedBox(width: c.width * 0.01),
+                                    Text(
+                                      item["likes"].toString(),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    Image.network(s14,
+                                        width: c.width * 0.05,
+                                        height: c.width * 0.05),
+                                    SizedBox(width: c.width * 0.01),
+                                    Text(
+                                      item["vue"].toString(),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    Image.network(s38,
+                                        width: c.width * 0.05,
+                                        height: c.width * 0.05),
+                                    SizedBox(width: c.width * 0.01),
+                                    Text(
+                                      item["comments"].toString(),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Row(
-                                children: [
-                                  Image.network(s37,
-                                      width: c.width * 0.05,
-                                      height: c.width * 0.05),
-                                  SizedBox(width: c.width * 0.01),
-                                  Text(
-                                    item["likes"].toString(),
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Image.network(s14,
-                                      width: c.width * 0.05,
-                                      height: c.width * 0.05),
-                                  SizedBox(width: c.width * 0.01),
-                                  Text(
-                                    item["vue"].toString(),
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Image.network(s38,
-                                      width: c.width * 0.05,
-                                      height: c.width * 0.05),
-                                  SizedBox(width: c.width * 0.01),
-                                  Text(
-                                    item["comments"].toString(),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   }).toList(),
@@ -926,7 +957,7 @@ class _ListenpageState extends State<Listenpage>
                               ),
                       ),
                       SizedBox(
-                        height: c.height * 0.2,
+                        height: c.height * 0.15,
                         child: Stack(
                           children: [
                             Positioned(
@@ -1150,7 +1181,7 @@ class _ListenpageState extends State<Listenpage>
                                   color: Colors.transparent,
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(30),
-                                    onTap: _skipForward,
+                                    onTap: () {},
                                     child: Container(
                                       padding: EdgeInsets.all(c.width * 0.02),
                                       child: Stack(
@@ -1191,7 +1222,7 @@ class _ListenpageState extends State<Listenpage>
                                   color: Colors.transparent,
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(30),
-                                    onTap: _skipForward,
+                                    onTap: () {},
                                     child: Container(
                                       padding: EdgeInsets.all(c.width * 0.02),
                                       child: Stack(
