@@ -20,6 +20,18 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  late int CH;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)!.settings.arguments;
+    if (args is int) {
+      CH = args;
+    } else {
+      CH = 0; // Valeur par défaut si aucun argument n'est passé
+    }
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -123,6 +135,8 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
         'userId': currentUser.uid,
         'name': channelName,
         'photoUrl': photoUrl, // URL de l'image (ou URL par défaut)
+        'followers': 0,
+        'following': 0,
         'createdAt': FieldValue.serverTimestamp(),
       };
 
@@ -157,9 +171,7 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
                 top: screenSize.height * 0.01,
                 left: screenSize.width * 0.03,
                 child: IconButton(
-                  onPressed: () => Navigator.pushNamedAndRemoveUntil(
-                      context, '/podly', (route) => false,
-                      arguments: {'selectedIndex': 2}),
+                  onPressed: () => Navigator.pop(context),
                   icon: Image.network(
                     s18,
                     width: screenSize.width * 0.07,

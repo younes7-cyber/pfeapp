@@ -142,6 +142,7 @@ class _PodlypageState extends State<Podlypage> {
 
   late int y = 1;
   late int o = 1;
+  late int ch = 1;
   void _showBottomSheet() {
     showModalBottomSheet(
       backgroundColor: Colors.white,
@@ -159,7 +160,7 @@ class _PodlypageState extends State<Podlypage> {
                 leading: Image.asset("images/cha.png", width: 25, height: 25),
                 title: Text("Create Channel"),
                 onTap: () {
-                  Navigator.pushNamed(context, '/ch');
+                  Navigator.pushNamed(context, '/ch', arguments: 2);
                   // Ajouter navigation ou logique ici
                 },
               ),

@@ -1,7 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pfeapp/constants.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+//import 'package:http/http.dart' as http;
 
 class YourChainepage extends StatefulWidget {
   const YourChainepage({super.key});
@@ -11,7 +17,9 @@ class YourChainepage extends StatefulWidget {
 
 class _YourChainepageState extends State<YourChainepage>
     with SingleTickerProviderStateMixin {
+  late int s = 0;
   bool hasError = false;
+  List<Map<String, dynamic>> user = [];
   List<Map<String, dynamic>> channels = [];
   List<Map<String, dynamic>> podcast = [];
   List<Map<String, dynamic>> playlist = [];
@@ -24,6 +32,112 @@ class _YourChainepageState extends State<YourChainepage>
     fetchChannels();
     fetchpodcasts();
     fetchplaylists();
+    fetchuser();
+  }
+
+  final supabase = Supabase.instance.client;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  Future<bool> _requestStoragePermission() async {
+    final status = await Permission.storage.request();
+    return status.isGranted;
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    final String userId = FirebaseAuth.instance.currentUser?.uid ?? "";
+    if (userId.isEmpty) {
+      print("Utilisateur non connecté.");
+      return;
+    }
+
+    if (await _requestStoragePermission()) {
+      try {
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          allowCompression: true,
+        );
+
+        if (result != null && result.files.isNotEmpty) {
+          File selectedImageFile = File(result.files.single.path!);
+
+          QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+              .collection('channels')
+              .where('userId', isEqualTo: userId)
+              .get();
+
+          if (querySnapshot.docs.isEmpty) {
+            print("❌ Erreur : Aucun document trouvé pour cet utilisateur.");
+            return;
+          }
+
+          DocumentSnapshot channelDoc = querySnapshot.docs.first;
+          /*  String? currentPhotoUrl = channelDoc.get('photoUrl');
+          if (currentPhotoUrl != null && currentPhotoUrl.isNotEmpty) {
+            try {
+              print("🔍 URL actuelle de la photo : $currentPhotoUrl");
+
+              // Extraire le chemin du fichier
+              String fileName = currentPhotoUrl.split('/').last;
+              String filePath = 'channel/$fileName';
+
+              print("📄 Chemin complet du fichier : $filePath");
+
+              try {
+                // Utiliser le SDK Supabase avec anon key ou service key
+                // Ces clés doivent être configurées lors de l'initialisation de Supabase
+                final response =
+                    await supabase.storage.from('pfeapp').remove([filePath]);
+
+                print("📊 Réponse Supabase: $response");
+              } catch (e) {
+                print("⚠️ Erreur Supabase : $e");
+
+                // Tentative alternative : appel HTTP avec clé API Supabase
+                try {
+                  // Remplacer par votre clé anon ou service_role de Supabase
+                  final supabaseApiKey =
+                      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pZ3dicWJ0Znpzem9wdmhkenJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5MjI3OTgsImV4cCI6MjA1NzQ5ODc5OH0.78NEfAWjrlWsjo_l9ZBLuKzNv13ikUWCBqE0DyCeZSA';
+
+                  final response = await http.delete(
+                    Uri.parse(
+                        'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/pfeapp/$filePath'),
+                    headers: {
+                      'apikey': supabaseApiKey,
+                      'Content-Type': 'application/json',
+                    },
+                  );
+
+                  print("🔄 Status HTTP: ${response.statusCode}");
+                  print("🔄 Corps HTTP: ${response.body}");
+                } catch (httpError) {
+                  print("❌ Erreur HTTP : $httpError");
+                }
+              }
+            } catch (e) {
+              print("❌ Erreur générale : $e");
+            }
+          }*/ // ⏳ **Étape 2 : Pause rapide pour éviter les conflits (optionnel)**
+          await Future.delayed(Duration(milliseconds: 500));
+
+          // 📤 **Étape 3 : Télécharger la nouvelle image**
+          final filePath =
+              'channel/$userId-${DateTime.now().millisecondsSinceEpoch}.jpg';
+          await supabase.storage
+              .from('pfeapp')
+              .upload(filePath, selectedImageFile);
+
+          // 🔗 **Étape 4 : Obtenir l'URL publique**
+          final newPhotoUrl =
+              supabase.storage.from('pfeapp').getPublicUrl(filePath);
+
+          // 📝 **Étape 5 : Mettre à jour Firestore avec la nouvelle URL**
+          await channelDoc.reference.update({'photoUrl': newPhotoUrl});
+
+          print("✅ Nouvelle photo enregistrée : $newPhotoUrl");
+        }
+      } catch (e) {
+        print("❌ Erreur lors de l'importation de l'image : $e");
+      }
+    }
   }
 
   Future<void> fetchChannels() async {
@@ -52,6 +166,32 @@ class _YourChainepageState extends State<YourChainepage>
     }
   }
 
+  Future<void> fetchuser() async {
+    try {
+      final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('userId', isEqualTo: currentUserId)
+          .get();
+
+      // Ajout des logs pour déboguer
+      debugPrint('Nombre de chaînes trouvées : ${querySnapshot.docs.length}');
+      debugPrint(
+          'Données des chaînes : ${querySnapshot.docs.map((doc) => doc.data()).toList()}');
+
+      setState(() {
+        user = querySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des chaînes : $e');
+      setState(() {
+        hasError = true;
+      });
+    }
+  }
+
   Future<void> fetchpodcasts() async {
     try {
       final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
@@ -69,9 +209,10 @@ class _YourChainepageState extends State<YourChainepage>
         podcast = querySnapshot.docs
             .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
+        s = podcast.fold(0, (sum, item) => sum + (item["likes"] ?? 0) as int);
       });
     } catch (e) {
-      debugPrint('Erreur lors de la récupération des chaînes : $e');
+      debugPrint('Erreur lors de la récupération des podcast : $e');
       setState(() {
         hasError = true;
       });
@@ -114,6 +255,7 @@ class _YourChainepageState extends State<YourChainepage>
   late int q = 1;
   late int y = 1;
   late int o = 1;
+  late int CH = 1;
   @override
   Widget build(BuildContext context) {
     final Size v = MediaQuery.of(context).size;
@@ -137,39 +279,71 @@ class _YourChainepageState extends State<YourChainepage>
                   child: Column(children: [
                     SizedBox(
                       height: v.height * 0.15,
-                    ),
-                    SizedBox(
-                      height: v.height * 0.3,
-                      width: v.width * 0.7,
-                      child: Container(
-                        child: Image.network(
-                          s27,
-                          fit: BoxFit.fill,
-                        ),
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            top: v.height * 0.02,
+                            left: v.width * 0.05,
+                            child: IconButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                icon: Image.network(
+                                  s18,
+                                  width: v.width * 0.07,
+                                  height: v.width * 0.07,
+                                )),
+                          )
+                        ],
                       ),
                     ),
+                    SizedBox(
+                        height: v.height * 0.4,
+                        width: v.width * 0.7,
+                        child: Column(
+                          children: [
+                            Container(
+                              height: v.height * 0.3,
+                              width: v.width * 0.8,
+                              child: Image.network(
+                                s27,
+                                fit: BoxFit.fill,
+                              ),
+                            ),
+                            Text(
+                              "There Is Not Channel Yet. You Must Create It",
+                              style: TextStyle(
+                                  fontSize: v.width * 0.04,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        )),
                     SizedBox(
                       height: v.height * 0.1,
                     ),
-                    Container(
+                    SizedBox(
                       height: v.height * 0.075,
                       width: v.width * 0.6,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF754CEF),
-                        borderRadius: BorderRadius.circular(v.width * 0.05),
-                      ),
-                      child: MaterialButton(
-                        onPressed: () {
-                          Navigator.pushNamedAndRemoveUntil(
-                            context,
-                            '/ch',
-                            (route) => false,
-                          );
-                        },
-                        child: Text(
-                          "Create",
-                          style: TextStyle(
-                              color: Colors.white, fontSize: v.width * 0.042),
+                      child: Container(
+                        height: v.height * 0.075,
+                        width: v.width * 0.6,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF754CEF),
+                          borderRadius: BorderRadius.circular(v.width * 0.05),
+                        ),
+                        child: MaterialButton(
+                          onPressed: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/ch',
+                              arguments: 3,
+                            );
+                          },
+                          child: Text(
+                            "Create",
+                            style: TextStyle(
+                                color: Colors.white, fontSize: v.width * 0.042),
+                          ),
                         ),
                       ),
                     ),
@@ -257,7 +431,7 @@ class _YourChainepageState extends State<YourChainepage>
                           height: v.height * 0.1,
                           // decoration: BoxDecoration(color: Colors.black),
                           child: Text(
-                            "younes benslimane",
+                            channels[0]["name"],
                             style: TextStyle(
                                 fontSize: v.width * 0.06,
                                 fontWeight: FontWeight.bold),
@@ -279,8 +453,8 @@ class _YourChainepageState extends State<YourChainepage>
                         decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(v.width * 0.2)),
                         child: ClipOval(
-                          child: Image.asset(
-                            "images/person.jpg",
+                          child: Image.network(
+                            channels[0]["photoUrl"],
                             fit: BoxFit.cover,
                           ),
                         ),
@@ -299,12 +473,15 @@ class _YourChainepageState extends State<YourChainepage>
                       top: v.height * 0.121,
                       left: v.width * 0.56,
                       child: Container(
-                        width: v.width * 0.07,
-                        height: v.width * 0.07,
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(v.width * 0.2)),
-                        child: Image.network(s26),
-                      )),
+                          width: v.width * 0.07,
+                          height: v.width * 0.07,
+                          decoration: BoxDecoration(
+                              borderRadius:
+                                  BorderRadius.circular(v.width * 0.2)),
+                          child: GestureDetector(
+                            onTap: _pickAndUploadImage,
+                            child: Image.network(s26),
+                          ))),
                   Positioned(
                       top: v.height * 0.25,
                       left: v.width * 0.07,
@@ -325,7 +502,7 @@ class _YourChainepageState extends State<YourChainepage>
                 child: Stack(children: [
               Positioned(
                 child: Text(
-                  "natalia1000@gmail.com",
+                  user[0]["email"],
                   style: TextStyle(
                       fontWeight: FontWeight.w400, color: Colors.grey),
                 ),
@@ -344,7 +521,7 @@ class _YourChainepageState extends State<YourChainepage>
                   Column(
                     children: [
                       Text(
-                        "111",
+                        channels[0]["following"].toString(),
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: v.width * 0.04),
@@ -361,7 +538,7 @@ class _YourChainepageState extends State<YourChainepage>
                   Column(
                     children: [
                       Text(
-                        "1k",
+                        channels[0]["followers"].toString(),
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: v.width * 0.04),
@@ -378,7 +555,7 @@ class _YourChainepageState extends State<YourChainepage>
                   Column(
                     children: [
                       Text(
-                        "246k",
+                        s.toString(),
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: v.width * 0.04),
@@ -395,7 +572,7 @@ class _YourChainepageState extends State<YourChainepage>
             SizedBox(height: v.width * 0.05),
             SizedBox(
               height: v.height * 0.07,
-              width: v.width * 0.75,
+              width: v.width,
               child: Row(
                 // Remplacer Stack et Positioned par une simple Row
                 children: [
@@ -408,18 +585,19 @@ class _YourChainepageState extends State<YourChainepage>
                       },
                       child: Row(
                         children: [
-                          SizedBox(width: v.width * 0.01), // Marge à gauche
+                          SizedBox(width: v.width * 0.08), // Marge à gauche
+
                           Image.network(s30,
                               width: v.width * 0.06, height: v.width * 0.06),
                           SizedBox(
                               width: v.width *
-                                  0.02), // Espace entre l'image et le texte
+                                  0.03), // Espace entre l'image et le texte
                           Text("Upload Podcast"),
                         ],
                       ),
                     ),
                   ),
-
+                  SizedBox(width: v.width * 0.03),
                   // Deuxième élément (Create Playlist)
                   Expanded(
                     child: InkWell(
@@ -433,7 +611,7 @@ class _YourChainepageState extends State<YourChainepage>
                               width: v.width * 0.06, height: v.width * 0.06),
                           SizedBox(
                               width: v.width *
-                                  0.02), // Espace entre l'image et le texte
+                                  0.03), // Espace entre l'image et le texte
                           Text("Create Playlist"),
                         ],
                       ),

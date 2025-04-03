@@ -8,6 +8,8 @@ import 'dart:io';
 import 'package:drop_down_list/drop_down_list.dart';
 import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:pfeapp/constants.dart';
+import 'package:nyx_converter/nyx_converter.dart';
+import 'package:path_provider/path_provider.dart';
 
 class Createpodcastpage extends StatefulWidget {
   const Createpodcastpage({super.key});
@@ -127,40 +129,132 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
     }
   }
 
-  Future<String> _uploadFileToSupabase(String path, String folder) async {
+  Future<String> _uploadFileToSupabase(String path, String folder,
+      {bool isAudio = false}) async {
     if (path.isEmpty) {
       debugPrint("No file selected for upload.");
-      return ''; // Retourne une chaîne vide si aucun fichier n'est fourni
+      return '';
     }
 
     try {
-      // Générer un nom unique pour le fichier
       final userId = FirebaseAuth.instance.currentUser?.uid ??
           DateTime.now().millisecondsSinceEpoch.toString();
-      final fileName =
-          '$folder/${userId}_${DateTime.now().millisecondsSinceEpoch}_${path.split('/').last}';
-      final file = File(path);
 
-      // Téléverser le fichier sur Supabase
-      await Supabase.instance.client.storage
-          .from('pfeapp')
-          .upload(fileName, file);
+      String filePath = path;
+      String fileName = path.split('/').last;
+      String fileExtension = fileName.split('.').last.toLowerCase();
 
-      // Récupérer l'URL publique
-      final publicUrl = Supabase.instance.client.storage
-          .from('pfeapp')
-          .getPublicUrl(fileName);
+      // For audio files, check and convert to MP3 if needed
+      if (isAudio) {
+        if (fileExtension != 'mp3') {
+          debugPrint("Converting audio file to MP3 format: $filePath");
 
-      if (publicUrl.isNotEmpty) {
-        debugPrint('File uploaded successfully: $publicUrl');
-        return publicUrl; // Retourner l'URL publique si disponible
+          try {
+            // Create a sanitized filename without special characters
+            final timestamp = DateTime.now().millisecondsSinceEpoch;
+            final sanitizedFileName = 'audio_$timestamp.mp3';
+
+            // Get temp directory for storing the converted file
+            final tempDir = await getTemporaryDirectory();
+
+            // Make sure temp directory exists
+            if (!await Directory(tempDir.path).exists()) {
+              await Directory(tempDir.path).create(recursive: true);
+            }
+
+            final outputPath = '${tempDir.path}/$sanitizedFileName';
+
+            // Convert the audio to MP3 using NyxConverter
+            final converter = NyxConverter;
+            final conversionResult = await converter.convertTo(
+              filePath,
+              outputPath,
+              container: NyxContainer.mp3,
+            );
+
+            if (conversionResult) {
+              debugPrint("✅ Conversion successful: $outputPath");
+              filePath = outputPath;
+              fileName = sanitizedFileName;
+              fileExtension = 'mp3';
+            } else {
+              debugPrint(
+                  "❌ Conversion failed. Will try to upload original file.");
+            }
+          } catch (e) {
+            debugPrint("❌ Error during audio conversion: $e");
+            // Continue with original file if conversion fails but sanitize the filename
+          }
+        }
+
+        // Create a sanitized filename with no special characters for Supabase
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final sanitizedFileName = 'audio_${userId}_$timestamp.$fileExtension'
+            .replaceAll(RegExp(r'[^a-zA-Z0-9._]'), '_');
+        final finalFileName = '$folder/$sanitizedFileName';
+
+        final file = File(filePath);
+
+        if (await file.exists()) {
+          debugPrint("✅ File exists and ready for upload: $filePath");
+
+          // Read file as bytes
+          final fileBytes = await file.readAsBytes();
+
+          // Upload to Supabase
+          await Supabase.instance.client.storage
+              .from('pfeapp')
+              .uploadBinary(finalFileName, fileBytes);
+
+          // Get public URL
+          final publicUrl = Supabase.instance.client.storage
+              .from('pfeapp')
+              .getPublicUrl(finalFileName);
+
+          if (publicUrl.isNotEmpty) {
+            debugPrint('✅ File uploaded successfully: $publicUrl');
+            return publicUrl;
+          } else {
+            debugPrint('⚠️ Failed to get public URL.');
+            return '';
+          }
+        } else {
+          debugPrint('❌ File does not exist: $filePath');
+          return '';
+        }
       } else {
-        debugPrint('Failed to generate public URL for the file.');
-        return ''; // Retourner une chaîne vide si l'URL publique ne peut être générée
+        // For images or other files - also sanitize filenames
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final sanitizedFileName = 'image_${userId}_$timestamp.$fileExtension'
+            .replaceAll(RegExp(r'[^a-zA-Z0-9._]'), '_');
+        final finalFileName = '$folder/$sanitizedFileName';
+
+        final file = File(filePath);
+
+        if (await file.exists()) {
+          await Supabase.instance.client.storage
+              .from('pfeapp')
+              .upload(finalFileName, file);
+
+          final publicUrl = Supabase.instance.client.storage
+              .from('pfeapp')
+              .getPublicUrl(finalFileName);
+
+          if (publicUrl.isNotEmpty) {
+            debugPrint('✅ File uploaded successfully: $publicUrl');
+            return publicUrl;
+          } else {
+            debugPrint('⚠️ Failed to get public URL.');
+            return '';
+          }
+        } else {
+          debugPrint('❌ File does not exist: $filePath');
+          return '';
+        }
       }
     } catch (e) {
-      debugPrint('Error uploading file to Supabase: $e');
-      return ''; // Retourner une chaîne vide en cas d'erreur
+      debugPrint('❌ Error during Supabase upload: $e');
+      return '';
     }
   }
 
@@ -190,12 +284,16 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
       final photoUrl = _selectedImagePath != null
           ? await _uploadFileToSupabase(_selectedImagePath!, 'podcast/photo')
           : 'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/ano.jpg';
-
-      // Téléverser le fichier audio
+// Téléverser le fichier audio (converti en MP3 si nécessaire)
       final audioUrl = await _uploadFileToSupabase(
         _selectedAudioPath!,
         'podcast/audio',
+        isAudio: true, // 🔥 Indique que c'est un fichier audio
       );
+
+      debugPrint('Audio file path: $_selectedAudioPath');
+      debugPrint(
+          'Audio file extension: ${_selectedAudioPath!.split('.').last}');
 
       // Vérifier si le téléversement audio a échoué
       if (audioUrl.isEmpty) {
@@ -220,7 +318,7 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
         'unlikes': 0,
         'comments': 0,
         'shares': 0,
-        'save':0,
+        'save': 0,
       };
 
       // Ajouter les données dans Firestore
