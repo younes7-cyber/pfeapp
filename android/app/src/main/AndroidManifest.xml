@@ -1,4 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.example.pfeapp">
     <!-- Ajout des permissions nécessaires -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
@@ -6,9 +6,6 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
     <uses-permission android:name="android.permission.INTERNET" />
-    <queries>
-    <provider  android:authorities="com.facebook.katana.provider.PlatformProvider"   />
-    </queries>
     <application
         android:label="pfeapp"
         android:name="${applicationName}"
@@ -66,6 +63,7 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+       <provider  android:authorities="com.facebook.katana.provider.PlatformProvider"   />
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
