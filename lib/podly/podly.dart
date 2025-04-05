@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -14,6 +15,30 @@ class _PodlypageState extends State<Podlypage> {
     await FirebaseAuth.instance.signOut();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('email'); // Supprime l'utilisateur sauvegardé
+  }
+
+  List<Map<String, dynamic>> user = [];
+  Future<void> fetchuser() async {
+    try {
+      final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('userId', isEqualTo: currentUserId)
+          .get();
+
+      // Ajout des logs pour déboguer
+      debugPrint('Nombre de chaînes trouvées : ${querySnapshot.docs.length}');
+      debugPrint(
+          'Données des chaînes : ${querySnapshot.docs.map((doc) => doc.data()).toList()}');
+
+      setState(() {
+        user = querySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des chaînes : $e');
+    }
   }
 
   final List<Map<String, String>> po = [
@@ -114,6 +139,7 @@ class _PodlypageState extends State<Podlypage> {
   @override
   void initState() {
     super.initState();
+    fetchuser();
     // Ajouter un listener pour détecter les changements de scroll
     _pageController.addListener(() {
       int next = _pageController.page!.round();
@@ -1322,7 +1348,6 @@ class _PodlypageState extends State<Podlypage> {
             ],
           ),
         );
-
       case 4:
         return Stack(
             fit: StackFit
@@ -1361,8 +1386,8 @@ class _PodlypageState extends State<Podlypage> {
                     shape: BoxShape.circle,
                   ),
                   child: ClipOval(
-                    child: Image.asset(
-                      "images/person.jpg",
+                    child: Image.network(
+                      user[0]['photoUrl'],
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -1371,18 +1396,30 @@ class _PodlypageState extends State<Podlypage> {
               Positioned(
                   top: x.height * 0.11,
                   left: x.width * 0.25,
-                  child: Text(
-                    "younes benslimane",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: x.width * 0.04),
+                  child: Row(
+                    children: [
+                      Text(
+                        user[0]['firstName'],
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: x.width * 0.04),
+                      ),
+                      Text(" "),
+                      Text(
+                        user[0]['lastName'],
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: x.width * 0.04),
+                      )
+                    ],
                   )),
               Positioned(
                   top: x.height * 0.14,
                   left: x.width * 0.25,
                   child: Text(
-                    "younesbens3100@gmail.com",
+                    user[0]['email'],
                     style: TextStyle(
                         color: Colors.white,
                         // fontWeight: FontWeight.bold,

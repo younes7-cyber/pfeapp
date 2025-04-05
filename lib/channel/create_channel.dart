@@ -141,8 +141,8 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
       };
 
       final docRef = await _firestore.collection('channels').add(channelData);
-      final channelId = docRef.id; // Récupérer l'ID généré par Firestore
-      print("Channel created with ID: $channelId");
+      await docRef
+          .update({'id': docRef.id}); // Récupérer l'ID généré par Firestore
 
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(context, '/podly', (route) => false,
