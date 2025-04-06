@@ -816,77 +816,77 @@ class _PodcastpageState extends State<Podcastpage>
                           SizedBox(
                             width: w.width * 0.01,
                           ),
-                          if (isYourPodcast == false) ...[
-                            Positioned(
-                              top: w.height * 0.62,
-                              right: w.width * 0.01,
-                              child: SizedBox(
-                                height: w.height * 0.05,
-                                width: w.width * 0.32,
-                                child: MaterialButton(
-                                  onPressed:
-                                      toggleFollow, // Utiliser la fonction toggleFollow
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 300),
-                                    height: w.height * 0.05,
-                                    width: w.width * 0.3,
-                                    decoration: BoxDecoration(
-                                      color: isFollowing
-                                          ? Colors.white
-                                          : const Color(0xFF754CEF),
-                                      borderRadius: BorderRadius.all(
-                                        Radius.circular(w.width * 0.05),
-                                      ),
-                                      border: isFollowing
-                                          ? Border.all(
-                                              color: const Color(0xFF754CEF))
-                                          : null,
+                          //     if (isYourPodcast == false) ...[
+                          Positioned(
+                            top: w.height * 0.62,
+                            right: w.width * 0.01,
+                            child: SizedBox(
+                              height: w.height * 0.05,
+                              width: w.width * 0.32,
+                              child: MaterialButton(
+                                onPressed:
+                                    toggleFollow, // Utiliser la fonction toggleFollow
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  height: w.height * 0.05,
+                                  width: w.width * 0.3,
+                                  decoration: BoxDecoration(
+                                    color: isFollowing
+                                        ? Colors.white
+                                        : const Color(0xFF754CEF),
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(w.width * 0.05),
                                     ),
-                                    child: Stack(
-                                      children: [
-                                        if (!isFollowing)
-                                          Positioned(
-                                            top: w.height * 0.014,
-                                            left: w.width *
-                                                0.03, // Centrer un peu plus
-                                            child: Text(
-                                              "Follow Now",
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: w.width * 0.035,
+                                    border: isFollowing
+                                        ? Border.all(
+                                            color: const Color(0xFF754CEF))
+                                        : null,
+                                  ),
+                                  child: Stack(
+                                    children: [
+                                      if (!isFollowing)
+                                        Positioned(
+                                          top: w.height * 0.014,
+                                          left: w.width *
+                                              0.03, // Centrer un peu plus
+                                          child: Text(
+                                            "Follow Now",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: w.width * 0.035,
+                                            ),
+                                          ),
+                                        ),
+                                      if (isFollowing)
+                                        Positioned(
+                                          top: w.height * 0.014,
+                                          left: w.width * 0.012,
+                                          child: Row(
+                                            children: [
+                                              Image.network(
+                                                s51,
+                                                width: w.width * 0.05,
+                                                height: w.width * 0.05,
                                               ),
-                                            ),
-                                          ),
-                                        if (isFollowing)
-                                          Positioned(
-                                            top: w.height * 0.014,
-                                            left: w.width * 0.012,
-                                            child: Row(
-                                              children: [
-                                                Image.network(
-                                                  s51,
-                                                  width: w.width * 0.05,
-                                                  height: w.width * 0.05,
+                                              SizedBox(width: w.width * 0.01),
+                                              Text(
+                                                "Following",
+                                                style: TextStyle(
+                                                  color:
+                                                      const Color(0xFF754CEF),
+                                                  fontSize: w.width * 0.03,
                                                 ),
-                                                SizedBox(width: w.width * 0.01),
-                                                Text(
-                                                  "Following",
-                                                  style: TextStyle(
-                                                    color:
-                                                        const Color(0xFF754CEF),
-                                                    fontSize: w.width * 0.03,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                              ),
+                                            ],
                                           ),
-                                      ],
-                                    ),
+                                        ),
+                                    ],
                                   ),
                                 ),
                               ),
-                            )
-                          ],
+                            ),
+                          )
+                          // ],
                         ])),
                     Positioned(
                       top: w.height * 0.71,

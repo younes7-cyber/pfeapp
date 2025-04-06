@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:pfeapp/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -17,7 +19,294 @@ class _PodlypageState extends State<Podlypage> {
     await prefs.remove('email'); // Supprime l'utilisateur sauvegardé
   }
 
+  List<Map<String, dynamic>> mesplaylist = [];
+  Future<void> fetchmesPlaylistsId() async {
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+
+    try {
+      // 1️⃣ Récupérer les `playlistId` associés au `idpod`
+      final playinPodSnapshot = await FirebaseFirestore.instance
+          .collection('mesplaylist')
+          .orderBy('dateCreation', descending: true)
+          .where('iduser', isEqualTo: currentUserId)
+          .get();
+
+      // Extraire la liste des playlistIds
+      List<String> playlistIds = [];
+      for (var doc in playinPodSnapshot.docs) {
+        String playlistId = doc.data()['idplay'];
+        if (!playlistIds.contains(playlistId)) {
+          playlistIds.add(playlistId);
+        }
+      }
+
+      if (playlistIds.isNotEmpty) {
+        // 2️⃣ Récupérer les playlists correspondant aux playlistIds
+        // Note: Firestore ne permet pas d'utiliser 'where in' avec plus de 10 éléments
+        // Donc nous divisons en groupes si nécessaire
+        List<Map<String, dynamic>> allPlaylists = [];
+
+        // Traiter par groupes de 10 maximum
+        for (int i = 0; i < playlistIds.length; i += 10) {
+          int end = (i + 10 < playlistIds.length) ? i + 10 : playlistIds.length;
+          List<String> batch = playlistIds.sublist(i, end);
+
+          final playlistsSnapshot = await FirebaseFirestore.instance
+              .collection('playlist')
+              //.orderBy('createdAt', descending: true)
+              .where('id', whereIn: batch)
+              .get();
+
+          for (var doc in playlistsSnapshot.docs) {
+            allPlaylists.add(doc.data() as Map<String, dynamic>);
+          }
+        }
+
+        setState(() {
+          // Stocker les playlists récupérées
+          mesplaylist = allPlaylists;
+        });
+
+        debugPrint("Playlists récupérées: ${mesplaylist.length}");
+      } else {
+        setState(() {
+          mesplaylist = [];
+        });
+        debugPrint("Aucune playlist trouvée pour ce podcast");
+      }
+    } catch (e) {
+      debugPrint("Erreur lors de la récupération des playlists: $e");
+      setState(() {
+        mesplaylist = [];
+      });
+    }
+  }
+
+  Future<void> fetrecentId() async {
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+
+    try {
+      // 1️⃣ Récupérer les `playlistId` associés au `idpod`
+      final playinPodSnapshot = await FirebaseFirestore.instance
+          .collection('vues')
+          .where('userId', isEqualTo: currentUserId)
+          .get();
+
+      // Extraire la liste des playlistIds
+      List<String> playlistIds = [];
+      for (var doc in playinPodSnapshot.docs) {
+        String playlistId = doc.data()['idpod'];
+        if (!playlistIds.contains(playlistId)) {
+          playlistIds.add(playlistId);
+        }
+      }
+
+      if (playlistIds.isNotEmpty) {
+        // 2️⃣ Récupérer les playlists correspondant aux playlistIds
+        // Note: Firestore ne permet pas d'utiliser 'where in' avec plus de 10 éléments
+        // Donc nous divisons en groupes si nécessaire
+        List<Map<String, dynamic>> allPlaylists = [];
+
+        // Traiter par groupes de 10 maximum
+        for (int i = 0; i < playlistIds.length; i += 10) {
+          int end = (i + 10 < playlistIds.length) ? i + 10 : playlistIds.length;
+          List<String> batch = playlistIds.sublist(i, end);
+
+          final playlistsSnapshot = await FirebaseFirestore.instance
+              .collection('podcasts')
+              .orderBy('dateCreation', descending: true)
+              .where('id', whereIn: batch)
+              .get();
+
+          for (var doc in playlistsSnapshot.docs) {
+            allPlaylists.add(doc.data() as Map<String, dynamic>);
+          }
+        }
+
+        setState(() {
+          // Stocker les playlists récupérées
+          res = allPlaylists;
+        });
+
+        debugPrint("Playlists récupérées: ${mesplaylist.length}");
+      } else {
+        setState(() {
+          res = [];
+        });
+        debugPrint("Aucune playlist trouvée pour ce podcast");
+      }
+    } catch (e) {
+      debugPrint("Erreur lors de la récupération des playlists: $e");
+      setState(() {
+        res = [];
+      });
+    }
+  }
+
+  Future<void> fetchtopChannel() async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('channels')
+          .orderBy("followers")
+          .get();
+
+      // Ajout des logs pour déboguer
+      debugPrint('Nombre de chaînes trouvées : ${querySnapshot.docs.length}');
+      debugPrint(
+          'Données des chaînes : ${querySnapshot.docs.map((doc) => doc.data()).toList()}');
+
+      setState(() {
+        topcha = querySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des chaînes : $e');
+      setState(() {});
+    }
+  }
+
+  Future<void> fetchtoppodcast() async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('podcasts')
+          .orderBy("likes")
+          .get();
+
+      // Ajout des logs pour déboguer
+      debugPrint('Nombre de chaînes trouvées : ${querySnapshot.docs.length}');
+      debugPrint(
+          'Données des chaînes : ${querySnapshot.docs.map((doc) => doc.data()).toList()}');
+
+      setState(() {
+        topl = querySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des chaînes : $e');
+      setState(() {});
+    }
+  }
+
+  Future<void> fetchtopseen() async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('podcasts')
+          .orderBy("vue")
+          .get();
+
+      // Ajout des logs pour déboguer
+      debugPrint('Nombre de chaînes trouvées : ${querySnapshot.docs.length}');
+      debugPrint(
+          'Données des chaînes : ${querySnapshot.docs.map((doc) => doc.data()).toList()}');
+
+      setState(() {
+        tops = querySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des chaînes : $e');
+      setState(() {});
+    }
+  }
+
+  String formatLikes(num likes) {
+    // Utiliser un pattern personnalisé avec exactement 2 décimales
+    final formatter = NumberFormat('#,##0.00', 'fr');
+    // Pour les nombres importants, appliquer une logique de compactage manuel
+    if (likes >= 1000000000000000) {
+      return formatter
+              .format(likes / 1000000000000000)
+              .replaceAll('\u202f', '') +
+          'P';
+    } else if (likes >= 1000000000000) {
+      return formatter.format(likes / 1000000000000).replaceAll('\u202f', '') +
+          'T';
+    } else if (likes >= 1000000000) {
+      return formatter.format(likes / 1000000000).replaceAll('\u202f', '') +
+          'G';
+    } else if (likes >= 1000000) {
+      return formatter.format(likes / 1000000).replaceAll('\u202f', '') + 'M';
+    } else if (likes >= 1000) {
+      return formatter.format(likes / 1000).replaceAll('\u202f', '') + 'k';
+    } else if (likes <= 999) {
+      final formatter1 = NumberFormat('#0', 'fr');
+      return formatter1.format(likes);
+    }
+
+    return formatter.format(likes).replaceAll('\u202f', '');
+  }
+
+  List<Map<String, dynamic>> followcha = [];
+  Future<void> fetchfollowId() async {
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+
+    try {
+      // 1️⃣ Récupérer les `playlistId` associés au `idpod`
+      final playinPodSnapshot = await FirebaseFirestore.instance
+          .collection('follow')
+          .orderBy('dateCreation', descending: true)
+          .where('idfollowers', isEqualTo: currentUserId)
+          .get();
+
+      // Extraire la liste des playlistIds
+      List<String> followIds = [];
+      for (var doc in playinPodSnapshot.docs) {
+        String followId = doc.data()['idfollowing'];
+        if (!followIds.contains(followId)) {
+          followIds.add(followId);
+        }
+      }
+
+      if (followIds.isNotEmpty) {
+        // 2️⃣ Récupérer les playlists correspondant aux playlistIds
+        // Note: Firestore ne permet pas d'utiliser 'where in' avec plus de 10 éléments
+        // Donc nous divisons en groupes si nécessaire
+        List<Map<String, dynamic>> allfollow = [];
+
+        // Traiter par groupes de 10 maximum
+        for (int i = 0; i < followIds.length; i += 10) {
+          int end = (i + 10 < followIds.length) ? i + 10 : followIds.length;
+          List<String> batch = followIds.sublist(i, end);
+
+          final playlistsSnapshot = await FirebaseFirestore.instance
+              .collection('channels')
+              .orderBy('createdAt', descending: true)
+              .where('userId', whereIn: batch)
+              .get();
+
+          for (var doc in playlistsSnapshot.docs) {
+            allfollow.add(doc.data() as Map<String, dynamic>);
+          }
+        }
+
+        setState(() {
+          // Stocker les playlists récupérées
+          followcha = allfollow;
+        });
+
+        debugPrint("Playlists récupérées: ${followcha.length}");
+      } else {
+        setState(() {
+          followcha = [];
+        });
+        debugPrint("Aucune playlist trouvée pour ce podcast");
+      }
+    } catch (e) {
+      debugPrint("Erreur lors de la récupération des playlists: $e");
+      setState(() {
+        followcha = [];
+      });
+    }
+  }
+
   List<Map<String, dynamic>> user = [];
+  List<Map<String, dynamic>> res = [];
+  List<Map<String, dynamic>> topcha = [];
+  List<Map<String, dynamic>> topl = [];
+  List<Map<String, dynamic>> tops = [];
   Future<void> fetchuser() async {
     try {
       final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
@@ -38,6 +327,32 @@ class _PodlypageState extends State<Podlypage> {
       });
     } catch (e) {
       debugPrint('Erreur lors de la récupération des chaînes : $e');
+    }
+  }
+
+  late int nbr = 0;
+  Future<void> nbrpodId() async {
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+
+    try {
+      // 1️⃣ Récupérer les `playlistId` associés au `idpod`
+      final playinPodSnapshot = await FirebaseFirestore.instance
+          .collection('myplaylist')
+          .where('iduser', isEqualTo: currentUserId)
+          .get();
+
+      // Extraire la liste des playlistIds
+      List<String> followIds = [];
+      for (var doc in playinPodSnapshot.docs) {
+        String followId = doc.data()['idpod'];
+        if (!followIds.contains(followId)) {
+          followIds.add(followId);
+          nbr++;
+        }
+      }
+    } catch (e) {
+      debugPrint("Erreur lors de la récupération des playlists: $e");
+      setState(() {});
     }
   }
 
@@ -140,6 +455,13 @@ class _PodlypageState extends State<Podlypage> {
   void initState() {
     super.initState();
     fetchuser();
+    fetchfollowId();
+    nbrpodId();
+    fetchmesPlaylistsId();
+    fetchtopseen();
+    fetchtoppodcast();
+    fetchtopChannel();
+    fetrecentId();
     // Ajouter un listener pour détecter les changements de scroll
     _pageController.addListener(() {
       int next = _pageController.page!.round();
@@ -398,7 +720,7 @@ class _PodlypageState extends State<Podlypage> {
                         child: SizedBox(
                           width: x.width * 0.04,
                           height: x.width * 0.04,
-                          child: Image.asset("images/o.png"),
+                          child: Image.network(s55),
                         )),
                     Positioned(
                         top: x.height * 0.007,
@@ -424,8 +746,8 @@ class _PodlypageState extends State<Podlypage> {
 
                             print(r);
                           },
-                          icon: Image.asset(
-                            "images/aa.png",
+                          icon: Image.network(
+                            s36,
                             width: x.width * 0.04,
                             height: x.width * 0.04,
                           ),
@@ -435,9 +757,9 @@ class _PodlypageState extends State<Podlypage> {
                 height: x.height * 0.23,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: pod.length,
+                  itemCount: res.length,
                   itemBuilder: (context, index) {
-                    final podItem = pod[index];
+                    final podItem = res[index];
                     return Container(
                       margin: EdgeInsets.symmetric(horizontal: x.width * 0.02),
                       width: x.width * 0.2,
@@ -454,8 +776,7 @@ class _PodlypageState extends State<Podlypage> {
                               borderRadius:
                                   BorderRadius.circular(x.width * 0.04),
                               image: DecorationImage(
-                                image: AssetImage(
-                                    podItem["img"] ?? "images/placeholder.png"),
+                                image: NetworkImage(podItem["urlPhoto"]),
                                 fit: BoxFit.cover,
                                 onError: (exception, stackTrace) {
                                   print('Error loading image: $exception');
@@ -466,7 +787,7 @@ class _PodlypageState extends State<Podlypage> {
                           SizedBox(height: x.width * 0.01),
                           Flexible(
                               child: Text(
-                            podItem["tit"] ?? "Untitled",
+                            podItem["name"],
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: x.width * 0.04,
@@ -477,7 +798,7 @@ class _PodlypageState extends State<Podlypage> {
                           SizedBox(
                             height: x.width * 0.01,
                           ),
-                          Flexible(
+                          /* Flexible(
                               child: Text(
                             podItem["tite"] ?? "Unknown",
                             style: TextStyle(
@@ -486,7 +807,7 @@ class _PodlypageState extends State<Podlypage> {
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                          )),
+                          )),*/
                         ],
                       ),
                     );
@@ -621,7 +942,7 @@ class _PodlypageState extends State<Podlypage> {
                         child: SizedBox(
                           width: x.width * 0.04,
                           height: x.width * 0.04,
-                          child: Image.asset("images/u.png"),
+                          child: Image.network(s56),
                         )),
                     Positioned(
                         top: x.height * 0.007,
@@ -646,8 +967,8 @@ class _PodlypageState extends State<Podlypage> {
                             );
                             print(r);
                           },
-                          icon: Image.asset(
-                            "images/aa.png",
+                          icon: Image.network(
+                            s36,
                             width: x.width * 0.04,
                             height: x.width * 0.04,
                           ),
@@ -657,9 +978,9 @@ class _PodlypageState extends State<Podlypage> {
                 height: x.height * 0.23,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: cra.length,
+                  itemCount: topcha.length,
                   itemBuilder: (context, index) {
-                    final craItem = cra[index];
+                    final craItem = topcha[index];
                     return Container(
                       margin: EdgeInsets.symmetric(horizontal: x.width * 0.02),
                       width: x.width * 0.2,
@@ -673,8 +994,7 @@ class _PodlypageState extends State<Podlypage> {
                                 borderRadius:
                                     BorderRadius.circular(x.width * 0.1),
                                 image: DecorationImage(
-                                  image: AssetImage(craItem["img"] ??
-                                      "images/placeholder.png"),
+                                  image: NetworkImage(craItem["photoUrl"]),
                                   fit: BoxFit.cover,
                                   onError: (exception, stackTrace) {
                                     print('Error loading image: $exception');
@@ -690,7 +1010,7 @@ class _PodlypageState extends State<Podlypage> {
                             height: x.width * 0.01,
                           ),
                           Text(
-                            craItem["tite"] ?? "Unknown",
+                            craItem["name"],
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: x.width * 0.03,
@@ -830,7 +1150,7 @@ class _PodlypageState extends State<Podlypage> {
                         child: SizedBox(
                           width: x.width * 0.04,
                           height: x.width * 0.04,
-                          child: Image.asset("images/i.png"),
+                          child: Image.network(s57),
                         )),
                     Positioned(
                         top: x.height * 0.007,
@@ -855,8 +1175,8 @@ class _PodlypageState extends State<Podlypage> {
                             );
                             print(r);
                           },
-                          icon: Image.asset(
-                            "images/aa.png",
+                          icon: Image.network(
+                            s36,
                             width: x.width * 0.04,
                             height: x.width * 0.04,
                           ),
@@ -866,9 +1186,9 @@ class _PodlypageState extends State<Podlypage> {
                 height: x.height * 0.23,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: pod.length,
+                  itemCount: topl.length,
                   itemBuilder: (context, index) {
-                    final podItem = pod[index];
+                    final podItem = topl[index];
                     return Container(
                       margin: EdgeInsets.symmetric(horizontal: x.width * 0.02),
                       width: x.width * 0.2,
@@ -885,8 +1205,7 @@ class _PodlypageState extends State<Podlypage> {
                               borderRadius:
                                   BorderRadius.circular(x.width * 0.04),
                               image: DecorationImage(
-                                image: AssetImage(
-                                    podItem["img"] ?? "images/placeholder.png"),
+                                image: NetworkImage(podItem["urlPhoto"]),
                                 fit: BoxFit.cover,
                                 onError: (exception, stackTrace) {
                                   print('Error loading image: $exception');
@@ -897,7 +1216,7 @@ class _PodlypageState extends State<Podlypage> {
                           SizedBox(height: x.width * 0.01),
                           Flexible(
                               child: Text(
-                            podItem["tit"] ?? "Untitled",
+                            podItem["name"],
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: x.width * 0.04,
@@ -908,7 +1227,7 @@ class _PodlypageState extends State<Podlypage> {
                           SizedBox(
                             height: x.width * 0.01,
                           ),
-                          Flexible(
+                          /* Flexible(
                               child: Text(
                             podItem["tite"] ?? "Unknown",
                             style: TextStyle(
@@ -917,7 +1236,7 @@ class _PodlypageState extends State<Podlypage> {
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                          )),
+                          )),*/
                         ],
                       ),
                     );
@@ -941,7 +1260,7 @@ class _PodlypageState extends State<Podlypage> {
                         child: Container(
                           width: x.width * 0.04,
                           height: x.width * 0.04,
-                          child: Image.asset("images/t.png"),
+                          child: Image.network(s58),
                         )),
                     Positioned(
                         top: x.height * 0.007,
@@ -966,8 +1285,8 @@ class _PodlypageState extends State<Podlypage> {
                             );
                             print(r);
                           },
-                          icon: Image.asset(
-                            "images/aa.png",
+                          icon: Image.network(
+                            s36,
                             width: x.width * 0.04,
                             height: x.width * 0.04,
                           ),
@@ -977,9 +1296,9 @@ class _PodlypageState extends State<Podlypage> {
                 height: x.height * 0.23,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: pod.length,
+                  itemCount: tops.length,
                   itemBuilder: (context, index) {
-                    final podItem = pod[index];
+                    final podItem = tops[index];
                     return Container(
                       margin: EdgeInsets.symmetric(horizontal: x.width * 0.02),
                       width: x.width * 0.2,
@@ -996,8 +1315,7 @@ class _PodlypageState extends State<Podlypage> {
                               borderRadius:
                                   BorderRadius.circular(x.width * 0.04),
                               image: DecorationImage(
-                                image: AssetImage(
-                                    podItem["img"] ?? "images/placeholder.png"),
+                                image: NetworkImage(podItem["urlPhoto"]),
                                 fit: BoxFit.cover,
                                 onError: (exception, stackTrace) {
                                   print('Error loading image: $exception');
@@ -1008,7 +1326,7 @@ class _PodlypageState extends State<Podlypage> {
                           SizedBox(height: x.width * 0.01),
                           Flexible(
                               child: Text(
-                            podItem["tit"] ?? "Untitled",
+                            podItem["name"],
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: x.width * 0.04,
@@ -1019,7 +1337,7 @@ class _PodlypageState extends State<Podlypage> {
                           SizedBox(
                             height: x.width * 0.01,
                           ),
-                          Flexible(
+                          /* Flexible(
                               child: Text(
                             podItem["tite"] ?? "Unknown",
                             style: TextStyle(
@@ -1028,7 +1346,7 @@ class _PodlypageState extends State<Podlypage> {
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                          )),
+                          )),*/
                         ],
                       ),
                     );
@@ -1144,7 +1462,7 @@ class _PodlypageState extends State<Podlypage> {
                       child: SizedBox(
                         width: x.width * 0.04,
                         height: x.width * 0.04,
-                        child: Image.asset("images/fol.png"),
+                        child: Image.network(s53),
                       ),
                     ),
                     Positioned(
@@ -1172,8 +1490,8 @@ class _PodlypageState extends State<Podlypage> {
                             );
                             print(r);
                           },
-                          icon: Image.asset(
-                            "images/aa.png",
+                          icon: Image.network(
+                            s36,
                             width: x.width * 0.04,
                             height: x.width * 0.04,
                           ),
@@ -1186,9 +1504,9 @@ class _PodlypageState extends State<Podlypage> {
                 height: x.height * 0.23,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: cre.length,
+                  itemCount: followcha.length,
                   itemBuilder: (context, index) {
-                    final creItem = cre[index];
+                    final creItem = followcha[index];
                     return Container(
                       margin: EdgeInsets.symmetric(horizontal: x.width * 0.02),
                       width: x.width * 0.2,
@@ -1203,8 +1521,7 @@ class _PodlypageState extends State<Podlypage> {
                                 borderRadius:
                                     BorderRadius.circular(x.width * 0.1),
                                 image: DecorationImage(
-                                  image: AssetImage(creItem["img"] ??
-                                      "images/placeholder.png"),
+                                  image: NetworkImage(creItem["photoUrl"]),
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -1213,7 +1530,7 @@ class _PodlypageState extends State<Podlypage> {
                           SizedBox(height: x.width * 0.01),
                           Flexible(
                             child: Text(
-                              creItem["tite"] ?? "Unknown",
+                              creItem["name"],
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: x.width * 0.03,
@@ -1249,7 +1566,7 @@ class _PodlypageState extends State<Podlypage> {
                       child: SizedBox(
                         width: x.width * 0.04,
                         height: x.width * 0.04,
-                        child: Image.asset("images/fav.png"),
+                        child: Image.network(s54),
                       ),
                     ),
                     Positioned(
@@ -1277,8 +1594,8 @@ class _PodlypageState extends State<Podlypage> {
                             );
                             print(r);
                           },
-                          icon: Image.asset(
-                            "images/aa.png",
+                          icon: Image.network(
+                            s36,
                             width: x.width * 0.04,
                             height: x.width * 0.04,
                           ),
@@ -1289,62 +1606,152 @@ class _PodlypageState extends State<Podlypage> {
               // Liste des playlists
               SizedBox(
                 height: x.height * 0.4,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: play.length,
-                  itemBuilder: (context, index) {
-                    final playItem = play[index];
-                    return Container(
-                      margin: EdgeInsets.symmetric(horizontal: x.width * 0.02),
-                      width: x.width * 0.32,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AspectRatio(
-                            aspectRatio: 1,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.circular(x.width * 0.04),
-                                image: DecorationImage(
-                                  image: AssetImage(playItem["img"] ??
-                                      "images/placeholder.png"),
-                                  fit: BoxFit.cover,
+                child: Row(
+                  children: [
+                    SizedBox(
+                        width: x.width * 0.36,
+                        child: Stack(
+                          children: [
+                            Positioned(
+                              top: x.height * 0.005,
+                              child: Container(
+                                margin: EdgeInsets.symmetric(
+                                    horizontal: x.width * 0.02),
+                                width: x.width * 0.32,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    AspectRatio(
+                                      aspectRatio: 1,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                              x.width * 0.04),
+                                          image: DecorationImage(
+                                            image: NetworkImage(
+                                                user[0]["photoUrl"]),
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(height: x.width * 0.03),
+                                    Flexible(
+                                      child: Text(
+                                        "My Playlist",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: x.width * 0.04,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    SizedBox(height: x.width * 0.01),
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            formatLikes(nbr),
+                                            style: TextStyle(
+                                              color: Colors.grey,
+                                              fontSize: x.width * 0.035,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        Text(" "),
+                                        Text(
+                                          "Podcasts",
+                                          style: TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: x.width * 0.035,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  ],
                                 ),
                               ),
+                            )
+                          ],
+                        )), // Correction ici: "height" changé en "width"
+                    Expanded(
+                      // Ajout d'un Expanded pour que le ListView prenne l'espace disponible
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: mesplaylist.length,
+                        itemBuilder: (context, index) {
+                          final playItem = mesplaylist[index];
+                          return Container(
+                            margin: EdgeInsets.symmetric(
+                                horizontal: x.width * 0.02),
+                            width: x.width * 0.32,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                AspectRatio(
+                                  aspectRatio: 1,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius:
+                                          BorderRadius.circular(x.width * 0.04),
+                                      image: DecorationImage(
+                                        image:
+                                            NetworkImage(playItem["photoUrl"]),
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: x.width * 0.03),
+                                Flexible(
+                                  child: Text(
+                                    playItem["name"],
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: x.width * 0.04,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                SizedBox(height: x.width * 0.01),
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        formatLikes(playItem["podcast"]),
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: x.width * 0.035,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Text(" "),
+                                    Text(
+                                      "Podcasts",
+                                      style: TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: x.width * 0.035,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              ],
                             ),
-                          ),
-                          SizedBox(height: x.width * 0.03),
-                          Flexible(
-                            child: Text(
-                              playItem["tit"] ?? "Untitled",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: x.width * 0.04,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          SizedBox(height: x.width * 0.01),
-                          Flexible(
-                            child: Text(
-                              playItem["tite"] ?? "Unknown",
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: x.width * 0.035,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
-              ),
+              )
             ],
           ),
         );
