@@ -23,7 +23,7 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
     SelectedListItem<String>(data: "Education"),
     SelectedListItem<String>(data: "History"),
     SelectedListItem<String>(data: "Comedie"),
-    SelectedListItem<String>(data: "tv/Films"),
+    SelectedListItem<String>(data: "Tv&Films"),
     SelectedListItem<String>(data: "Music"),
     SelectedListItem<String>(data: "Books"),
     SelectedListItem<String>(data: "Culture"),
@@ -33,7 +33,7 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
     SelectedListItem<String>(data: "Gaming"),
     SelectedListItem<String>(data: "Food"),
     SelectedListItem<String>(data: "Travel"),
-    SelectedListItem<String>(data: "Relegion"),
+    SelectedListItem<String>(data: "Religion"),
     SelectedListItem<String>(data: "Art"),
     SelectedListItem<String>(data: "Sciences"),
   ];

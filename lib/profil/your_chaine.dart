@@ -18,6 +18,7 @@ class YourChainepage extends StatefulWidget {
 
 class _YourChainepageState extends State<YourChainepage>
     with SingleTickerProviderStateMixin {
+  late int your = 1;
   late int s = 0;
   bool hasError = false;
   List<Map<String, dynamic>> user = [];
@@ -54,16 +55,18 @@ class _YourChainepageState extends State<YourChainepage>
     return formatter.format(likes).replaceAll('\u202f', '');
   }
 
+  late int pp = 1;
+  late int feat = 1;
   bool isLoading = true;
   void initState() {
     super.initState();
     _tabController1 = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       setState(() => isLoading = true);
-      fetchChannels();
-      fetchpodcasts();
-      fetchplaylists();
-      fetchuser();
+      await fetchChannels();
+      await fetchpodcasts();
+      await fetchplaylists();
+      await fetchuser();
       setState(() => isLoading = false);
     });
   }
@@ -169,6 +172,19 @@ class _YourChainepageState extends State<YourChainepage>
         }
       } catch (e) {
         print("❌ Erreur lors de l'importation de l'image : $e");
+      }
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final arguments =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+    if (arguments != null) {
+      if (arguments.containsKey('your')) {
+        your = arguments['your'];
       }
     }
   }
@@ -410,9 +426,17 @@ class _YourChainepageState extends State<YourChainepage>
                           left: v.width * 0.03,
                           child: IconButton(
                             onPressed: () {
-                              Navigator.pushNamedAndRemoveUntil(
-                                  context, '/podly', (route) => false,
-                                  arguments: {'selectedIndex': 4});
+                              if (your == 2) {
+                                Navigator.pushNamedAndRemoveUntil(
+                                    context, '/podly', (route) => false,
+                                    arguments: {'selectedIndex': 0});
+                              }
+                              if (your == 3) {
+                                Navigator.pop(context);
+                              }
+                              if (your == 4) {
+                                Navigator.pop(context);
+                              }
                             },
                             icon: Image.network(
                               s18,
@@ -754,7 +778,8 @@ class _YourChainepageState extends State<YourChainepage>
                                           context,
                                           '/podcast',
                                           arguments: {
-                                            'idpod': item["id"]
+                                            'idpod': item["id"],
+                                            'feat': 3,
                                           }, // Envoie l'ID
                                         );
                                       },
@@ -1035,7 +1060,10 @@ class _YourChainepageState extends State<YourChainepage>
                                     child: GestureDetector(
                                       onTap: () {
                                         Navigator.pushNamed(context, '/play',
-                                            arguments: {'idplay': item["id"]});
+                                            arguments: {
+                                              'idplay': item["id"],
+                                              'pp': 3
+                                            });
                                       },
                                       child: Row(
                                         children: [

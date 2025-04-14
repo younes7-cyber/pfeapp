@@ -16,7 +16,7 @@ class Listenpage extends StatefulWidget {
 class _ListenpageState extends State<Listenpage>
     with SingleTickerProviderStateMixin {
   String? idpod;
-
+  late int? feal;
   String? replyingTo;
   List<Map<String, dynamic>> podcast = [];
   List<Map<String, dynamic>> playlist = [];
@@ -142,7 +142,7 @@ class _ListenpageState extends State<Listenpage>
   String currentTime = "0:00";
   String totalTime = "0:00";
   double currentPosition = 0.0; // Progress value
-
+  double audioProgressPercent = 0.0;
   @override
   void initState() {
     super.initState();
@@ -153,23 +153,28 @@ class _ListenpageState extends State<Listenpage>
       final arguments =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
 
-      if (arguments != null && arguments.containsKey('idpod')) {
-        idpod = arguments['idpod'];
+      if (arguments != null) {
+        if (arguments.containsKey('idpod')) {
+          idpod = arguments['idpod'];
+        }
+
+        if (arguments.containsKey('feal')) {
+          feal = arguments['feal'];
+        }
 
         if (idpod != null) {
           await fetchPodcastsById(idpod!);
           await fetchPlaylistsByPodcastId(idpod!);
           _initAudioPlayer();
           _fetchComments();
+          _fetchLikeStatus();
+          _fetchUnlikeStatus();
+          _fetchsaveStatus();
         }
       }
 
       setState(() => isLoading = false);
     });
-
-    _fetchLikeStatus();
-    _fetchUnlikeStatus();
-    _fetchsaveStatus();
   }
 
 // First, let's add a specific function to debug a single user ID
@@ -1169,13 +1174,22 @@ class _ListenpageState extends State<Listenpage>
       _audioPlayer.positionStream.listen((position) {
         final duration = _audioPlayer.duration;
         if (duration != null) {
+          double percent = position.inMilliseconds / duration.inMilliseconds;
           setState(() {
             currentTime = _formatDuration(position);
-            currentPosition = position.inMilliseconds / duration.inMilliseconds;
+            currentPosition = percent;
+            audioProgressPercent = percent;
           });
-          if (currentPosition >= 0.2 && !hasViewed) {
+
+          // Enregistrement de la vue si > 20%
+          if (percent >= 0.2 && !hasViewed) {
             hasViewed = true;
-            _registerView();
+            _registerView(percent);
+          }
+
+          // Mise à jour de la vue si déjà vue
+          if (percent >= 0.2 && hasViewed) {
+            View(percent);
           }
         }
       });
@@ -1190,7 +1204,7 @@ class _ListenpageState extends State<Listenpage>
     }
   }
 
-  Future _registerView() async {
+  Future<void> _registerView(double percent) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null || idpod == null) return;
 
@@ -1204,13 +1218,35 @@ class _ListenpageState extends State<Listenpage>
       await vuesCollection.add({
         'userId': userId,
         'idpod': idpod,
-        'timestamp': FieldValue.serverTimestamp(),
+        'timevue': FieldValue.serverTimestamp(),
+        'percent': percent, // ✅ Ajout ici
       });
+
       await FirebaseFirestore.instance
           .collection('podcasts')
           .doc(idpod)
           .update({
         'vue': FieldValue.increment(1),
+      });
+    }
+  }
+
+  Future<void> View(double percent) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null || idpod == null) return;
+
+    final vuesCollection = FirebaseFirestore.instance.collection('vues');
+    final querySnapshot = await vuesCollection
+        .where('userId', isEqualTo: userId)
+        .where('idpod', isEqualTo: idpod)
+        .get();
+
+    if (querySnapshot.docs.isNotEmpty) {
+      final docId = querySnapshot.docs.first.id;
+
+      await vuesCollection.doc(docId).update({
+        'timevue': FieldValue.serverTimestamp(),
+        'percent': percent, // ✅ Met à jour le pourcentage écouté
       });
     }
   }

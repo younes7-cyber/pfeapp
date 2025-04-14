@@ -13,8 +13,10 @@ class Playlistpage extends StatefulWidget {
 
 class _PlaylistpageState extends State<Playlistpage>
     with SingleTickerProviderStateMixin {
+  final String userId = FirebaseAuth.instance.currentUser?.uid ?? "";
   late TabController _tabController1;
   String? idplay;
+  late int? pp = 1;
   bool isFollowing = false;
   List<Map<String, dynamic>> podcastPlaylists = [];
   List<Map<String, dynamic>> playlist = [];
@@ -23,6 +25,90 @@ class _PlaylistpageState extends State<Playlistpage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+  }
+
+  List<Map<String, dynamic>> mesplaylist = [];
+  Future<void> fetchmesPlaylistsId(String idplay) async {
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+
+    try {
+      final playinPodSnapshot = await FirebaseFirestore.instance
+          .collection('mesplaylist')
+          .where('iduser', isEqualTo: currentUserId)
+          .get();
+
+      List<Map<String, dynamic>> mesPlayInfos = [];
+      for (var doc in playinPodSnapshot.docs) {
+        final data = doc.data();
+        if (data.containsKey('idplay') && data.containsKey('dateCreation')) {
+          mesPlayInfos.add({
+            'idplay': data['idplay'],
+            'dateCreation': data['dateCreation'],
+          });
+        }
+      }
+
+      if (mesPlayInfos.isNotEmpty) {
+        List<Map<String, dynamic>> allPlaylists = [];
+
+        List<String> playlistIds =
+            mesPlayInfos.map((e) => e['idplay'] as String).toList();
+
+        for (int i = 0; i < playlistIds.length; i += 10) {
+          int end = (i + 10 < playlistIds.length) ? i + 10 : playlistIds.length;
+          List<String> batch = playlistIds.sublist(i, end);
+
+          final playlistsSnapshot = await FirebaseFirestore.instance
+              .collection('playlist')
+              .where('id', whereIn: batch)
+              .get();
+
+          for (var doc in playlistsSnapshot.docs) {
+            final playlistData = doc.data() as Map<String, dynamic>;
+            final matchingMes = mesPlayInfos.firstWhere(
+                (element) => element['idplay'] == playlistData['id'],
+                orElse: () => {});
+
+            if (matchingMes.isNotEmpty) {
+              playlistData['dateCreation'] = matchingMes['dateCreation'];
+            }
+
+            allPlaylists.add(playlistData);
+          }
+        }
+
+        // ⬇️ Tri du plus récent au plus ancien
+        allPlaylists.sort((a, b) {
+          Timestamp? dateA = a['dateCreation'];
+          Timestamp? dateB = b['dateCreation'];
+
+          if (dateA == null && dateB == null) return 0;
+          if (dateA == null) return 1;
+          if (dateB == null) return -1;
+
+          return dateB.compareTo(dateA); // ⬅️ tri décroissant ici
+        });
+        String idpodASupprimer = idplay;
+
+        allPlaylists.removeWhere((podcast) => podcast['id'] == idpodASupprimer);
+        setState(() {
+          mesplaylist = allPlaylists;
+        });
+
+        debugPrint(
+            "Playlists triées du plus récent au plus ancien: ${mesplaylist.length}");
+      } else {
+        setState(() {
+          mesplaylist = [];
+        });
+        debugPrint("Aucune playlist trouvée.");
+      }
+    } catch (e) {
+      debugPrint("Erreur lors de la récupération des playlists: $e");
+      setState(() {
+        mesplaylist = [];
+      });
+    }
   }
 
   Future<void> fetchPodcastsByUserId(String idplay) async {
@@ -63,58 +149,89 @@ class _PlaylistpageState extends State<Playlistpage>
 
   Future<void> fetchPlaylistsByPodcastId(String idplay) async {
     try {
-      // 1️⃣ Récupérer les `playlistId` associés au `idpod`
       final playinPodSnapshot = await FirebaseFirestore.instance
           .collection('playinpod')
-          .orderBy('date', descending: true)
           .where('playlistId', isEqualTo: idplay)
+          .orderBy('date',
+              descending: true) // ⬅️ Trie par date DESC de playinpod
           .get();
 
-      // Extraire la liste des playlistIds
-      List<String> playlistIds = [];
+      // 🔁 Récupérer les podcasts avec leur date d'ajout
+      List<Map<String, dynamic>> podInfos = [];
+
       for (var doc in playinPodSnapshot.docs) {
-        String playlistId = doc.data()['podcastId'];
-        if (!playlistIds.contains(playlistId)) {
-          playlistIds.add(playlistId);
-        }
+        final data = doc.data();
+        final podcastId = data['podcastId'];
+        final date = data['date'];
+
+        // On garde l’ordre, donc on ne filtre pas les doublons ici
+        podInfos.add({
+          'podcastId': podcastId,
+          'date': date,
+        });
       }
 
-      if (playlistIds.isNotEmpty) {
-        // 2️⃣ Récupérer les playlists correspondant aux playlistIds
-        // Note: Firestore ne permet pas d'utiliser 'where in' avec plus de 10 éléments
-        // Donc nous divisons en groupes si nécessaire
-        List<Map<String, dynamic>> allPlaylists = [];
+      if (podInfos.isNotEmpty) {
+        List<Map<String, dynamic>> allPodcasts = [];
 
-        // Traiter par groupes de 10 maximum
-        for (int i = 0; i < playlistIds.length; i += 10) {
-          int end = (i + 10 < playlistIds.length) ? i + 10 : playlistIds.length;
-          List<String> batch = playlistIds.sublist(i, end);
+        // Regrouper par lot de 10 les IDs de podcasts
+        for (int i = 0; i < podInfos.length; i += 10) {
+          int end = (i + 10 < podInfos.length) ? i + 10 : podInfos.length;
+          List<String> batch = podInfos
+              .sublist(i, end)
+              .map((e) => e['podcastId'] as String)
+              .toList();
 
-          final playlistsSnapshot = await FirebaseFirestore.instance
+          final podcastsSnapshot = await FirebaseFirestore.instance
               .collection('podcasts')
-              .orderBy('dateCreation', descending: true)
               .where('id', whereIn: batch)
               .get();
 
-          for (var doc in playlistsSnapshot.docs) {
-            allPlaylists.add(doc.data() as Map<String, dynamic>);
+          for (var doc in podcastsSnapshot.docs) {
+            final data = doc.data();
+            allPodcasts.add(data);
           }
         }
 
-        setState(() {
-          // Stocker les playlists récupérées
-          podcastPlaylists = allPlaylists;
+        // Réassocier la date de playinpod pour trier
+        List<Map<String, dynamic>> sortedPods = [];
+
+        for (var info in podInfos) {
+          final match = allPodcasts.firstWhere(
+            (pod) => pod['id'] == info['podcastId'],
+            orElse: () => {},
+          );
+
+          if (match.isNotEmpty) {
+            match['playinpodDate'] = info['date'];
+            sortedPods.add(match);
+          }
+        }
+
+        // 🔁 Tri décroissant par la date de `playinpod`
+        sortedPods.sort((a, b) {
+          Timestamp? dateA = a['playinpodDate'];
+          Timestamp? dateB = b['playinpodDate'];
+          if (dateA == null && dateB == null) return 0;
+          if (dateA == null) return 1;
+          if (dateB == null) return -1;
+          return dateB.compareTo(dateA);
         });
 
-        debugPrint("Playlists récupérées: ${podcastPlaylists.length}");
+        setState(() {
+          podcastPlaylists = sortedPods;
+        });
+
+        debugPrint(
+            "🎧 Podcasts récupérés et triés par date (playinpod) : ${podcastPlaylists.length}");
       } else {
         setState(() {
           podcastPlaylists = [];
         });
-        debugPrint("Aucune playlist trouvée pour ce podcast");
+        debugPrint("Aucun podcast trouvé pour cette playlist.");
       }
     } catch (e) {
-      debugPrint("Erreur lors de la récupération des playlists: $e");
+      debugPrint("Erreur lors de la récupération des podcasts : $e");
       setState(() {
         podcastPlaylists = [];
       });
@@ -211,8 +328,13 @@ class _PlaylistpageState extends State<Playlistpage>
       final arguments =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
 
-      if (arguments != null && arguments.containsKey('idplay')) {
-        idplay = arguments['idplay'];
+      if (arguments != null) {
+        if (arguments.containsKey('idplay')) {
+          idplay = arguments['idplay'];
+        }
+        if (arguments.containsKey('pp')) {
+          pp = arguments['pp'];
+        }
 
         if (idplay != null) {
           await fetchPlaylidtById(idplay!);
@@ -221,12 +343,13 @@ class _PlaylistpageState extends State<Playlistpage>
           await checkIfUserIsFollowing();
           await fetchPlaylistsByPodcastId(idplay!);
           await fetchPodcastsByUserId(idplay!);
+          await _fetchsaveStatus();
+          await fetchmesPlaylistsId(idplay!);
         }
       }
 
       setState(() => isLoading = false);
     });
-    _fetchsaveStatus();
   }
 
   Future<String?> getPlaylistUserId() async {
@@ -524,27 +647,7 @@ class _PlaylistpageState extends State<Playlistpage>
                         height: w.height * 0.1,
                       ),
                     ),
-                    Positioned(
-                        top: w.height * 0.01,
-                        left: w.width * 0.03,
-                        child: Container(
-                          width: w.width * 0.1,
-                          height: w.width * 0.1,
-                          decoration: BoxDecoration(
-                              color: Colors.black12,
-                              borderRadius:
-                                  BorderRadius.circular(w.width * 0.05)),
-                          child: IconButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            icon: Image.network(
-                              s18,
-                              width: w.width * 0.07,
-                              height: w.width * 0.07,
-                            ),
-                          ),
-                        )),
+
                     if (isYourPlaylist == false) ...[
                       Positioned(
                           top: w.height * 0.01,
@@ -599,17 +702,147 @@ class _PlaylistpageState extends State<Playlistpage>
                                 ],
                               ))),
                     ],
-
-                    Positioned(
-                      top: w.height * 0.28,
-                      right: w.width * 0.05,
-                      child: Image.network(
-                        s48,
-                        width: w.width * 0.14,
-                        height: w.width * 0.14,
-                        fit: BoxFit.cover,
+                    if (pp == 2) ...[
+                      Positioned(
+                          top: w.height * 0.01,
+                          left: w.width * 0.03,
+                          child: Container(
+                            width: w.width * 0.1,
+                            height: w.width * 0.1,
+                            decoration: BoxDecoration(
+                                color: Colors.black12,
+                                borderRadius:
+                                    BorderRadius.circular(w.width * 0.05)),
+                            child: IconButton(
+                              onPressed: () {
+                                Navigator.pushNamedAndRemoveUntil(
+                                    context, '/podly', (route) => false,
+                                    arguments: {'selectedIndex': 3});
+                              },
+                              icon: Image.network(
+                                s18,
+                                width: w.width * 0.07,
+                                height: w.width * 0.07,
+                              ),
+                            ),
+                          )),
+                      Positioned(
+                        top: w.height * 0.27,
+                        right: w.width * 0.03,
+                        child: IconButton(
+                          onPressed: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/podcast',
+                              arguments: {
+                                'idpod': podcastPlaylists[0]["id"],
+                                'feat':
+                                    11, // remplace "someValue" par ce que tu veux représenter
+                              },
+                            );
+                          },
+                          icon: Image.network(
+                            s48,
+                            width: w.width * 0.14,
+                            height: w.width * 0.14,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
+                    if (pp == 3) ...[
+                      Positioned(
+                          top: w.height * 0.01,
+                          left: w.width * 0.03,
+                          child: Container(
+                            width: w.width * 0.1,
+                            height: w.width * 0.1,
+                            decoration: BoxDecoration(
+                                color: Colors.black12,
+                                borderRadius:
+                                    BorderRadius.circular(w.width * 0.05)),
+                            child: IconButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              icon: Image.network(
+                                s18,
+                                width: w.width * 0.07,
+                                height: w.width * 0.07,
+                              ),
+                            ),
+                          )),
+                      Positioned(
+                        top: w.height * 0.27,
+                        right: w.width * 0.03,
+                        child: IconButton(
+                          onPressed: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/podcast',
+                              arguments: {
+                                'idpod': podcastPlaylists[0]["id"],
+                                'feat':
+                                    3, // remplace "someValue" par ce que tu veux représenter
+                              },
+                            );
+                          },
+                          icon: Image.network(
+                            s48,
+                            width: w.width * 0.14,
+                            height: w.width * 0.14,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (pp == 4) ...[
+                      Positioned(
+                          top: w.height * 0.01,
+                          left: w.width * 0.03,
+                          child: Container(
+                            width: w.width * 0.1,
+                            height: w.width * 0.1,
+                            decoration: BoxDecoration(
+                                color: Colors.black12,
+                                borderRadius:
+                                    BorderRadius.circular(w.width * 0.05)),
+                            child: IconButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              icon: Image.network(
+                                s18,
+                                width: w.width * 0.07,
+                                height: w.width * 0.07,
+                              ),
+                            ),
+                          )),
+                      Positioned(
+                        top: w.height * 0.27,
+                        right: w.width * 0.03,
+                        child: IconButton(
+                          onPressed: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/podcast',
+                              arguments: {
+                                'idpod': podcastPlaylists[0]["id"],
+                                'feat':
+                                    3, // remplace "someValue" par ce que tu veux représenter
+                              },
+                            );
+                          },
+                          icon: Image.network(
+                            s48,
+                            width: w.width * 0.14,
+                            height: w.width * 0.14,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ],
+
                     Positioned(
                       top: w.height * 0.28,
                       child: Container(
@@ -720,7 +953,7 @@ class _PlaylistpageState extends State<Playlistpage>
                       child: Container(
                         width: w.width * 0.9, // Add width constraint
                         child: ReadMoreText(
-                          'Flutter is Googles mobile UI open source framework to build high-quality native (super fast) interfaces for iOS and Android apps with the unified codebase.tttttttttttttttttttttttttttttttttttttttttttttttttt',
+                          playlist[0]["description"],
                           trimMode: TrimMode.Line,
                           trimLines: 2,
                           trimCollapsedText: 'Show more',
@@ -738,119 +971,151 @@ class _PlaylistpageState extends State<Playlistpage>
                     ),
 
                     Positioned(
-                        top: w.height * 0.57,
-                        left: w.width * 0.02,
-                        child: Row(children: [
-                          Container(
-                            width: w.width * 0.2,
-                            height: w.width * 0.2,
-                            decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.circular(w.width * 0.2)),
-                            child: ClipOval(
-                              child: Image.network(
-                                channel[0]["photoUrl"],
-                                fit: BoxFit.cover,
+                      top: w.height * 0.57,
+                      left: w.width * 0.02,
+                      child: Container(
+                        child: GestureDetector(
+                          onTap: () {
+                            if (userId == channel[0]["userId"]) {
+                              Navigator.pushNamed(context, '/your',
+                                  arguments: {'your': 4});
+                            }
+                            if (userId != channel[0]["userId"]) {
+                              Navigator.pushNamed(
+                                context,
+                                '/channel',
+                                arguments: {
+                                  'id': channel[0]["id"],
+                                  'chaine': 5,
+                                },
+                              );
+                            }
+                          },
+                          child: Row(children: [
+                            Container(
+                              width: w.width * 0.2,
+                              height: w.width * 0.2,
+                              decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(w.width * 0.2)),
+                              child: ClipOval(
+                                child: Image.network(
+                                  channel[0]["photoUrl"],
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
-                          ),
-                          SizedBox(
-                            width: w.width * 0.01,
-                          ),
-                          Column(
-                            children: [
-                              TextButton(
-                                  onPressed: () {},
-                                  child: Text(
-                                    channel[0]["name"],
-                                    style: TextStyle(
-                                        fontSize: w.width * 0.045,
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.bold),
-                                  )),
-                              Text(formatLikes(channel[0]["followers"]),
+                            SizedBox(
+                              width: w.width * 0.01,
+                            ),
+                            Column(
+                              children: [
+                                Text(
+                                  channel[0]["name"],
                                   style: TextStyle(
-                                    fontSize: w.width * 0.035,
-                                    color: Colors.black,
-                                    //   fontWeight: FontWeight.bold),
-                                  ))
-                            ],
-                          ),
-                          SizedBox(
-                            width: w.width * 0.01,
-                          ),
-                          if (isYourPlaylist == false) ...[
-                            Positioned(
-                              top: w.height * 0.68,
-                              right: w.width * 0.01,
-                              child: SizedBox(
-                                height: w.height * 0.05,
-                                width: w.width * 0.32,
-                                child: MaterialButton(
-                                  onPressed:
-                                      toggleFollow, // Utiliser la fonction toggleFollow
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 300),
-                                    height: w.height * 0.05,
-                                    width: w.width * 0.3,
-                                    decoration: BoxDecoration(
-                                      color: isFollowing
-                                          ? Colors.white
-                                          : const Color(0xFF754CEF),
-                                      borderRadius: BorderRadius.all(
-                                        Radius.circular(w.width * 0.05),
+                                      fontSize: w.width * 0.045,
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                Row(
+                                  children: [
+                                    Text(formatLikes(channel[0]["followers"]),
+                                        style: TextStyle(
+                                          fontSize: w.width * 0.035,
+                                          color: Colors.black,
+                                          //   fontWeight: FontWeight.bold),
+                                        )),
+                                    Text(" "),
+                                    Text("Followers",
+                                        style: TextStyle(
+                                          fontSize: w.width * 0.035,
+                                          color: Colors.black,
+                                          //   fontWeight: FontWeight.bold),
+                                        ))
+                                  ],
+                                ),
+                              ],
+                            ),
+                            SizedBox(
+                              width: w.width * 0.01,
+                            ),
+                            if (isYourPlaylist == false) ...[
+                              Positioned(
+                                top: w.height * 0.68,
+                                right: w.width * 0.01,
+                                child: SizedBox(
+                                  height: w.height * 0.05,
+                                  width: w.width * 0.32,
+                                  child: MaterialButton(
+                                    onPressed:
+                                        toggleFollow, // Utiliser la fonction toggleFollow
+                                    child: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                      height: w.height * 0.05,
+                                      width: w.width * 0.3,
+                                      decoration: BoxDecoration(
+                                        color: isFollowing
+                                            ? Colors.white
+                                            : const Color(0xFF754CEF),
+                                        borderRadius: BorderRadius.all(
+                                          Radius.circular(w.width * 0.05),
+                                        ),
+                                        border: isFollowing
+                                            ? Border.all(
+                                                color: const Color(0xFF754CEF))
+                                            : null,
                                       ),
-                                      border: isFollowing
-                                          ? Border.all(
-                                              color: const Color(0xFF754CEF))
-                                          : null,
-                                    ),
-                                    child: Stack(
-                                      children: [
-                                        if (!isFollowing)
-                                          Positioned(
-                                            top: w.height * 0.014,
-                                            left: w.width *
-                                                0.03, // Centrer un peu plus
-                                            child: Text(
-                                              "Follow Now",
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: w.width * 0.035,
+                                      child: Stack(
+                                        children: [
+                                          if (!isFollowing)
+                                            Positioned(
+                                              top: w.height * 0.014,
+                                              left: w.width *
+                                                  0.03, // Centrer un peu plus
+                                              child: Text(
+                                                "Follow Now",
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: w.width * 0.035,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        if (isFollowing)
-                                          Positioned(
-                                            top: w.height * 0.014,
-                                            left: w.width * 0.012,
-                                            child: Row(
-                                              children: [
-                                                Image.network(
-                                                  s51,
-                                                  width: w.width * 0.05,
-                                                  height: w.width * 0.05,
-                                                ),
-                                                SizedBox(width: w.width * 0.01),
-                                                Text(
-                                                  "Following",
-                                                  style: TextStyle(
-                                                    color:
-                                                        const Color(0xFF754CEF),
-                                                    fontSize: w.width * 0.03,
+                                          if (isFollowing)
+                                            Positioned(
+                                              top: w.height * 0.014,
+                                              left: w.width * 0.012,
+                                              child: Row(
+                                                children: [
+                                                  Image.network(
+                                                    s51,
+                                                    width: w.width * 0.05,
+                                                    height: w.width * 0.05,
                                                   ),
-                                                ),
-                                              ],
+                                                  SizedBox(
+                                                      width: w.width * 0.01),
+                                                  Text(
+                                                    "Following",
+                                                    style: TextStyle(
+                                                      color: const Color(
+                                                          0xFF754CEF),
+                                                      fontSize: w.width * 0.03,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
-                                          ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            )
-                          ],
-                        ])),
+                              )
+                            ],
+                          ]),
+                        ),
+                      ),
+                    ),
                     Positioned(
                       top: w.height * 0.67,
                       left: w.width * 0.25,
@@ -953,222 +1218,369 @@ class _PlaylistpageState extends State<Playlistpage>
                                     itemBuilder: (context, index) {
                                       final item = podcastPlaylists[index];
                                       return Container(
-                                        margin: EdgeInsets.all(w.width * 0.02),
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                              w.width * 0.05),
-                                          border:
-                                              Border.all(color: Colors.black12),
-                                        ),
-                                        width: w.width * 0.95,
-                                        height: w.width * 0.3,
-                                        child: Row(
-                                          // Add this to prevent overflow
-                                          mainAxisSize: MainAxisSize.max,
-                                          children: [
-                                            SizedBox(width: w.width * 0.01),
-                                            Image.network(
-                                              s48,
-                                              width: w.width *
-                                                  0.07, // Slightly reduce size if needed
-                                              height: w.width * 0.07,
-                                              fit: BoxFit.cover,
-                                            ),
-                                            SizedBox(
-                                                width: w.width *
-                                                    0.02), // Reduce spacing slightly
-                                            Container(
-                                              height: w.width * 0.2,
-                                              width: w.width *
-                                                  0.18, // Adjust width to be slightly smaller
-                                              decoration: BoxDecoration(
-                                                borderRadius:
-                                                    BorderRadius.circular(
-                                                        w.width * 0.04),
-                                                image: DecorationImage(
-                                                  image: NetworkImage(
-                                                      item["urlPhoto"]!),
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              ),
-                                            ),
-                                            SizedBox(width: w.width * 0.02),
-                                            Expanded(
-                                              // Add Expanded to make text take available space
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  SizedBox(
-                                                      height: w.width * 0.0),
-                                                  Text(
-                                                    item["name"]!,
-                                                    style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: w.width *
-                                                          0.035, // Slightly smaller font
-                                                    ),
-                                                    maxLines: 2,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                  SizedBox(
-                                                      height: w.width * 0.01),
-                                                ],
-                                              ),
-                                            ),
-                                            // No fixed width SizedBox here - let the Expanded handle spacing
-                                            Container(
-                                              width: w.width *
-                                                  0.2, // Fixed width for the stats column
-                                              child: Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  Row(
-                                                    mainAxisSize: MainAxisSize
-                                                        .min, // Make row take minimum space
-                                                    children: [
-                                                      Image.network(
-                                                        s37,
-                                                        width: w.width * 0.04,
-                                                        height: w.width * 0.04,
-                                                      ),
-                                                      SizedBox(
-                                                          width:
-                                                              w.width * 0.01),
-                                                      Text(
-                                                        formatLikes(
-                                                            item["likes"]!),
-                                                        style: TextStyle(
-                                                            fontSize: w.width *
-                                                                0.03, // Slightly smaller font
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .bold),
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  Row(
-                                                    mainAxisSize: MainAxisSize
-                                                        .min, // Make row take minimum space
-                                                    children: [
-                                                      Image.network(
-                                                        s14,
-                                                        width: w.width * 0.04,
-                                                        height: w.width * 0.04,
-                                                      ),
-                                                      SizedBox(
-                                                          width:
-                                                              w.width * 0.01),
-                                                      Text(
-                                                        formatLikes(
-                                                            item["vue"]!),
-                                                        style: TextStyle(
-                                                            fontSize: w.width *
-                                                                0.03, // Slightly smaller font
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .bold),
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  Row(
-                                                    mainAxisSize: MainAxisSize
-                                                        .min, // Make row take minimum space
-                                                    children: [
-                                                      Image.network(
-                                                        s38,
-                                                        width: w.width * 0.04,
-                                                        height: w.width * 0.04,
-                                                      ),
-                                                      SizedBox(
-                                                          width:
-                                                              w.width * 0.01),
-                                                      Text(
-                                                        formatLikes(
-                                                            item["comments"]!),
-                                                        style: TextStyle(
-                                                            fontSize: w.width *
-                                                                0.03, // Slightly smaller font
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .bold),
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                                SizedBox(
-                                  height: w.height * 0.23,
-                                  child: ListView.builder(
-                                    scrollDirection: Axis.horizontal,
-                                    itemCount: userPodcasts.length,
-                                    itemBuilder: (context, index) {
-                                      final playItem = userPodcasts[index];
-                                      return Container(
-                                        margin: EdgeInsets.symmetric(
-                                            horizontal: w.width * 0.02),
-                                        width: w.width * 0.2,
-                                        height: w.width *
-                                            0.35, // Increased height to accommodate content
-                                        child: Column(
-                                          mainAxisSize:
-                                              MainAxisSize.min, // Add this
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Container(
-                                              height: w.width * 0.2,
-                                              width: w.width * 0.2,
-                                              decoration: BoxDecoration(
-                                                borderRadius:
-                                                    BorderRadius.circular(
-                                                        w.width * 0.04),
-                                                image: DecorationImage(
-                                                  image: NetworkImage(
-                                                      playItem['photoUrl']),
-                                                  fit: BoxFit.cover,
-                                                  onError:
-                                                      (exception, stackTrace) {
-                                                    print(
-                                                        'Error loading image: $exception');
+                                          margin:
+                                              EdgeInsets.all(w.width * 0.02),
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(
+                                                w.width * 0.05),
+                                            border: Border.all(
+                                                color: Colors.black12),
+                                          ),
+                                          width: w.width * 0.95,
+                                          height: w.width * 0.3,
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              if (pp == 2) {
+                                                Navigator.pushNamed(
+                                                  context,
+                                                  '/podcast',
+                                                  arguments: {
+                                                    'idpod': item["id"],
+                                                    'feat':
+                                                        11, // remplace "someValue" par ce que tu veux représenter
                                                   },
+                                                );
+                                              }
+                                              if (pp == 3) {
+                                                Navigator.pushNamed(
+                                                  context,
+                                                  '/podcast',
+                                                  arguments: {
+                                                    'idpod': item["id"],
+                                                    'feat':
+                                                        3, // remplace "someValue" par ce que tu veux représenter
+                                                  },
+                                                );
+                                              }
+                                              if (pp == 4) {
+                                                Navigator.pushNamed(
+                                                  context,
+                                                  '/podcast',
+                                                  arguments: {
+                                                    'idpod': item["id"],
+                                                    'feat':
+                                                        3, // remplace "someValue" par ce que tu veux représenter
+                                                  },
+                                                );
+                                              }
+                                            },
+                                            child: Row(
+                                              // Add this to prevent overflow
+                                              mainAxisSize: MainAxisSize.max,
+                                              children: [
+                                                SizedBox(width: w.width * 0.01),
+                                                Image.network(
+                                                  s48,
+                                                  width: w.width *
+                                                      0.07, // Slightly reduce size if needed
+                                                  height: w.width * 0.07,
+                                                  fit: BoxFit.cover,
                                                 ),
-                                              ),
+                                                SizedBox(
+                                                    width: w.width *
+                                                        0.02), // Reduce spacing slightly
+                                                Container(
+                                                  height: w.width * 0.2,
+                                                  width: w.width *
+                                                      0.18, // Adjust width to be slightly smaller
+                                                  decoration: BoxDecoration(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            w.width * 0.04),
+                                                    image: DecorationImage(
+                                                      image: NetworkImage(
+                                                          item["urlPhoto"]!),
+                                                      fit: BoxFit.cover,
+                                                    ),
+                                                  ),
+                                                ),
+                                                SizedBox(width: w.width * 0.02),
+                                                Expanded(
+                                                  // Add Expanded to make text take available space
+                                                  child: Column(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      SizedBox(
+                                                          height:
+                                                              w.width * 0.0),
+                                                      Text(
+                                                        item["name"]!,
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: w.width *
+                                                              0.035, // Slightly smaller font
+                                                        ),
+                                                        maxLines: 2,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                      SizedBox(
+                                                          height:
+                                                              w.width * 0.01),
+                                                    ],
+                                                  ),
+                                                ),
+                                                // No fixed width SizedBox here - let the Expanded handle spacing
+                                                Container(
+                                                  width: w.width *
+                                                      0.2, // Fixed width for the stats column
+                                                  child: Column(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      Row(
+                                                        mainAxisSize: MainAxisSize
+                                                            .min, // Make row take minimum space
+                                                        children: [
+                                                          Image.network(
+                                                            s37,
+                                                            width:
+                                                                w.width * 0.04,
+                                                            height:
+                                                                w.width * 0.04,
+                                                          ),
+                                                          SizedBox(
+                                                              width: w.width *
+                                                                  0.01),
+                                                          Text(
+                                                            formatLikes(
+                                                                item["likes"]!),
+                                                            style: TextStyle(
+                                                                fontSize: w
+                                                                        .width *
+                                                                    0.03, // Slightly smaller font
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold),
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      Row(
+                                                        mainAxisSize: MainAxisSize
+                                                            .min, // Make row take minimum space
+                                                        children: [
+                                                          Image.network(
+                                                            s14,
+                                                            width:
+                                                                w.width * 0.04,
+                                                            height:
+                                                                w.width * 0.04,
+                                                          ),
+                                                          SizedBox(
+                                                              width: w.width *
+                                                                  0.01),
+                                                          Text(
+                                                            formatLikes(
+                                                                item["vue"]!),
+                                                            style: TextStyle(
+                                                                fontSize: w
+                                                                        .width *
+                                                                    0.03, // Slightly smaller font
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold),
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      Row(
+                                                        mainAxisSize: MainAxisSize
+                                                            .min, // Make row take minimum space
+                                                        children: [
+                                                          Image.network(
+                                                            s38,
+                                                            width:
+                                                                w.width * 0.04,
+                                                            height:
+                                                                w.width * 0.04,
+                                                          ),
+                                                          SizedBox(
+                                                              width: w.width *
+                                                                  0.01),
+                                                          Text(
+                                                            formatLikes(item[
+                                                                "comments"]!),
+                                                            style: TextStyle(
+                                                                fontSize: w
+                                                                        .width *
+                                                                    0.03, // Slightly smaller font
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold),
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                            SizedBox(height: w.width * 0.01),
-                                            Flexible(
-                                                child: Text(
-                                              playItem['name'],
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: w.width * 0.04,
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            )),
-                                          ],
-                                        ),
-                                      );
+                                          ));
                                     },
                                   ),
                                 ),
+                                if (pp == 3 || pp == 4) ...[
+                                  SizedBox(
+                                    height: w.height * 0.23,
+                                    child: ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: userPodcasts.length,
+                                      itemBuilder: (context, index) {
+                                        final playItem = userPodcasts[index];
+                                        return Container(
+                                          margin: EdgeInsets.symmetric(
+                                              horizontal: w.width * 0.02),
+                                          width: w.width * 0.2,
+                                          height: w.width *
+                                              0.35, // Increased height to accommodate content
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              if (pp == 3) {
+                                                Navigator.pushReplacementNamed(
+                                                    context, '/play',
+                                                    arguments: {
+                                                      'idplay': playItem["id"],
+                                                      'pp': 3
+                                                    });
+                                              }
+                                              if (pp == 4) {
+                                                Navigator.pushReplacementNamed(
+                                                    context, '/play',
+                                                    arguments: {
+                                                      'idplay': playItem["id"],
+                                                      'pp': 4
+                                                    });
+                                              }
+                                            },
+                                            child: Column(
+                                              mainAxisSize:
+                                                  MainAxisSize.min, // Add this
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Container(
+                                                  height: w.width * 0.2,
+                                                  width: w.width * 0.2,
+                                                  decoration: BoxDecoration(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            w.width * 0.04),
+                                                    image: DecorationImage(
+                                                      image: NetworkImage(
+                                                          playItem['photoUrl']),
+                                                      fit: BoxFit.cover,
+                                                      onError: (exception,
+                                                          stackTrace) {
+                                                        print(
+                                                            'Error loading image: $exception');
+                                                      },
+                                                    ),
+                                                  ),
+                                                ),
+                                                SizedBox(
+                                                    height: w.width * 0.01),
+                                                Flexible(
+                                                    child: Text(
+                                                  playItem['name'],
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: w.width * 0.04,
+                                                  ),
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                )),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                                if (pp == 2) ...[
+                                  SizedBox(
+                                    height: w.height * 0.23,
+                                    child: ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: userPodcasts.length,
+                                      itemBuilder: (context, index) {
+                                        final playItem = userPodcasts[index];
+                                        return Container(
+                                          margin: EdgeInsets.symmetric(
+                                              horizontal: w.width * 0.02,
+                                              vertical: w.height * 0.01),
+                                          width: w.width * 0.2,
+                                          height: w.width *
+                                              0.35, // Increased height to accommodate content
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              Navigator.pushReplacementNamed(
+                                                  context, '/play', arguments: {
+                                                'idplay': playItem["id"],
+                                                'pp': 2
+                                              });
+                                            },
+                                            child: Column(
+                                              mainAxisSize:
+                                                  MainAxisSize.min, // Add this
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Container(
+                                                  height: w.width * 0.2,
+                                                  width: w.width * 0.2,
+                                                  decoration: BoxDecoration(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            w.width * 0.04),
+                                                    image: DecorationImage(
+                                                      image: NetworkImage(
+                                                          playItem['photoUrl']),
+                                                      fit: BoxFit.cover,
+                                                      onError: (exception,
+                                                          stackTrace) {
+                                                        print(
+                                                            'Error loading image: $exception');
+                                                      },
+                                                    ),
+                                                  ),
+                                                ),
+                                                SizedBox(
+                                                    height: w.width * 0.01),
+                                                Flexible(
+                                                    child: Text(
+                                                  playItem['name'],
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: w.width * 0.04,
+                                                  ),
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                )),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),

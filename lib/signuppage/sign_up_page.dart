@@ -599,7 +599,7 @@ class _SignUppageState extends State<SignUppage> {
                   )),
                 ),
                 Positioned(
-                  top: sizee.height * 0.815,
+                  top: sizee.height * 0.83,
                   left: sizee.width * 0.2,
                   child: SizedBox(
                     child: Container(
@@ -637,46 +637,8 @@ class _SignUppageState extends State<SignUppage> {
                   ),
                 ),
 
-// Replace the existing Facebook button code with this:
                 Positioned(
-                  top: sizee.height * 0.874,
-                  left: sizee.width * 0.2,
-                  child: SizedBox(
-                    child: Container(
-                      height: sizee.height * 0.055,
-                      width: sizee.width * 0.8,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(sizee.width * 0.05),
-                      ),
-                      child: MaterialButton(
-                        onPressed: () {
-                          signInWithFacebook(context);
-                        },
-                        child: Row(
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.all(sizee.width * 0.02),
-                              child: Image.network(
-                                s16,
-                                width: sizee.width * 0.07,
-                                height: sizee.width * 0.07,
-                              ),
-                            ),
-                            Text(
-                              "  Continue With Facebook",
-                              style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: sizee.width * 0.038),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: sizee.height * 0.93,
+                  top: sizee.height * 0.9,
                   left: sizee.width * 0.43,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,

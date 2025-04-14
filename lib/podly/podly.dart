@@ -19,60 +19,83 @@ class _PodlypageState extends State<Podlypage> {
     await prefs.remove('email'); // Supprime l'utilisateur sauvegardé
   }
 
+  late int your = 1;
+  late int pp = 1;
+  late int chaine = 1;
+  final String userId = FirebaseAuth.instance.currentUser?.uid ?? "";
   List<Map<String, dynamic>> mesplaylist = [];
   Future<void> fetchmesPlaylistsId() async {
     final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
 
     try {
-      // 1️⃣ Récupérer les `playlistId` associés au `idpod`
       final playinPodSnapshot = await FirebaseFirestore.instance
           .collection('mesplaylist')
-          .orderBy('dateCreation', descending: true)
           .where('iduser', isEqualTo: currentUserId)
           .get();
 
-      // Extraire la liste des playlistIds
-      List<String> playlistIds = [];
+      List<Map<String, dynamic>> mesPlayInfos = [];
       for (var doc in playinPodSnapshot.docs) {
-        String playlistId = doc.data()['idplay'];
-        if (!playlistIds.contains(playlistId)) {
-          playlistIds.add(playlistId);
+        final data = doc.data();
+        if (data.containsKey('idplay') && data.containsKey('dateCreation')) {
+          mesPlayInfos.add({
+            'idplay': data['idplay'],
+            'dateCreation': data['dateCreation'],
+          });
         }
       }
 
-      if (playlistIds.isNotEmpty) {
-        // 2️⃣ Récupérer les playlists correspondant aux playlistIds
-        // Note: Firestore ne permet pas d'utiliser 'where in' avec plus de 10 éléments
-        // Donc nous divisons en groupes si nécessaire
+      if (mesPlayInfos.isNotEmpty) {
         List<Map<String, dynamic>> allPlaylists = [];
 
-        // Traiter par groupes de 10 maximum
+        List<String> playlistIds =
+            mesPlayInfos.map((e) => e['idplay'] as String).toList();
+
         for (int i = 0; i < playlistIds.length; i += 10) {
           int end = (i + 10 < playlistIds.length) ? i + 10 : playlistIds.length;
           List<String> batch = playlistIds.sublist(i, end);
 
           final playlistsSnapshot = await FirebaseFirestore.instance
               .collection('playlist')
-              //.orderBy('createdAt', descending: true)
               .where('id', whereIn: batch)
               .get();
 
           for (var doc in playlistsSnapshot.docs) {
-            allPlaylists.add(doc.data() as Map<String, dynamic>);
+            final playlistData = doc.data() as Map<String, dynamic>;
+            final matchingMes = mesPlayInfos.firstWhere(
+                (element) => element['idplay'] == playlistData['id'],
+                orElse: () => {});
+
+            if (matchingMes.isNotEmpty) {
+              playlistData['dateCreation'] = matchingMes['dateCreation'];
+            }
+
+            allPlaylists.add(playlistData);
           }
         }
 
+        // ⬇️ Tri du plus récent au plus ancien
+        allPlaylists.sort((a, b) {
+          Timestamp? dateA = a['dateCreation'];
+          Timestamp? dateB = b['dateCreation'];
+
+          if (dateA == null && dateB == null) return 0;
+          if (dateA == null) return 1;
+          if (dateB == null) return -1;
+
+          return dateB.compareTo(dateA); // ⬅️ tri décroissant ici
+        });
+
         setState(() {
-          // Stocker les playlists récupérées
           mesplaylist = allPlaylists;
         });
 
-        debugPrint("Playlists récupérées: ${mesplaylist.length}");
+        debugPrint(
+            "Playlists triées du plus récent au plus ancien: ${mesplaylist.length}");
       } else {
         setState(() {
           mesplaylist = [];
         });
-        debugPrint("Aucune playlist trouvée pour ce podcast");
+        debugPrint("Aucune playlist trouvée.");
       }
     } catch (e) {
       debugPrint("Erreur lors de la récupération des playlists: $e");
@@ -82,53 +105,349 @@ class _PodlypageState extends State<Podlypage> {
     }
   }
 
-  Future<void> fetrecentId() async {
+  List<Map<String, dynamic>> recommendedPodcasts = [];
+  List<Map<String, dynamic>> viewedPodcasts = [];
+  Future<void> fetchRecommendedPodcasts() async {
     final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
 
     try {
-      // 1️⃣ Récupérer les `playlistId` associés au `idpod`
-      final playinPodSnapshot = await FirebaseFirestore.instance
+      // 1. Récupérer les documents 'vues' de l'utilisateur
+      final viewedPodsSnapshot = await FirebaseFirestore.instance
           .collection('vues')
           .where('userId', isEqualTo: currentUserId)
           .get();
 
-      // Extraire la liste des playlistIds
-      List<String> playlistIds = [];
-      for (var doc in playinPodSnapshot.docs) {
-        String playlistId = doc.data()['idpod'];
-        if (!playlistIds.contains(playlistId)) {
-          playlistIds.add(playlistId);
+      // 2. Extraire les IDs des podcasts vus
+      List<String> viewedPodcastIds = viewedPodsSnapshot.docs
+          .map((doc) => doc.data()['idpod'] as String)
+          .toList();
+
+      debugPrint(
+          "🔎 Podcasts vus (${viewedPodcastIds.length}) : $viewedPodcastIds");
+
+      // 3. Récupérer les catégories à partir des podcasts vus
+      Set<String> categories = {};
+
+      for (int i = 0; i < viewedPodcastIds.length; i += 10) {
+        int end = (i + 10 < viewedPodcastIds.length)
+            ? i + 10
+            : viewedPodcastIds.length;
+        List<String> batchIds = viewedPodcastIds.sublist(i, end);
+
+        final snapshot = await FirebaseFirestore.instance
+            .collection('podcasts')
+            .where('id', whereIn: batchIds)
+            .get();
+
+        for (var doc in snapshot.docs) {
+          final category = doc.data()['category'];
+          if (category != null) {
+            categories.add(category);
+          }
         }
       }
 
-      if (playlistIds.isNotEmpty) {
-        // 2️⃣ Récupérer les playlists correspondant aux playlistIds
-        // Note: Firestore ne permet pas d'utiliser 'where in' avec plus de 10 éléments
-        // Donc nous divisons en groupes si nécessaire
+      debugPrint(
+          "📁 Catégories extraites (${categories.length}) : $categories");
+
+      if (categories.isEmpty) {
+        setState(() {
+          viewedPodcasts = [];
+          recommendedPodcasts = [];
+        });
+        debugPrint("Aucune catégorie trouvée pour les podcasts vus.");
+        return;
+      }
+
+      // 4. Récupérer les détails des podcasts vus
+      List<Map<String, dynamic>> tempViewedPodcasts = [];
+
+      for (int i = 0; i < viewedPodcastIds.length; i += 10) {
+        int end = (i + 10 < viewedPodcastIds.length)
+            ? i + 10
+            : viewedPodcastIds.length;
+        List<String> batchIds = viewedPodcastIds.sublist(i, end);
+
+        final snapshot = await FirebaseFirestore.instance
+            .collection('podcasts')
+            .where('id', whereIn: batchIds)
+            .get();
+
+        for (var doc in snapshot.docs) {
+          tempViewedPodcasts.add(doc.data());
+        }
+      }
+
+      debugPrint(
+          "✅ Détails des podcasts vus récupérés : ${tempViewedPodcasts.length}");
+
+      // 5. Récupérer les podcasts recommandés
+      List<Map<String, dynamic>> tempRecommendedPodcasts = [];
+
+      for (String category in categories) {
+        final recommendedSnapshot = await FirebaseFirestore.instance
+            .collection('podcasts')
+            .where('category', isEqualTo: category)
+            .orderBy('dateCreation', descending: true)
+            .limit(10)
+            .get();
+
+        debugPrint(
+            "📦 Candidats dans '$category' : ${recommendedSnapshot.docs.length}");
+
+        for (var doc in recommendedSnapshot.docs) {
+          final data = doc.data();
+          final id = data['id']?.toString();
+          if (id == null) {
+            debugPrint("⚠️ Podcast sans ID → ignoré");
+            continue;
+          }
+
+          if (!viewedPodcastIds.contains(id)) {
+            debugPrint("✅ Ajouté aux recommandations: $id");
+            tempRecommendedPodcasts.add(data);
+          } else {
+            debugPrint("⛔ Déjà vu, ignoré: $id");
+          }
+        }
+      }
+
+      debugPrint(
+          "✨ Podcasts recommandés retenus : ${tempRecommendedPodcasts.length}");
+
+      // 6. Récupérer les infos des channels
+      Set<String> allChannelIds = {};
+
+      for (var podcast in [...tempViewedPodcasts, ...tempRecommendedPodcasts]) {
+        if (podcast.containsKey('idUser')) {
+          allChannelIds.add(podcast['idUser']);
+        }
+      }
+
+      Map<String, Map<String, dynamic>> channelsMap = {};
+      List<String> channelIdsList = allChannelIds.toList();
+
+      for (int i = 0; i < channelIdsList.length; i += 10) {
+        int end =
+            (i + 10 < channelIdsList.length) ? i + 10 : channelIdsList.length;
+        List<String> batchIds = channelIdsList.sublist(i, end);
+
+        final channelsSnapshot = await FirebaseFirestore.instance
+            .collection('channels')
+            .where('userId', whereIn: batchIds)
+            .get();
+
+        for (var doc in channelsSnapshot.docs) {
+          final data = doc.data();
+          channelsMap[data['userId']] = data;
+        }
+      }
+
+      // 7. Associer les channels aux podcasts
+      for (var podcast in tempViewedPodcasts) {
+        podcast['channel'] = channelsMap[podcast['idUser']];
+      }
+
+      for (var podcast in tempRecommendedPodcasts) {
+        podcast['channel'] = channelsMap[podcast['idUser']];
+      }
+
+      // 8. Mettre à jour l'état
+      setState(() {
+        viewedPodcasts = tempViewedPodcasts;
+        recommendedPodcasts = tempRecommendedPodcasts;
+      });
+
+      debugPrint(
+          "🎯 Podcasts vus: ${viewedPodcasts.length}, recommandations: ${recommendedPodcasts.length}");
+    } catch (e) {
+      debugPrint("❌ Erreur fetchRecommendedPodcasts: $e");
+      setState(() {
+        viewedPodcasts = [];
+        recommendedPodcasts = [];
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> ress = [];
+  Future<void> fetchTrendingPodcasts() async {
+    final DateTime sevenDaysAgo = DateTime.now().subtract(Duration(days: 7));
+    final Timestamp timestampSevenDaysAgo = Timestamp.fromDate(sevenDaysAgo);
+
+    try {
+      // 1️⃣ Récupérer les vues des 7 derniers jours
+      final recentViewsSnapshot = await FirebaseFirestore.instance
+          .collection('vues')
+          .where('timevue', isGreaterThan: timestampSevenDaysAgo)
+          .get();
+
+      // 2️⃣ Récupérer tous les idpod uniques
+      Set<String> recentIdPods = recentViewsSnapshot.docs
+          .map((doc) => doc.data()['idpod'] as String)
+          .toSet();
+
+      if (recentIdPods.isEmpty) {
+        debugPrint("❌ Aucun podcast vu récemment.");
+        setState(() => ress = []);
+        return;
+      }
+
+      // 3️⃣ Récupérer les documents podcasts correspondants
+      List<Map<String, dynamic>> matchingPodcasts = [];
+
+      List<String> idList = recentIdPods.toList();
+      for (int i = 0; i < idList.length; i += 10) {
+        int end = (i + 10 < idList.length) ? i + 10 : idList.length;
+        List<String> batch = idList.sublist(i, end);
+
+        final podcastSnapshot = await FirebaseFirestore.instance
+            .collection('podcasts')
+            .where('id', whereIn: batch)
+            .get();
+
+        for (var doc in podcastSnapshot.docs) {
+          matchingPodcasts.add(doc.data());
+        }
+      }
+
+      // 4️⃣ Trier localement les podcasts par le champ `vue` (desc)
+      matchingPodcasts.sort((a, b) => (b['vue'] ?? 0).compareTo(a['vue'] ?? 0));
+
+      // 5️⃣ Prendre les 10 premiers
+      List<Map<String, dynamic>> top10 = matchingPodcasts.take(10).toList();
+
+      // 6️⃣ Ajouter les infos des chaînes
+      Set<String> userIds = top10.map((p) => p['idUser'] as String).toSet();
+      Map<String, Map<String, dynamic>> channelsMap = {};
+
+      for (int i = 0; i < userIds.length; i += 10) {
+        int end = (i + 10 < userIds.length) ? i + 10 : userIds.length;
+        List<String> batch = userIds.toList().sublist(i, end);
+
+        final channelsSnapshot = await FirebaseFirestore.instance
+            .collection('channels')
+            .where('userId', whereIn: batch)
+            .get();
+
+        for (var doc in channelsSnapshot.docs) {
+          channelsMap[doc.data()['userId']] = doc.data();
+        }
+      }
+
+      // 7️⃣ Associer les chaînes
+      for (var podcast in top10) {
+        podcast['channel'] = channelsMap[podcast['idUser']];
+      }
+
+      // 🔁 Mettre à jour l’état
+      setState(() {
+        ress = top10;
+      });
+
+      debugPrint("🔥 Trending podcasts récupérés: ${top10.length}");
+    } catch (e) {
+      debugPrint("❌ Erreur fetchTrendingPodcasts: $e");
+      setState(() => ress = []);
+    }
+  }
+
+  Future<void> fetrecentId() async {
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+
+    try {
+      // 🔁 Étape 1 : Récupérer les vues triées par timevue ASC
+      final playinPodSnapshot = await FirebaseFirestore.instance
+          .collection('vues')
+          .where('userId', isEqualTo: currentUserId)
+          .orderBy('timevue', descending: false)
+          .get();
+
+      // 🔁 Étape 2 : Liste ordonnée d’idpod avec timevue + percent
+      List<Map<String, dynamic>> orderedIdpods = [];
+      for (var doc in playinPodSnapshot.docs) {
+        final data = doc.data();
+        String idpod = data['idpod'];
+        Timestamp timevue = data['timevue'];
+        double percent = (data['percent'] ?? 0).toDouble();
+
+        // Évite les doublons (garde le premier car trié)
+        if (!orderedIdpods.any((e) => e['idpod'] == idpod)) {
+          orderedIdpods
+              .add({'idpod': idpod, 'timevue': timevue, 'percent': percent});
+        }
+      }
+
+      if (orderedIdpods.isNotEmpty) {
         List<Map<String, dynamic>> allPlaylists = [];
 
-        // Traiter par groupes de 10 maximum
-        for (int i = 0; i < playlistIds.length; i += 10) {
-          int end = (i + 10 < playlistIds.length) ? i + 10 : playlistIds.length;
-          List<String> batch = playlistIds.sublist(i, end);
+        for (int i = 0; i < orderedIdpods.length; i += 10) {
+          int end =
+              (i + 10 < orderedIdpods.length) ? i + 10 : orderedIdpods.length;
+          List<String> batch = orderedIdpods
+              .sublist(i, end)
+              .map((e) => e['idpod'] as String)
+              .toList();
 
           final playlistsSnapshot = await FirebaseFirestore.instance
               .collection('podcasts')
-              .orderBy('dateCreation', descending: true)
               .where('id', whereIn: batch)
               .get();
 
           for (var doc in playlistsSnapshot.docs) {
-            allPlaylists.add(doc.data() as Map<String, dynamic>);
+            final data = doc.data() as Map<String, dynamic>;
+            allPlaylists.add(data);
           }
         }
 
-        setState(() {
-          // Stocker les playlists récupérées
-          res = allPlaylists;
+        // Associer timevue et percent à chaque podcast
+        allPlaylists = allPlaylists.map((podcast) {
+          final match =
+              orderedIdpods.firstWhere((e) => e['idpod'] == podcast['id']);
+          podcast['timevue'] = match['timevue'];
+          podcast['percent'] = match['percent']; // ⬅️ ICI on ajoute percent
+          return podcast;
+        }).toList();
+
+        // Trier par timevue DESC
+        allPlaylists.sort((a, b) {
+          final aTime = a['timevue'] as Timestamp;
+          final bTime = b['timevue'] as Timestamp;
+          return bTime.compareTo(aTime);
         });
 
-        debugPrint("Playlists récupérées: ${mesplaylist.length}");
+        // 🔁 Étape 3 : Ajouter les infos du channel
+        final Set<String> userIds =
+            allPlaylists.map((p) => p['idUser'] as String).toSet();
+        Map<String, Map<String, dynamic>> channelsMap = {};
+
+        for (int i = 0; i < userIds.length; i += 10) {
+          int end = (i + 10 < userIds.length) ? i + 10 : userIds.length;
+          List<String> batchUserIds = userIds.toList().sublist(i, end);
+
+          final channelSnap = await FirebaseFirestore.instance
+              .collection('channels')
+              .where('userId', whereIn: batchUserIds)
+              .get();
+
+          for (var doc in channelSnap.docs) {
+            final data = doc.data();
+            channelsMap[data['userId']] = data;
+          }
+        }
+
+        // Ajouter channel à chaque podcast
+        final enrichedPlaylists = allPlaylists.map((podcast) {
+          final String idUser = podcast['idUser'];
+          final channel = channelsMap[idUser];
+          podcast['channel'] = channel;
+          return podcast;
+        }).toList();
+
+        setState(() {
+          res = enrichedPlaylists;
+        });
+
+        debugPrint("Playlists enrichies: ${res.length}");
       } else {
         setState(() {
           res = [];
@@ -147,7 +466,7 @@ class _PodlypageState extends State<Podlypage> {
     try {
       final querySnapshot = await FirebaseFirestore.instance
           .collection('channels')
-          .orderBy("followers")
+          .orderBy("followers", descending: true)
           .get();
 
       // Ajout des logs pour déboguer
@@ -166,20 +485,18 @@ class _PodlypageState extends State<Podlypage> {
     }
   }
 
-  Future<void> fetchtoppodcast() async {
+  Future<void> fetchfeuteredppodcast() async {
     try {
-      final querySnapshot = await FirebaseFirestore.instance
+      final sevenDaysAgo = DateTime.now().subtract(Duration(days: 7));
+
+      final recentPodcasts = await FirebaseFirestore.instance
           .collection('podcasts')
-          .orderBy("likes")
+          .where('dateCreation',
+              isGreaterThan: Timestamp.fromDate(sevenDaysAgo))
+          .orderBy('dateCreation', descending: true)
           .get();
-
-      // Ajout des logs pour déboguer
-      debugPrint('Nombre de chaînes trouvées : ${querySnapshot.docs.length}');
-      debugPrint(
-          'Données des chaînes : ${querySnapshot.docs.map((doc) => doc.data()).toList()}');
-
       setState(() {
-        topl = querySnapshot.docs
+        fea = recentPodcasts.docs
             .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
       });
@@ -189,22 +506,111 @@ class _PodlypageState extends State<Podlypage> {
     }
   }
 
+  Future<void> fetchtoppodcast() async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('podcasts')
+          .orderBy("likes", descending: true)
+          .limit(10)
+          .get();
+
+// Étape 1 : Extraire les données des podcasts
+      final allPlaylists = querySnapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+
+// Étape 2 : Récupérer les idUser (auteurs) uniques des podcasts
+      final Set<String> userIds = allPlaylists
+          .map((p) => p['idUser'] as String)
+          // ignore: unnecessary_null_comparison
+          .where((id) => id != null)
+          .toSet();
+
+// Étape 3 : Récupérer les channels associés à ces userIds
+      Map<String, Map<String, dynamic>> channelsMap = {};
+
+      for (int i = 0; i < userIds.length; i += 10) {
+        int end = (i + 10 < userIds.length) ? i + 10 : userIds.length;
+        List<String> batchUserIds = userIds.toList().sublist(i, end);
+
+        final channelsSnapshot = await FirebaseFirestore.instance
+            .collection('channels')
+            .where('userId', whereIn: batchUserIds)
+            .get();
+
+        for (var doc in channelsSnapshot.docs) {
+          final data = doc.data();
+          channelsMap[data['userId']] = data;
+        }
+      }
+
+// Étape 4 : Associer chaque podcast à son channel
+      final enrichedPlaylists = allPlaylists.map((podcast) {
+        final String idUser = podcast['idUser'];
+        podcast['channel'] = channelsMap[idUser];
+        return podcast;
+      }).toList();
+
+// (Optionnel) Mettre à jour l'état si tu es dans un widget Stateful
+      setState(() {
+        topl = enrichedPlaylists;
+      });
+    } catch (e) {
+      debugPrint("Erreur lors de la récupération des playlists: $e");
+      setState(() {
+        topl = [];
+      });
+    }
+  }
+
   Future<void> fetchtopseen() async {
     try {
       final querySnapshot = await FirebaseFirestore.instance
           .collection('podcasts')
-          .orderBy("vue")
+          .orderBy("vue", descending: true)
+          .limit(10)
           .get();
 
-      // Ajout des logs pour déboguer
-      debugPrint('Nombre de chaînes trouvées : ${querySnapshot.docs.length}');
-      debugPrint(
-          'Données des chaînes : ${querySnapshot.docs.map((doc) => doc.data()).toList()}');
+// Étape 1 : Extraire les données des podcasts
+      final allPlaylists = querySnapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
 
+// Étape 2 : Récupérer les idUser (auteurs) uniques des podcasts
+      final Set<String> userIds = allPlaylists
+          .map((p) => p['idUser'] as String)
+          // ignore: unnecessary_null_comparison
+          .where((id) => id != null)
+          .toSet();
+
+// Étape 3 : Récupérer les channels associés à ces userIds
+      Map<String, Map<String, dynamic>> channelsMap = {};
+
+      for (int i = 0; i < userIds.length; i += 10) {
+        int end = (i + 10 < userIds.length) ? i + 10 : userIds.length;
+        List<String> batchUserIds = userIds.toList().sublist(i, end);
+
+        final channelsSnapshot = await FirebaseFirestore.instance
+            .collection('channels')
+            .where('userId', whereIn: batchUserIds)
+            .get();
+
+        for (var doc in channelsSnapshot.docs) {
+          final data = doc.data();
+          channelsMap[data['userId']] = data;
+        }
+      }
+
+// Étape 4 : Associer chaque podcast à son channel
+      final enrichedPlaylists = allPlaylists.map((podcast) {
+        final String idUser = podcast['idUser'];
+        podcast['channel'] = channelsMap[idUser];
+        return podcast;
+      }).toList();
+
+// (Optionnel) Mettre à jour l'état si tu es dans un widget Stateful
       setState(() {
-        tops = querySnapshot.docs
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
+        tops = enrichedPlaylists;
       });
     } catch (e) {
       debugPrint('Erreur lors de la récupération des chaînes : $e');
@@ -240,62 +646,81 @@ class _PodlypageState extends State<Podlypage> {
   }
 
   List<Map<String, dynamic>> followcha = [];
+  List<Map<String, dynamic>> fea = [];
   Future<void> fetchfollowId() async {
     final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
 
     try {
-      // 1️⃣ Récupérer les `playlistId` associés au `idpod`
-      final playinPodSnapshot = await FirebaseFirestore.instance
+      // 1️⃣ Récupérer les follow triés par dateCreation DESC
+      final followSnapshot = await FirebaseFirestore.instance
           .collection('follow')
-          .orderBy('dateCreation', descending: true)
           .where('idfollowers', isEqualTo: currentUserId)
+          .orderBy('dateCreation', descending: true)
           .get();
 
-      // Extraire la liste des playlistIds
-      List<String> followIds = [];
-      for (var doc in playinPodSnapshot.docs) {
-        String followId = doc.data()['idfollowing'];
-        if (!followIds.contains(followId)) {
-          followIds.add(followId);
+      // 2️⃣ Construire une liste ordonnée de followings avec dateCreation
+      List<Map<String, dynamic>> followList = [];
+      for (var doc in followSnapshot.docs) {
+        final data = doc.data();
+        String idFollowing = data['idfollowing'];
+        Timestamp dateCreation = data['dateCreation'];
+
+        if (!followList.any((f) => f['idfollowing'] == idFollowing)) {
+          followList
+              .add({'idfollowing': idFollowing, 'dateCreation': dateCreation});
         }
       }
 
-      if (followIds.isNotEmpty) {
-        // 2️⃣ Récupérer les playlists correspondant aux playlistIds
-        // Note: Firestore ne permet pas d'utiliser 'where in' avec plus de 10 éléments
-        // Donc nous divisons en groupes si nécessaire
-        List<Map<String, dynamic>> allfollow = [];
+      if (followList.isNotEmpty) {
+        List<Map<String, dynamic>> allChannels = [];
 
-        // Traiter par groupes de 10 maximum
-        for (int i = 0; i < followIds.length; i += 10) {
-          int end = (i + 10 < followIds.length) ? i + 10 : followIds.length;
-          List<String> batch = followIds.sublist(i, end);
+        // 3️⃣ Récupérer les channels associés
+        for (int i = 0; i < followList.length; i += 10) {
+          int end = (i + 10 < followList.length) ? i + 10 : followList.length;
+          List<String> batch = followList
+              .sublist(i, end)
+              .map((e) => e['idfollowing'] as String)
+              .toList();
 
-          final playlistsSnapshot = await FirebaseFirestore.instance
+          final channelsSnapshot = await FirebaseFirestore.instance
               .collection('channels')
-              .orderBy('createdAt', descending: true)
               .where('userId', whereIn: batch)
               .get();
 
-          for (var doc in playlistsSnapshot.docs) {
-            allfollow.add(doc.data() as Map<String, dynamic>);
+          for (var doc in channelsSnapshot.docs) {
+            final channelData = doc.data();
+            allChannels.add(channelData);
           }
         }
 
-        setState(() {
-          // Stocker les playlists récupérées
-          followcha = allfollow;
+        // 4️⃣ Associer chaque channel à sa dateCreation (de follow)
+        final enrichedChannels = allChannels.map((channel) {
+          final match = followList
+              .firstWhere((f) => f['idfollowing'] == channel['userId']);
+          channel['dateCreationFollow'] = match['dateCreation']; // important !
+          return channel;
+        }).toList();
+
+        // 5️⃣ Trier localement par dateCreationFollow DESC
+        enrichedChannels.sort((a, b) {
+          final aTime = a['dateCreationFollow'] as Timestamp;
+          final bTime = b['dateCreationFollow'] as Timestamp;
+          return bTime.compareTo(aTime);
         });
 
-        debugPrint("Playlists récupérées: ${followcha.length}");
+        setState(() {
+          followcha = enrichedChannels;
+        });
+
+        debugPrint("Channels suivis récupérés : ${followcha.length}");
       } else {
         setState(() {
           followcha = [];
         });
-        debugPrint("Aucune playlist trouvée pour ce podcast");
+        debugPrint("Aucun channel suivi.");
       }
     } catch (e) {
-      debugPrint("Erreur lors de la récupération des playlists: $e");
+      debugPrint("Erreur lors de la récupération des channels suivis: $e");
       setState(() {
         followcha = [];
       });
@@ -414,22 +839,22 @@ class _PodlypageState extends State<Podlypage> {
     {"img": "images/h.png", "tite": "Amine"},
   ];
   final List<Map<String, String>> cat = [
-    {"tite": "Education", "img": "images/ed.jpg"},
-    {"tite": "History", "img": "images/his.jpg"},
-    {"tite": "Comedie", "img": "images/come.jpg"},
-    {"tite": "Tv&Films", "img": "images/film.jpg"},
-    {"tite": "Music", "img": "images/music.jpg"},
-    {"tite": "Books", "img": "images/book.jpg"},
-    {"tite": "Culture", "img": "images/cultur.jpg"},
-    {"tite": "Self", "img": "images/self.jpg"},
-    {"tite": "Marketing", "img": "images/mar.jpg"},
-    {"tite": "Sport", "img": "images/sport.jpg"},
-    {"tite": "Gaming", "img": "images/game.jpg"},
-    {"tite": "Food", "img": "images/food.jpg"},
-    {"tite": "Travel", "img": "images/travel.jpg"},
-    {"tite": "Religion", "img": "images/rel.jpg"},
-    {"tite": "Art", "img": "images/art.jpg"},
-    {"tite": "Sciences", "img": "images/sience.jpg"},
+    {"tite": "Education", "img": s65},
+    {"tite": "History", "img": s66},
+    {"tite": "Comedie", "img": s67},
+    {"tite": "Tv&Films", "img": s68},
+    {"tite": "Music", "img": s69},
+    {"tite": "Books", "img": s70},
+    {"tite": "Culture", "img": s71},
+    {"tite": "Self", "img": s72},
+    {"tite": "Marketing", "img": s73},
+    {"tite": "Sport", "img": s74},
+    {"tite": "Gaming", "img": s75},
+    {"tite": "Food", "img": s76},
+    {"tite": "Travel", "img": s77},
+    {"tite": "Religion", "img": s78},
+    {"tite": "Art", "img": s79},
+    {"tite": "Sciences", "img": s80},
   ];
   final List<Map<String, String>> play = [
     {"img": "images/person.jpg", "tit": "My Playlist", "tite": "50 Podcast"},
@@ -451,25 +876,34 @@ class _PodlypageState extends State<Podlypage> {
   int _selectedIndex = 0;
   late int r = 1;
   late int q = 1;
+  late int feat = 1;
+  bool isLoading = true;
   @override
   void initState() {
     super.initState();
-    fetchuser();
-    fetchfollowId();
-    nbrpodId();
-    fetchmesPlaylistsId();
-    fetchtopseen();
-    fetchtoppodcast();
-    fetchtopChannel();
-    fetrecentId();
-    // Ajouter un listener pour détecter les changements de scroll
-    _pageController.addListener(() {
-      int next = _pageController.page!.round();
-      if (_currentIndex != next) {
-        setState(() {
-          _currentIndex = next;
-        });
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      setState(() => isLoading = true);
+      await fetchuser();
+      await fetchfollowId();
+      await nbrpodId();
+      await fetchmesPlaylistsId();
+      await fetchtopseen();
+      await fetchtoppodcast();
+      await fetchtopChannel();
+      await fetrecentId();
+      await fetchfeuteredppodcast();
+      await fetchRecommendedPodcasts();
+      await fetchTrendingPodcasts();
+      // Ajouter un listener pour détecter les changements de scroll
+      _pageController.addListener(() {
+        int next = _pageController.page!.round();
+        if (_currentIndex != next) {
+          setState(() {
+            _currentIndex = next;
+          });
+        }
+      });
+      setState(() => isLoading = false);
     });
   }
 
@@ -568,8 +1002,8 @@ class _PodlypageState extends State<Podlypage> {
                         SizedBox(
                           width: x.width * 0.15,
                           height: x.width * 0.15,
-                          child: Image.asset(
-                            "images/podly.jpg",
+                          child: Image.network(
+                            s61,
                             width: x.width * 0.15,
                             height: x.width * 0.15,
                           ),
@@ -584,39 +1018,39 @@ class _PodlypageState extends State<Podlypage> {
                     ),
                   ),
                   Positioned(
-                    top: x.height * 0.033,
+                    top: x.height * 0.027,
                     right: x.width * 0.07,
                     child: Row(
                       children: [
                         SizedBox(
-                          width: x.width * 0.05, // Added width
-                          height: x.width * 0.05, // Added height
-                          child: GestureDetector(
-                            onTap: () {
+                          width: x.width * 0.09, // Added width
+                          height: x.width * 0.09, // Added height
+                          child: IconButton(
+                            onPressed: () {
                               showSearch(context: context, delegate: Search());
                             },
-                            child: Image.asset(
-                              "images/search.png",
-                              width: x.width * 0.05,
-                              height: x.width * 0.05,
+                            icon: Image.network(
+                              s60,
+                              width: x.width * 0.09,
+                              height: x.width * 0.09,
                             ),
                           ),
                         ),
                         SizedBox(
-                          width: x.width * 0.05, // Added width
-                          height: x.width * 0.05, // Added height
+                          width: x.width * 0.01, // Added width
+                          height: x.width * 0.01, // Added height
                         ),
                         SizedBox(
-                          width: x.width * 0.05, // Added width
-                          height: x.width * 0.05, // Added height
-                          child: GestureDetector(
-                            onTap: () {
+                          width: x.width * 0.09, // Added width
+                          height: x.width * 0.09, // Added height
+                          child: IconButton(
+                            onPressed: () {
                               Navigator.pushNamed(context, '/nofi');
                             },
-                            child: Image.asset(
-                              "images/nofi.png",
-                              width: x.width * 0.05,
-                              height: x.width * 0.05,
+                            icon: Image.network(
+                              s59,
+                              width: x.width * 0.09,
+                              height: x.width * 0.09,
                             ),
                           ),
                         ),
@@ -626,12 +1060,36 @@ class _PodlypageState extends State<Podlypage> {
                   Positioned(
                       top: x.height * 0.08,
                       left: x.width * 0.08,
-                      child: Text(
-                        "Hello Younes3100",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: x.width * 0.065),
-                      ))
+                      child: Wrap(
+                        children: [
+                          Row(children: [
+                            Text(
+                              "Hello",
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: x.width * 0.065),
+                            ),
+                            Text(" "),
+                            Row(
+                              children: [
+                                Text(
+                                  user[0]["firstName"],
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: x.width * 0.065),
+                                ),
+                                Text(" "),
+                                Text(
+                                  user[0]["lastName"],
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: x.width * 0.065),
+                                ),
+                              ],
+                            )
+                          ])
+                        ],
+                      )),
                 ],
               ),
             ),
@@ -657,22 +1115,36 @@ class _PodlypageState extends State<Podlypage> {
                   Expanded(
                     child: PageView.builder(
                       controller: _pageController,
-                      itemCount: 3,
+                      itemCount: fea.length,
                       itemBuilder: (context, index) {
+                        final feaItem = fea[index];
                         return Container(
                           margin:
                               EdgeInsets.symmetric(horizontal: x.width * 0.05),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(x.width * 0.05),
                             border: Border.all(
-                              color: Colors.grey.shade300,
+                              color: Colors.white,
                               width: 1,
                             ),
                           ),
                           clipBehavior: Clip.antiAlias,
-                          child: Image.asset(
-                            "images/fetur.png",
-                            fit: BoxFit.fill,
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/podcast',
+                                arguments: {
+                                  'idpod': feaItem["id"],
+                                  'feat':
+                                      2, // remplace "someValue" par ce que tu veux représenter
+                                },
+                              );
+                            },
+                            child: Image.network(
+                              feaItem["urlPhoto"],
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         );
                       },
@@ -683,7 +1155,7 @@ class _PodlypageState extends State<Podlypage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
-                      3,
+                      fea.length,
                       (index) => Container(
                         width: x.width * 0.015,
                         height: x.width * 0.015,
@@ -740,8 +1212,9 @@ class _PodlypageState extends State<Podlypage> {
                             Navigator.pushNamed(
                               context,
                               '/seeall',
-                              arguments:
-                                  3, // Passe la valeur de r comme argument
+                              arguments: {
+                                'r': 3
+                              }, // Passe la valeur de r comme argument
                             );
 
                             print(r);
@@ -760,55 +1233,83 @@ class _PodlypageState extends State<Podlypage> {
                   itemCount: res.length,
                   itemBuilder: (context, index) {
                     final podItem = res[index];
+                    final channel = podItem['channel'];
                     return Container(
                       margin: EdgeInsets.symmetric(horizontal: x.width * 0.02),
                       width: x.width * 0.2,
                       height: x.width *
                           0.35, // Increased height to accommodate content
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min, // Add this
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            height: x.width * 0.2,
-                            width: x.width * 0.2,
-                            decoration: BoxDecoration(
-                              borderRadius:
-                                  BorderRadius.circular(x.width * 0.04),
-                              image: DecorationImage(
-                                image: NetworkImage(podItem["urlPhoto"]),
-                                fit: BoxFit.cover,
-                                onError: (exception, stackTrace) {
-                                  print('Error loading image: $exception');
-                                },
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/podcast',
+                            arguments: {
+                              'idpod': podItem["id"],
+                              'feat':
+                                  4, // remplace "someValue" par ce que tu veux représenter
+                            },
+                          );
+                        },
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min, // Add this
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              height: x.width * 0.2,
+                              width: x.width * 0.2,
+                              decoration: BoxDecoration(
+                                borderRadius:
+                                    BorderRadius.circular(x.width * 0.04),
+                                image: DecorationImage(
+                                  image: NetworkImage(podItem["urlPhoto"]),
+                                  fit: BoxFit.cover,
+                                  onError: (exception, stackTrace) {
+                                    print('Error loading image: $exception');
+                                  },
+                                ),
                               ),
                             ),
-                          ),
-                          SizedBox(height: x.width * 0.01),
-                          Flexible(
-                              child: Text(
-                            podItem["name"],
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: x.width * 0.04,
+                            SizedBox(height: x.width * 0.01),
+                            Flexible(
+                                child: Text(
+                              podItem["name"],
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: x.width * 0.04,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            )),
+                            SizedBox(
+                              height: x.width * 0.01,
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          )),
-                          SizedBox(
-                            height: x.width * 0.01,
-                          ),
-                          /* Flexible(
-                              child: Text(
-                            podItem["tite"] ?? "Unknown",
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: x.width * 0.035,
+                            Flexible(
+                                child: Text(
+                              channel["name"],
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: x.width * 0.035,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            )),
+                            SizedBox(
+                              height: x.height * 0.01,
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          )),*/
-                        ],
+                            SizedBox(
+                              width: x.width *
+                                  0.35, // Constrain the width of the progress bar
+                              child: LinearProgressIndicator(
+                                value: podItem["percent"], // 65% de progression
+                                backgroundColor: Colors.grey[300],
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    Color(0xFF754CEF)),
+                                minHeight: 8,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -831,7 +1332,7 @@ class _PodlypageState extends State<Podlypage> {
                         child: SizedBox(
                           width: x.width * 0.04,
                           height: x.width * 0.04,
-                          child: Image.asset("images/q.png"),
+                          child: Image.network(s62),
                         )),
                     Positioned(
                         top: x.height * 0.007,
@@ -851,13 +1352,14 @@ class _PodlypageState extends State<Podlypage> {
                             Navigator.pushNamed(
                               context,
                               '/seeall',
-                              arguments:
-                                  4, // Passe la valeur de r comme argument
+                              arguments: {
+                                'r': 4
+                              }, // Passe la valeur de r comme argument
                             );
                             print(r);
                           },
-                          icon: Image.asset(
-                            "images/aa.png",
+                          icon: Image.network(
+                            s36,
                             width: x.width * 0.04,
                             height: x.width * 0.04,
                           ),
@@ -867,59 +1369,72 @@ class _PodlypageState extends State<Podlypage> {
                 height: x.height * 0.23,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: po.length,
+                  itemCount: recommendedPodcasts.length,
                   itemBuilder: (context, index) {
-                    final podItem = po[index];
+                    final podItem = recommendedPodcasts[index];
+                    final reco = podItem["channel"];
                     return Container(
                       margin: EdgeInsets.symmetric(horizontal: x.width * 0.02),
                       width: x.width * 0.2,
                       height: x.width *
                           0.35, // Increased height to accommodate content
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min, // Add this
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            height: x.width * 0.2,
-                            width: x.width * 0.2,
-                            decoration: BoxDecoration(
-                              borderRadius:
-                                  BorderRadius.circular(x.width * 0.04),
-                              image: DecorationImage(
-                                image: AssetImage(
-                                    podItem["img"] ?? "images/placeholder.png"),
-                                fit: BoxFit.cover,
-                                onError: (exception, stackTrace) {
-                                  print('Error loading image: $exception');
-                                },
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/podcast',
+                            arguments: {
+                              'idpod': podItem["id"],
+                              'feat':
+                                  5, // remplace "someValue" par ce que tu veux représenter
+                            },
+                          );
+                        },
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min, // Add this
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              height: x.width * 0.2,
+                              width: x.width * 0.2,
+                              decoration: BoxDecoration(
+                                borderRadius:
+                                    BorderRadius.circular(x.width * 0.04),
+                                image: DecorationImage(
+                                  image: NetworkImage(podItem["urlPhoto"]),
+                                  fit: BoxFit.cover,
+                                  onError: (exception, stackTrace) {
+                                    print('Error loading image: $exception');
+                                  },
+                                ),
                               ),
                             ),
-                          ),
-                          SizedBox(height: x.width * 0.01),
-                          Flexible(
-                              child: Text(
-                            podItem["tit"] ?? "Untitled",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: x.width * 0.04,
+                            SizedBox(height: x.width * 0.01),
+                            Flexible(
+                                child: Text(
+                              podItem["name"],
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: x.width * 0.04,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            )),
+                            SizedBox(
+                              height: x.width * 0.01,
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          )),
-                          SizedBox(
-                            height: x.width * 0.01,
-                          ),
-                          Flexible(
-                              child: Text(
-                            podItem["tite"] ?? "Unknown",
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: x.width * 0.035,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          )),
-                        ],
+                            Flexible(
+                                child: Text(
+                              reco["name"],
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: x.width * 0.035,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            )),
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -962,8 +1477,9 @@ class _PodlypageState extends State<Podlypage> {
                             Navigator.pushNamed(
                               context,
                               '/seeall',
-                              arguments:
-                                  5, // Passe la valeur de r comme argument
+                              arguments: {
+                                'r': 5
+                              }, // Passe la valeur de r comme argument
                             );
                             print(r);
                           },
@@ -984,10 +1500,27 @@ class _PodlypageState extends State<Podlypage> {
                     return Container(
                       margin: EdgeInsets.symmetric(horizontal: x.width * 0.02),
                       width: x.width * 0.2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
+                      child: GestureDetector(
+                        onTap: () {
+                          if (userId == craItem["userId"]) {
+                            Navigator.pushNamed(context, '/your',
+                                arguments: {'your': 2});
+                          }
+                          if (userId != craItem["userId"]) {
+                            Navigator.pushNamed(
+                              context,
+                              '/channel',
+                              arguments: {
+                                'id': craItem["id"],
+                                'chaine': 2,
+                              },
+                            );
+                          }
+                        },
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
                               height: x.width * 0.2,
                               width: x.width * 0.2,
                               decoration: BoxDecoration(
@@ -1001,22 +1534,19 @@ class _PodlypageState extends State<Podlypage> {
                                   },
                                 ),
                               ),
-                              child: GestureDetector(
-                                onTap: () {
-                                  Navigator.pushNamed(context, '/channel');
-                                },
-                              )),
-                          SizedBox(
-                            height: x.width * 0.01,
-                          ),
-                          Text(
-                            craItem["name"],
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: x.width * 0.03,
                             ),
-                          ),
-                        ],
+                            SizedBox(
+                              height: x.width * 0.01,
+                            ),
+                            Text(
+                              craItem["name"],
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: x.width * 0.03,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -1039,7 +1569,7 @@ class _PodlypageState extends State<Podlypage> {
                         child: SizedBox(
                           width: x.width * 0.04,
                           height: x.width * 0.04,
-                          child: Image.asset("images/r.png"),
+                          child: Image.network(s63),
                         )),
                     Positioned(
                         top: x.height * 0.007,
@@ -1059,13 +1589,14 @@ class _PodlypageState extends State<Podlypage> {
                             Navigator.pushNamed(
                               context,
                               '/seeall',
-                              arguments:
-                                  6, // Passe la valeur de r comme argument
+                              arguments: {
+                                'r': 6
+                              }, // Passe la valeur de r comme argument
                             );
                             print(r);
                           },
-                          icon: Image.asset(
-                            "images/aa.png",
+                          icon: Image.network(
+                            s36,
                             width: x.width * 0.04,
                             height: x.width * 0.04,
                           ),
@@ -1075,59 +1606,72 @@ class _PodlypageState extends State<Podlypage> {
                 height: x.height * 0.23,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: pod.length,
+                  itemCount: ress.length,
                   itemBuilder: (context, index) {
-                    final podItem = pod[index];
+                    final podItem = ress[index];
+                    final chann = podItem["channel"];
                     return Container(
                       margin: EdgeInsets.symmetric(horizontal: x.width * 0.02),
                       width: x.width * 0.2,
                       height: x.width *
                           0.35, // Increased height to accommodate content
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min, // Add this
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            height: x.width * 0.2,
-                            width: x.width * 0.2,
-                            decoration: BoxDecoration(
-                              borderRadius:
-                                  BorderRadius.circular(x.width * 0.04),
-                              image: DecorationImage(
-                                image: AssetImage(
-                                    podItem["img"] ?? "images/placeholder.png"),
-                                fit: BoxFit.cover,
-                                onError: (exception, stackTrace) {
-                                  print('Error loading image: $exception');
-                                },
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/podcast',
+                            arguments: {
+                              'idpod': podItem["id"],
+                              'feat':
+                                  6, // remplace "someValue" par ce que tu veux représenter
+                            },
+                          );
+                        },
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min, // Add this
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              height: x.width * 0.2,
+                              width: x.width * 0.2,
+                              decoration: BoxDecoration(
+                                borderRadius:
+                                    BorderRadius.circular(x.width * 0.04),
+                                image: DecorationImage(
+                                  image: NetworkImage(podItem["urlPhoto"]),
+                                  fit: BoxFit.cover,
+                                  onError: (exception, stackTrace) {
+                                    print('Error loading image: $exception');
+                                  },
+                                ),
                               ),
                             ),
-                          ),
-                          SizedBox(height: x.width * 0.01),
-                          Flexible(
-                              child: Text(
-                            podItem["tit"] ?? "Untitled",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: x.width * 0.04,
+                            SizedBox(height: x.width * 0.01),
+                            Flexible(
+                                child: Text(
+                              podItem["name"],
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: x.width * 0.04,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            )),
+                            SizedBox(
+                              height: x.width * 0.01,
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          )),
-                          SizedBox(
-                            height: x.width * 0.01,
-                          ),
-                          Flexible(
-                              child: Text(
-                            podItem["tite"] ?? "Unknown",
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: x.width * 0.035,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          )),
-                        ],
+                            Flexible(
+                                child: Text(
+                              chann["name"],
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: x.width * 0.035,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            )),
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -1170,8 +1714,9 @@ class _PodlypageState extends State<Podlypage> {
                             Navigator.pushNamed(
                               context,
                               '/seeall',
-                              arguments:
-                                  7, // Passe la valeur de r comme argument
+                              arguments: {
+                                'r': 7
+                              }, // Passe la valeur de r comme argument
                             );
                             print(r);
                           },
@@ -1189,57 +1734,71 @@ class _PodlypageState extends State<Podlypage> {
                   itemCount: topl.length,
                   itemBuilder: (context, index) {
                     final podItem = topl[index];
+                    final re = podItem["channel"];
                     return Container(
-                      margin: EdgeInsets.symmetric(horizontal: x.width * 0.02),
-                      width: x.width * 0.2,
-                      height: x.width *
-                          0.35, // Increased height to accommodate content
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min, // Add this
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            height: x.width * 0.2,
-                            width: x.width * 0.2,
-                            decoration: BoxDecoration(
-                              borderRadius:
-                                  BorderRadius.circular(x.width * 0.04),
-                              image: DecorationImage(
-                                image: NetworkImage(podItem["urlPhoto"]),
-                                fit: BoxFit.cover,
-                                onError: (exception, stackTrace) {
-                                  print('Error loading image: $exception');
-                                },
+                        margin:
+                            EdgeInsets.symmetric(horizontal: x.width * 0.02),
+                        width: x.width * 0.2,
+                        height: x.width *
+                            0.35, // Increased height to accommodate content
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/podcast',
+                              arguments: {
+                                'idpod': podItem["id"],
+                                'feat':
+                                    7, // remplace "someValue" par ce que tu veux représenter
+                              },
+                            );
+                          },
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min, // Add this
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                height: x.width * 0.2,
+                                width: x.width * 0.2,
+                                decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(x.width * 0.04),
+                                  image: DecorationImage(
+                                    image: NetworkImage(podItem["urlPhoto"]),
+                                    fit: BoxFit.cover,
+                                    onError: (exception, stackTrace) {
+                                      print('Error loading image: $exception');
+                                    },
+                                  ),
+                                ),
                               ),
-                            ),
+                              SizedBox(height: x.width * 0.01),
+                              Flexible(
+                                  child: Text(
+                                podItem["name"],
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: x.width * 0.04,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              )),
+                              SizedBox(
+                                height: x.width * 0.01,
+                              ),
+                              Flexible(
+                                  child: Text(
+                                re["name"],
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: x.width * 0.035,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              )),
+                            ],
                           ),
-                          SizedBox(height: x.width * 0.01),
-                          Flexible(
-                              child: Text(
-                            podItem["name"],
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: x.width * 0.04,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          )),
-                          SizedBox(
-                            height: x.width * 0.01,
-                          ),
-                          /* Flexible(
-                              child: Text(
-                            podItem["tite"] ?? "Unknown",
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: x.width * 0.035,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          )),*/
-                        ],
-                      ),
-                    );
+                        ));
                   },
                 ),
               ),
@@ -1280,8 +1839,9 @@ class _PodlypageState extends State<Podlypage> {
                             Navigator.pushNamed(
                               context,
                               '/seeall',
-                              arguments:
-                                  8, // Passe la valeur de r comme argument
+                              arguments: {
+                                'r': 8
+                              }, // Passe la valeur de r comme argument
                             );
                             print(r);
                           },
@@ -1300,44 +1860,57 @@ class _PodlypageState extends State<Podlypage> {
                   itemBuilder: (context, index) {
                     final podItem = tops[index];
                     return Container(
-                      margin: EdgeInsets.symmetric(horizontal: x.width * 0.02),
-                      width: x.width * 0.2,
-                      height: x.width *
-                          0.35, // Increased height to accommodate content
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min, // Add this
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            height: x.width * 0.2,
-                            width: x.width * 0.2,
-                            decoration: BoxDecoration(
-                              borderRadius:
-                                  BorderRadius.circular(x.width * 0.04),
-                              image: DecorationImage(
-                                image: NetworkImage(podItem["urlPhoto"]),
-                                fit: BoxFit.cover,
-                                onError: (exception, stackTrace) {
-                                  print('Error loading image: $exception');
-                                },
+                        margin:
+                            EdgeInsets.symmetric(horizontal: x.width * 0.02),
+                        width: x.width * 0.2,
+                        height: x.width *
+                            0.35, // Increased height to accommodate content
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/podcast',
+                              arguments: {
+                                'idpod': podItem["id"],
+                                'feat':
+                                    8, // remplace "someValue" par ce que tu veux représenter
+                              },
+                            );
+                          },
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min, // Add this
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                height: x.width * 0.2,
+                                width: x.width * 0.2,
+                                decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(x.width * 0.04),
+                                  image: DecorationImage(
+                                    image: NetworkImage(podItem["urlPhoto"]),
+                                    fit: BoxFit.cover,
+                                    onError: (exception, stackTrace) {
+                                      print('Error loading image: $exception');
+                                    },
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                          SizedBox(height: x.width * 0.01),
-                          Flexible(
-                              child: Text(
-                            podItem["name"],
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: x.width * 0.04,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          )),
-                          SizedBox(
-                            height: x.width * 0.01,
-                          ),
-                          /* Flexible(
+                              SizedBox(height: x.width * 0.01),
+                              Flexible(
+                                  child: Text(
+                                podItem["name"],
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: x.width * 0.04,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              )),
+                              SizedBox(
+                                height: x.width * 0.01,
+                              ),
+                              /* Flexible(
                               child: Text(
                             podItem["tite"] ?? "Unknown",
                             style: TextStyle(
@@ -1347,9 +1920,9 @@ class _PodlypageState extends State<Podlypage> {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           )),*/
-                        ],
-                      ),
-                    );
+                            ],
+                          ),
+                        ));
                   },
                 ),
               ),
@@ -1391,7 +1964,7 @@ class _PodlypageState extends State<Podlypage> {
                               Navigator.pushNamed(
                                 context,
                                 '/seeall',
-                                arguments: 11,
+                                arguments: {'r': 11, 'ct': cat[index]["tite"]},
                                 // Passe la valeur de r comme argument
                               );
                               print(r);
@@ -1408,7 +1981,7 @@ class _PodlypageState extends State<Podlypage> {
                               child: ClipRRect(
                                 borderRadius:
                                     BorderRadius.circular(x.width * 0.04),
-                                child: Image.asset(
+                                child: Image.network(
                                   cat[index]["img"] ?? "images/placeholder.png",
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) {
@@ -1485,8 +2058,9 @@ class _PodlypageState extends State<Podlypage> {
                             Navigator.pushNamed(
                               context,
                               '/seeall',
-                              arguments:
-                                  9, // Passe la valeur de r comme argument
+                              arguments: {
+                                'r': 9
+                              }, // Passe la valeur de r comme argument
                             );
                             print(r);
                           },
@@ -1508,40 +2082,52 @@ class _PodlypageState extends State<Podlypage> {
                   itemBuilder: (context, index) {
                     final creItem = followcha[index];
                     return Container(
-                      margin: EdgeInsets.symmetric(horizontal: x.width * 0.02),
-                      width: x.width * 0.2,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AspectRatio(
-                            aspectRatio: 1,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.circular(x.width * 0.1),
-                                image: DecorationImage(
-                                  image: NetworkImage(creItem["photoUrl"]),
-                                  fit: BoxFit.cover,
+                        margin:
+                            EdgeInsets.symmetric(horizontal: x.width * 0.02),
+                        width: x.width * 0.2,
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/channel',
+                              arguments: {
+                                'id': creItem["id"],
+                                'chaine': 3,
+                              },
+                            );
+                          },
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AspectRatio(
+                                aspectRatio: 1,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius:
+                                        BorderRadius.circular(x.width * 0.1),
+                                    image: DecorationImage(
+                                      image: NetworkImage(creItem["photoUrl"]),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                          SizedBox(height: x.width * 0.01),
-                          Flexible(
-                            child: Text(
-                              creItem["name"],
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: x.width * 0.03,
+                              SizedBox(height: x.width * 0.01),
+                              Flexible(
+                                child: Text(
+                                  creItem["name"],
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: x.width * 0.03,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
-                    );
+                        ));
                   },
                 ),
               ),
@@ -1613,11 +2199,96 @@ class _PodlypageState extends State<Podlypage> {
                         child: Stack(
                           children: [
                             Positioned(
-                              top: x.height * 0.005,
+                              top: x.height * 0.00,
                               child: Container(
                                 margin: EdgeInsets.symmetric(
                                     horizontal: x.width * 0.02),
                                 width: x.width * 0.32,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.pushNamed(context, '/your1');
+                                  },
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      AspectRatio(
+                                        aspectRatio: 1,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(
+                                                x.width * 0.04),
+                                            image: DecorationImage(
+                                              image: NetworkImage(
+                                                  user[0]["photoUrl"]),
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(height: x.width * 0.03),
+                                      Flexible(
+                                        child: Text(
+                                          "My Playlist",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: x.width * 0.04,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      SizedBox(height: x.width * 0.01),
+                                      Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              formatLikes(nbr),
+                                              style: TextStyle(
+                                                color: Colors.grey,
+                                                fontSize: x.width * 0.035,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          Text(" "),
+                                          Text(
+                                            "Podcasts",
+                                            style: TextStyle(
+                                              color: Colors.grey,
+                                              fontSize: x.width * 0.035,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )), // Correction ici: "height" changé en "width"
+                    Expanded(
+                      // Ajout d'un Expanded pour que le ListView prenne l'espace disponible
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: mesplaylist.length,
+                        itemBuilder: (context, index) {
+                          final playItem = mesplaylist[index];
+                          return Container(
+                              margin: EdgeInsets.symmetric(
+                                  horizontal: x.width * 0.02),
+                              width: x.width * 0.32,
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.pushNamed(context, '/play',
+                                      arguments: {
+                                        'idplay': playItem["id"],
+                                        'pp': 2
+                                      });
+                                },
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1630,7 +2301,7 @@ class _PodlypageState extends State<Podlypage> {
                                               x.width * 0.04),
                                           image: DecorationImage(
                                             image: NetworkImage(
-                                                user[0]["photoUrl"]),
+                                                playItem["photoUrl"]),
                                             fit: BoxFit.cover,
                                           ),
                                         ),
@@ -1639,7 +2310,7 @@ class _PodlypageState extends State<Podlypage> {
                                     SizedBox(height: x.width * 0.03),
                                     Flexible(
                                       child: Text(
-                                        "My Playlist",
+                                        playItem["name"],
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: x.width * 0.04,
@@ -1653,7 +2324,7 @@ class _PodlypageState extends State<Podlypage> {
                                       children: [
                                         Flexible(
                                           child: Text(
-                                            formatLikes(nbr),
+                                            formatLikes(playItem["podcast"]),
                                             style: TextStyle(
                                               color: Colors.grey,
                                               fontSize: x.width * 0.035,
@@ -1674,78 +2345,7 @@ class _PodlypageState extends State<Podlypage> {
                                     )
                                   ],
                                 ),
-                              ),
-                            )
-                          ],
-                        )), // Correction ici: "height" changé en "width"
-                    Expanded(
-                      // Ajout d'un Expanded pour que le ListView prenne l'espace disponible
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: mesplaylist.length,
-                        itemBuilder: (context, index) {
-                          final playItem = mesplaylist[index];
-                          return Container(
-                            margin: EdgeInsets.symmetric(
-                                horizontal: x.width * 0.02),
-                            width: x.width * 0.32,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                AspectRatio(
-                                  aspectRatio: 1,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius:
-                                          BorderRadius.circular(x.width * 0.04),
-                                      image: DecorationImage(
-                                        image:
-                                            NetworkImage(playItem["photoUrl"]),
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(height: x.width * 0.03),
-                                Flexible(
-                                  child: Text(
-                                    playItem["name"],
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: x.width * 0.04,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                SizedBox(height: x.width * 0.01),
-                                Row(
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        formatLikes(playItem["podcast"]),
-                                        style: TextStyle(
-                                          color: Colors.grey,
-                                          fontSize: x.width * 0.035,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    Text(" "),
-                                    Text(
-                                      "Podcasts",
-                                      style: TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: x.width * 0.035,
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              ],
-                            ),
-                          );
+                              ));
                         },
                       ),
                     ),
@@ -2138,9 +2738,10 @@ class _PodlypageState extends State<Podlypage> {
                 left: x.width * 0.15,
                 child: GestureDetector(
                   onTap: () async {
-                    await logout();
+                    /* await logout();
                     Navigator.pushNamedAndRemoveUntil(
                         context, '/LogIn', (route) => false);
+                 */
                   },
                   child: Text(
                     "Log Out",
@@ -2166,7 +2767,7 @@ class _PodlypageState extends State<Podlypage> {
           width: double.infinity, // Added to provide width constraint
           height: double.infinity, // Added to provide height constraint
           decoration: const BoxDecoration(color: Colors.white),
-          child: _buildBody(context),
+          child: isLoading ? Center(child: Text("")) : _buildBody(context),
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
