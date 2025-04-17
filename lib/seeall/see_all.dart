@@ -13,6 +13,32 @@ class SeeAllpage extends StatefulWidget {
 
 class _SeeAllpagepageState extends State<SeeAllpage>
     with SingleTickerProviderStateMixin {
+  Future<void> fetchpodcasts() async {
+    try {
+      final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('podcasts')
+          .orderBy('dateCreation', descending: true)
+          .where('idUser', isEqualTo: currentUserId)
+          .get();
+
+      // Ajout des logs pour déboguer
+      debugPrint('Nombre de podcast trouvées : ${querySnapshot.docs.length}');
+      debugPrint(
+          'Données des podcast : ${querySnapshot.docs.map((doc) => doc.data()).toList()}');
+
+      setState(() {
+        podcast = querySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des podcast : $e');
+      setState(() {});
+    }
+  }
+
+  List<Map<String, dynamic>> podcast = [];
   String formatLikes(num likes) {
     // Utiliser un pattern personnalisé avec exactement 2 décimales
     final formatter = NumberFormat('#,##0.00', 'fr');
@@ -40,7 +66,57 @@ class _SeeAllpagepageState extends State<SeeAllpage>
     return formatter.format(likes).replaceAll('\u202f', '');
   }
 
+  List<Map<String, dynamic>> user = [];
+  Future<void> fetchuser() async {
+    try {
+      final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('userId', isEqualTo: currentUserId)
+          .get();
+
+      // Ajout des logs pour déboguer
+      debugPrint('Nombre de chaînes trouvées : ${querySnapshot.docs.length}');
+      debugPrint(
+          'Données des chaînes : ${querySnapshot.docs.map((doc) => doc.data()).toList()}');
+
+      setState(() {
+        user = querySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des chaînes : $e');
+    }
+  }
+
   List<Map<String, dynamic>> followcha = [];
+  List<Map<String, dynamic>> playlist = [];
+  Future<void> fetchplaylists() async {
+    try {
+      final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('playlist')
+          .orderBy('createdAt', descending: true)
+          .where('userId', isEqualTo: currentUserId)
+          .get();
+
+      // Ajout des logs pour déboguer
+      debugPrint('Nombre de playlist trouvées : ${querySnapshot.docs.length}');
+      debugPrint(
+          'Données des playlist : ${querySnapshot.docs.map((doc) => doc.data()).toList()}');
+
+      setState(() {
+        playlist = querySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des chaînes : $e');
+      setState(() {});
+    }
+  }
+
   Future<void> fetchfollowId() async {
     final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
 
@@ -904,10 +980,200 @@ class _SeeAllpagepageState extends State<SeeAllpage>
     {"img": "images/n.png", "tite": "Mohammed", "fol": "100K"},
     {"img": "images/l.png", "tite": "Amine", "fol": "100K"},
   ];
-  List<Map<String, String>> combinedList = [];
+  List<Map<String, dynamic>> mesplaylist = [];
+  Future<void> fetchmesPlaylistsId() async {
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
 
+    try {
+      final playinPodSnapshot = await FirebaseFirestore.instance
+          .collection('mesplaylist')
+          .where('iduser', isEqualTo: currentUserId)
+          .get();
+
+      List<Map<String, dynamic>> mesPlayInfos = [];
+      for (var doc in playinPodSnapshot.docs) {
+        final data = doc.data();
+        if (data.containsKey('idplay') && data.containsKey('dateCreation')) {
+          mesPlayInfos.add({
+            'idplay': data['idplay'],
+            'dateCreation': data['dateCreation'],
+          });
+        }
+      }
+
+      if (mesPlayInfos.isNotEmpty) {
+        List<Map<String, dynamic>> allPlaylists = [];
+
+        List<String> playlistIds =
+            mesPlayInfos.map((e) => e['idplay'] as String).toList();
+
+        for (int i = 0; i < playlistIds.length; i += 10) {
+          int end = (i + 10 < playlistIds.length) ? i + 10 : playlistIds.length;
+          List<String> batch = playlistIds.sublist(i, end);
+
+          final playlistsSnapshot = await FirebaseFirestore.instance
+              .collection('playlist')
+              .where('id', whereIn: batch)
+              .get();
+
+          for (var doc in playlistsSnapshot.docs) {
+            final playlistData = doc.data() as Map<String, dynamic>;
+            final matchingMes = mesPlayInfos.firstWhere(
+                (element) => element['idplay'] == playlistData['id'],
+                orElse: () => {});
+
+            if (matchingMes.isNotEmpty) {
+              playlistData['dateCreation'] = matchingMes['dateCreation'];
+            }
+
+            allPlaylists.add(playlistData);
+          }
+        }
+
+        // ⬇️ Tri du plus récent au plus ancien
+        allPlaylists.sort((a, b) {
+          Timestamp? dateA = a['dateCreation'];
+          Timestamp? dateB = b['dateCreation'];
+
+          if (dateA == null && dateB == null) return 0;
+          if (dateA == null) return 1;
+          if (dateB == null) return -1;
+
+          return dateB.compareTo(dateA); // ⬅️ tri décroissant ici
+        });
+
+        setState(() {
+          mesplaylist = allPlaylists;
+        });
+
+        debugPrint(
+            "Playlists triées du plus récent au plus ancien: ${mesplaylist.length}");
+      } else {
+        setState(() {
+          mesplaylist = [];
+        });
+        debugPrint("Aucune playlist trouvée.");
+      }
+    } catch (e) {
+      debugPrint("Erreur lors de la récupération des playlists: $e");
+      setState(() {
+        mesplaylist = [];
+      });
+    }
+  }
+
+  late int nbr = 0;
+  Future<void> nbrpodId() async {
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+
+    try {
+      // 1️⃣ Récupérer les `playlistId` associés au `idpod`
+      final playinPodSnapshot = await FirebaseFirestore.instance
+          .collection('myplaylist')
+          .where('iduser', isEqualTo: currentUserId)
+          .get();
+
+      // Extraire la liste des playlistIds
+      List<String> followIds = [];
+      for (var doc in playinPodSnapshot.docs) {
+        String followId = doc.data()['idpod'];
+        if (!followIds.contains(followId)) {
+          followIds.add(followId);
+          nbr++;
+        }
+      }
+    } catch (e) {
+      debugPrint("Erreur lors de la récupération des playlists: $e");
+      setState(() {});
+    }
+  }
+
+  Future<void> fetchplaylists1(String id) async {
+    try {
+      // Étape 1 : Récupérer le channel pour extraire userId
+      final channelSnapshot = await FirebaseFirestore.instance
+          .collection('channels')
+          .where('id', isEqualTo: id)
+          .get();
+
+      if (channelSnapshot.docs.isEmpty) {
+        return;
+      }
+
+      final channelData = channelSnapshot.docs.first.data();
+      final String userId = channelData['userId'];
+
+      // Étape 2 : Récupérer les podcasts liés à ce userId
+      final podcastsSnapshot = await FirebaseFirestore.instance
+          .collection('playlist')
+          .where('userId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      final List<Map<String, dynamic>> fetchedPodcasts = podcastsSnapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+      // Debug
+      debugPrint("Podcasts trouvés : ${fetchedPodcasts.length}");
+
+      // Met à jour l'état si besoin
+      setState(() {
+        playlists1 = fetchedPodcasts;
+      });
+    } catch (e) {
+      debugPrint("Erreur lors de la récupération des podcasts : $e");
+      setState(() {
+        playlists1 = [];
+      });
+    }
+  }
+
+  Future<void> fetchPodcastsByChannelId(String id) async {
+    try {
+      // Étape 1 : Récupérer le channel pour extraire userId
+      final channelSnapshot = await FirebaseFirestore.instance
+          .collection('channels')
+          .where('id', isEqualTo: id)
+          .get();
+
+      if (channelSnapshot.docs.isEmpty) {
+        return;
+      }
+
+      final channelData = channelSnapshot.docs.first.data();
+      final String userId = channelData['userId'];
+
+      // Étape 2 : Récupérer les podcasts liés à ce userId
+      final podcastsSnapshot = await FirebaseFirestore.instance
+          .collection('podcasts')
+          .where('idUser', isEqualTo: userId)
+          .orderBy('dateCreation', descending: true)
+          .get();
+
+      final List<Map<String, dynamic>> fetchedPodcasts = podcastsSnapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+      // Debug
+      debugPrint("Podcasts trouvés : ${fetchedPodcasts.length}");
+
+      // Met à jour l'état si besoin
+      setState(() {
+        podcasts1 = fetchedPodcasts;
+      });
+    } catch (e) {
+      debugPrint("Erreur lors de la récupération des podcasts : $e");
+      setState(() {
+        podcasts1 = [];
+      });
+    }
+  }
+
+  List<Map<String, String>> combinedList = [];
+  List<Map<String, dynamic>> podcasts1 = [];
+  List<Map<String, dynamic>> playlists1 = [];
   late int r = 1;
   String? ct;
+  String? id;
   late int feat = 1;
   bool isLoading = true;
   @override
@@ -928,11 +1194,18 @@ class _SeeAllpagepageState extends State<SeeAllpage>
         if (arguments.containsKey('r')) {
           r = arguments['r'];
         }
+        if (arguments.containsKey('id')) {
+          id = arguments['id'];
+        }
 
         if (ct != null) {
           await fetchPodcastById(ct!);
           await fetchChannelsByPodcastCategory(ct!);
           await fetchPlaylistsByPodcastCategory(ct!);
+        }
+        if (id != null) {
+          await fetchplaylists1(id!);
+          await fetchPodcastsByChannelId(id!);
         }
         await fetchtopChannel();
         await fetchtopseen();
@@ -941,6 +1214,11 @@ class _SeeAllpagepageState extends State<SeeAllpage>
         await fetchRecommendedPodcasts();
         await fetrecentId();
         await fetchfollowId();
+        await fetchmesPlaylistsId();
+        await nbrpodId();
+        await fetchuser();
+        await fetchpodcasts();
+        await fetchplaylists();
       }
 
       setState(() => isLoading = false);
@@ -997,15 +1275,18 @@ class _SeeAllpagepageState extends State<SeeAllpage>
                           if (r == 12)
                             Navigator.pushNamedAndRemoveUntil(
                               context,
-                              '/channel',
+                              '/your',
                               (route) => false,
                             );
                           if (r == 13)
                             Navigator.pushNamedAndRemoveUntil(
                               context,
-                              '/channel',
+                              '/your',
                               (route) => false,
                             );
+                          if (r == 14) Navigator.pop(context);
+
+                          if (r == 15) Navigator.pop(context);
 //vre dans Categories // Ouvre dans Categories
                         },
                         icon: Image.network(
@@ -1808,82 +2089,172 @@ class _SeeAllpagepageState extends State<SeeAllpage>
                               ]),
                             ),
                           ),
-                      if (r == 10)
-                        for (var item in play)
-                          Container(
-                            margin: EdgeInsets.only(bottom: q.width * 0.02),
+                      if (r == 10) ...[
+                        // En-tête Favorite Playlist
+                        SizedBox(
+                          height: q.height * 0.15,
+                          child: Container(
+                            margin: EdgeInsets.all(q.width * 0.02),
                             decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.circular(q.width * 0.05),
-                                border: Border.all(color: Colors.black12)),
+                              borderRadius:
+                                  BorderRadius.circular(q.width * 0.05),
+                              border: Border.all(color: Colors.black12),
+                            ),
                             width: q.width * 0.95,
-                            height: q.width * 0.3,
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: q.width * 0.01,
-                                ),
-                                Container(
-                                  height: q.width * 0.25,
-                                  width: q.width * 0.25,
-                                  decoration: BoxDecoration(
-                                    borderRadius:
-                                        BorderRadius.circular(q.width * 0.04),
-                                    image: DecorationImage(
-                                      image: AssetImage(item["img"]!),
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: q.width * 0.04),
-                                Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    SizedBox(height: q.width * 0.02),
-                                    SizedBox(
-                                      width: q.width * 0.3,
-                                      child: Text(
-                                        item["tit"]!,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: q.width * 0.04,
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.pushNamed(context, '/your1');
+                              },
+                              child: Row(
+                                children: [
+                                  SizedBox(width: q.width * 0.01),
+                                  Container(
+                                    height: q.width * 0.2,
+                                    width: q.width * 0.2,
+                                    decoration: BoxDecoration(
+                                      borderRadius:
+                                          BorderRadius.circular(q.width * 0.04),
+                                      image: DecorationImage(
+                                        image:
+                                            NetworkImage(user[0]["photoUrl"]!),
+                                        fit: BoxFit.cover,
                                       ),
                                     ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  width: q.width * 0.04,
-                                ),
-                                Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    SizedBox(
-                                        width: q.width *
-                                            0.2, // Constrain the width of the progress bar
-                                        child: Column(
-                                          children: [
-                                            SizedBox(
-                                              height: q.width * 0.02,
-                                            ),
-                                            Text(
-                                              item["tite"]!,
-                                              style: TextStyle(
-                                                fontSize: q.width * 0.035,
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ],
-                                        )),
-                                  ],
-                                ),
-                              ],
+                                  ),
+                                  SizedBox(width: q.width * 0.04),
+                                  SizedBox(
+                                    width: q.width * 0.4,
+                                    child: Text(
+                                      "My Playlist",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: q.width * 0.04,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  SizedBox(width: q.width * 0.01),
+                                  Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        formatLikes(nbr),
+                                        style: TextStyle(
+                                            fontSize: q.width * 0.035),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        "Podcasts",
+                                        style: TextStyle(
+                                            fontSize: q.width * 0.035),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
+                        ),
+
+                        // Playlist tab (ListView.builder inside ScrollView)
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          itemCount: mesplaylist.length,
+                          itemBuilder: (context, index) {
+                            final item = mesplaylist[index];
+                            return Container(
+                              margin: EdgeInsets.all(q.width * 0.02),
+                              decoration: BoxDecoration(
+                                borderRadius:
+                                    BorderRadius.circular(q.width * 0.05),
+                                border: Border.all(color: Colors.black12),
+                              ),
+                              width: q.width * 0.95,
+                              height: q.width * 0.3,
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/play',
+                                    arguments: {
+                                      'idplay': item["id"],
+                                      'pp': 2,
+                                    },
+                                  );
+                                },
+                                child: Row(
+                                  children: [
+                                    SizedBox(width: q.width * 0.01),
+                                    Container(
+                                      height: q.width * 0.25,
+                                      width: q.width * 0.25,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(
+                                            q.width * 0.04),
+                                        image: DecorationImage(
+                                          image:
+                                              NetworkImage(item["photoUrl"]!),
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: q.width * 0.04),
+                                    Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        SizedBox(height: q.width * 0.02),
+                                        SizedBox(
+                                          width: q.width * 0.3,
+                                          child: Text(
+                                            item["name"]!,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: q.width * 0.04,
+                                            ),
+                                            maxLines: 4,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(width: q.width * 0.03),
+                                    Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        SizedBox(
+                                          width: q.width * 0.19,
+                                          child: Column(
+                                            children: [
+                                              Text(
+                                                formatLikes(item["podcast"]!),
+                                                style: TextStyle(
+                                                    fontSize: q.width * 0.035),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              Text(
+                                                "Podcast",
+                                                style: TextStyle(
+                                                    fontSize: q.width * 0.035),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                       if (r == 11) ...[
                         TabBar(
                           controller: _tabController,
@@ -2210,9 +2581,9 @@ class _SeeAllpagepageState extends State<SeeAllpage>
                         SizedBox(
                           height: q.height,
                           child: ListView.builder(
-                            itemCount: poda.length,
+                            itemCount: podcast.length,
                             itemBuilder: (context, index) {
-                              final item = poda[index];
+                              final item = podcast[index];
                               return Container(
                                 margin: EdgeInsets.all(q.width * 0.02),
                                 decoration: BoxDecoration(
@@ -2222,142 +2593,161 @@ class _SeeAllpagepageState extends State<SeeAllpage>
                                 ),
                                 width: q.width * 0.95,
                                 height: q.width * 0.3,
-                                child: Row(
-                                  children: [
-                                    SizedBox(width: q.width * 0.01),
-                                    Image.asset(
-                                      "images/play1.png",
-                                      width: q.width * 0.09,
-                                      height: q.width * 0.09,
-                                      fit: BoxFit.cover,
-                                    ),
-                                    SizedBox(width: q.width * 0.03),
-                                    Container(
-                                      height: q.width * 0.2,
-                                      width: q.width * 0.2,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(
-                                            q.width * 0.04),
-                                        image: DecorationImage(
-                                          image: AssetImage(item["img"]!),
-                                          fit: BoxFit.cover,
-                                        ),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/podcast',
+                                      arguments: {
+                                        'idpod': item["id"],
+                                        'feat': 3,
+                                      }, // Envoie l'ID
+                                    );
+                                  },
+                                  child: Row(
+                                    children: [
+                                      SizedBox(width: q.width * 0.01),
+                                      Image.network(
+                                        s48,
+                                        width: q.width * 0.09,
+                                        height: q.width * 0.09,
+                                        fit: BoxFit.cover,
                                       ),
-                                    ),
-                                    SizedBox(width: q.width * 0.02),
-                                    Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        SizedBox(height: q.width * 0.0),
-                                        SizedBox(
-                                          width: q.width * 0.35,
-                                          child: Text(
-                                            item["tit"]!,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: q.width * 0.04,
-                                            ),
-                                            maxLines: 4,
-                                            overflow: TextOverflow.ellipsis,
+                                      SizedBox(width: q.width * 0.03),
+                                      Container(
+                                        height: q.width * 0.2,
+                                        width: q.width * 0.2,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                              q.width * 0.04),
+                                          image: DecorationImage(
+                                            image:
+                                                NetworkImage(item["urlPhoto"]!),
+                                            fit: BoxFit.cover,
                                           ),
                                         ),
-                                        SizedBox(height: q.width * 0.01),
-                                      ],
-                                    ),
-                                    SizedBox(
-                                      width: q.width * 0.05,
-                                    ),
-                                    Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        SizedBox(
-                                            width: q.width *
-                                                0.2, // Constrain the width of the progress bar
-                                            child: Column(
-                                              children: [
-                                                Row(
-                                                  children: [
-                                                    SizedBox(
-                                                      child: Image.asset(
-                                                          "images/like.png"),
-                                                      width: q.width * 0.05,
-                                                      height: q.width * 0.05,
-                                                    ),
-                                                    SizedBox(
-                                                      width: q.width * 0.01,
-                                                    ),
-                                                    Text(
-                                                      item["like"]!,
-                                                      style: TextStyle(
-                                                          fontSize:
-                                                              q.width * 0.035,
-                                                          fontWeight:
-                                                              FontWeight.bold),
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ],
-                                                ),
-                                                SizedBox(
-                                                  height: q.width * 0.02,
-                                                ),
-                                                Row(
-                                                  children: [
-                                                    SizedBox(
-                                                      child: Image.asset(
-                                                          "images/view.png"),
-                                                      width: q.width * 0.05,
-                                                      height: q.width * 0.05,
-                                                    ),
-                                                    SizedBox(
-                                                      width: q.width * 0.01,
-                                                    ),
-                                                    Text(
-                                                      item["view"]!,
-                                                      style: TextStyle(
-                                                          fontSize:
-                                                              q.width * 0.035,
-                                                          fontWeight:
-                                                              FontWeight.bold),
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ],
-                                                ),
-                                                SizedBox(
-                                                  height: q.width * 0.02,
-                                                ),
-                                                Row(
-                                                  children: [
-                                                    SizedBox(
-                                                      child: Image.asset(
-                                                          "images/comment.png"),
-                                                      width: q.width * 0.05,
-                                                      height: q.width * 0.05,
-                                                    ),
-                                                    SizedBox(
-                                                      width: q.width * 0.01,
-                                                    ),
-                                                    Text(
-                                                      item["com"]!,
-                                                      style: TextStyle(
-                                                          fontSize:
-                                                              q.width * 0.035,
-                                                          fontWeight:
-                                                              FontWeight.bold),
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
-                                            )),
-                                      ],
-                                    ),
-                                  ],
+                                      ),
+                                      SizedBox(width: q.width * 0.02),
+                                      Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          SizedBox(height: q.width * 0.0),
+                                          SizedBox(
+                                            width: q.width * 0.35,
+                                            child: Text(
+                                              item["name"]!,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: q.width * 0.04,
+                                              ),
+                                              maxLines: 4,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          SizedBox(height: q.width * 0.01),
+                                        ],
+                                      ),
+                                      SizedBox(
+                                        width: q.width * 0.05,
+                                      ),
+                                      Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          SizedBox(
+                                              width: q.width *
+                                                  0.2, // Constrain the width of the progress bar
+                                              child: Column(
+                                                children: [
+                                                  Row(
+                                                    children: [
+                                                      SizedBox(
+                                                        child:
+                                                            Image.network(s37),
+                                                        width: q.width * 0.05,
+                                                        height: q.width * 0.05,
+                                                      ),
+                                                      SizedBox(
+                                                        width: q.width * 0.01,
+                                                      ),
+                                                      Text(
+                                                        formatLikes(
+                                                            item["likes"]!),
+                                                        style: TextStyle(
+                                                            fontSize:
+                                                                q.width * 0.035,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold),
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  SizedBox(
+                                                    height: q.width * 0.02,
+                                                  ),
+                                                  Row(
+                                                    children: [
+                                                      SizedBox(
+                                                        child:
+                                                            Image.network(s14),
+                                                        width: q.width * 0.05,
+                                                        height: q.width * 0.05,
+                                                      ),
+                                                      SizedBox(
+                                                        width: q.width * 0.01,
+                                                      ),
+                                                      Text(
+                                                        formatLikes(
+                                                            item["vue"]!),
+                                                        style: TextStyle(
+                                                            fontSize:
+                                                                q.width * 0.035,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold),
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  SizedBox(
+                                                    height: q.width * 0.02,
+                                                  ),
+                                                  Row(
+                                                    children: [
+                                                      SizedBox(
+                                                        child:
+                                                            Image.network(s38),
+                                                        width: q.width * 0.05,
+                                                        height: q.width * 0.05,
+                                                      ),
+                                                      SizedBox(
+                                                        width: q.width * 0.01,
+                                                      ),
+                                                      Text(
+                                                        formatLikes(
+                                                            item["comments"]!),
+                                                        style: TextStyle(
+                                                            fontSize:
+                                                                q.width * 0.035,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold),
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              )),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               );
                             },
@@ -2369,9 +2759,121 @@ class _SeeAllpagepageState extends State<SeeAllpage>
                           height: q.height,
                           child: // Playlist tab
                               ListView.builder(
-                            itemCount: play.length,
+                            itemCount: playlist.length,
                             itemBuilder: (context, index) {
-                              final item = play[index];
+                              final item = playlist[index];
+                              return Container(
+                                  margin: EdgeInsets.all(q.width * 0.02),
+                                  decoration: BoxDecoration(
+                                    borderRadius:
+                                        BorderRadius.circular(q.width * 0.05),
+                                    border: Border.all(color: Colors.black12),
+                                  ),
+                                  width: q.width * 0.95,
+                                  height: q.width * 0.3,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      Navigator.pushNamed(context, '/play',
+                                          arguments: {
+                                            'idplay': item["id"],
+                                            'pp': 3
+                                          });
+                                    },
+                                    child: Row(
+                                      children: [
+                                        SizedBox(
+                                          width: q.width * 0.01,
+                                        ),
+                                        Container(
+                                          height: q.width * 0.25,
+                                          width: q.width * 0.25,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(
+                                                q.width * 0.04),
+                                            image: DecorationImage(
+                                              image: NetworkImage(
+                                                  item["photoUrl"]!),
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(width: q.width * 0.04),
+                                        Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            SizedBox(height: q.width * 0.02),
+                                            SizedBox(
+                                              width: q.width * 0.3,
+                                              child: Text(
+                                                item["name"]!,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: q.width * 0.04,
+                                                ),
+                                                maxLines: 4,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(
+                                          width: q.width * 0.04,
+                                        ),
+                                        Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              SizedBox(
+                                                  width: q.width *
+                                                      0.2, // Constrain the width of the progress bar
+                                                  child: Column(children: [
+                                                    SizedBox(
+                                                      height: q.width * 0.02,
+                                                    ),
+                                                    Column(children: [
+                                                      Text(
+                                                        formatLikes(
+                                                            item["podcast"]!),
+                                                        style: TextStyle(
+                                                          fontSize:
+                                                              q.width * 0.035,
+                                                        ),
+                                                        maxLines: 4,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                      SizedBox(
+                                                        width: q.width * 0.03,
+                                                      ),
+                                                      Text(
+                                                        "Podcast",
+                                                        style: TextStyle(
+                                                          fontSize:
+                                                              q.width * 0.035,
+                                                        ),
+                                                        maxLines: 4,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ])
+                                                  ]))
+                                            ])
+                                      ],
+                                    ),
+                                  ));
+                            },
+                          ),
+                        ),
+                      ],
+                      if (r == 14) ...[
+                        SizedBox(
+                          height: q.height,
+                          child: ListView.builder(
+                            itemCount: podcasts1.length,
+                            itemBuilder: (context, index) {
+                              final item = podcasts1[index];
                               return Container(
                                 margin: EdgeInsets.all(q.width * 0.02),
                                 decoration: BoxDecoration(
@@ -2381,72 +2883,276 @@ class _SeeAllpagepageState extends State<SeeAllpage>
                                 ),
                                 width: q.width * 0.95,
                                 height: q.width * 0.3,
-                                child: Row(
-                                  children: [
-                                    SizedBox(
-                                      width: q.width * 0.01,
-                                    ),
-                                    Container(
-                                      height: q.width * 0.25,
-                                      width: q.width * 0.25,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(
-                                            q.width * 0.04),
-                                        image: DecorationImage(
-                                          image: AssetImage(item["img"]!),
-                                          fit: BoxFit.cover,
-                                        ),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/podcast',
+                                      arguments: {
+                                        'idpod': item["id"],
+                                        'feat': 12,
+                                      }, // Envoie l'ID
+                                    );
+                                  },
+                                  child: Row(
+                                    children: [
+                                      SizedBox(width: q.width * 0.01),
+                                      Image.network(
+                                        s48,
+                                        width: q.width * 0.09,
+                                        height: q.width * 0.09,
+                                        fit: BoxFit.cover,
                                       ),
-                                    ),
-                                    SizedBox(width: q.width * 0.04),
-                                    Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        SizedBox(height: q.width * 0.02),
-                                        SizedBox(
-                                          width: q.width * 0.3,
-                                          child: Text(
-                                            item["tit"]!,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: q.width * 0.04,
-                                            ),
-                                            maxLines: 4,
-                                            overflow: TextOverflow.ellipsis,
+                                      SizedBox(width: q.width * 0.03),
+                                      Container(
+                                        height: q.width * 0.2,
+                                        width: q.width * 0.2,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                              q.width * 0.04),
+                                          image: DecorationImage(
+                                            image:
+                                                NetworkImage(item["urlPhoto"]!),
+                                            fit: BoxFit.cover,
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                    SizedBox(
-                                      width: q.width * 0.04,
-                                    ),
-                                    Column(
+                                      ),
+                                      SizedBox(width: q.width * 0.02),
+                                      Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          SizedBox(height: q.width * 0.0),
+                                          SizedBox(
+                                            width: q.width * 0.35,
+                                            child: Text(
+                                              item["name"]!,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: q.width * 0.04,
+                                              ),
+                                              maxLines: 4,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          SizedBox(height: q.width * 0.01),
+                                        ],
+                                      ),
+                                      SizedBox(
+                                        width: q.width * 0.05,
+                                      ),
+                                      Column(
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
                                         children: [
                                           SizedBox(
                                               width: q.width *
                                                   0.2, // Constrain the width of the progress bar
-                                              child: Column(children: [
-                                                SizedBox(
-                                                  height: q.width * 0.02,
-                                                ),
-                                                Text(
-                                                  item["tite"]!,
-                                                  style: TextStyle(
-                                                    fontSize: q.width * 0.035,
+                                              child: Column(
+                                                children: [
+                                                  Row(
+                                                    children: [
+                                                      SizedBox(
+                                                        child:
+                                                            Image.network(s37),
+                                                        width: q.width * 0.05,
+                                                        height: q.width * 0.05,
+                                                      ),
+                                                      SizedBox(
+                                                        width: q.width * 0.01,
+                                                      ),
+                                                      Text(
+                                                        formatLikes(
+                                                            item["likes"]!),
+                                                        style: TextStyle(
+                                                            fontSize:
+                                                                q.width * 0.035,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold),
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ],
                                                   ),
-                                                  maxLines: 4,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ]))
-                                        ])
-                                  ],
+                                                  SizedBox(
+                                                    height: q.width * 0.02,
+                                                  ),
+                                                  Row(
+                                                    children: [
+                                                      SizedBox(
+                                                        child:
+                                                            Image.network(s14),
+                                                        width: q.width * 0.05,
+                                                        height: q.width * 0.05,
+                                                      ),
+                                                      SizedBox(
+                                                        width: q.width * 0.01,
+                                                      ),
+                                                      Text(
+                                                        formatLikes(
+                                                            item["vue"]!),
+                                                        style: TextStyle(
+                                                            fontSize:
+                                                                q.width * 0.035,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold),
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  SizedBox(
+                                                    height: q.width * 0.02,
+                                                  ),
+                                                  Row(
+                                                    children: [
+                                                      SizedBox(
+                                                        child:
+                                                            Image.network(s38),
+                                                        width: q.width * 0.05,
+                                                        height: q.width * 0.05,
+                                                      ),
+                                                      SizedBox(
+                                                        width: q.width * 0.01,
+                                                      ),
+                                                      Text(
+                                                        formatLikes(
+                                                            item["comments"]!),
+                                                        style: TextStyle(
+                                                            fontSize:
+                                                                q.width * 0.035,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold),
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              )),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               );
+                            },
+                          ),
+                        ),
+                      ],
+                      if (r == 15) ...[
+                        SizedBox(
+                          height: q.height,
+                          child: // Playlist tab
+                              ListView.builder(
+                            itemCount: playlists1.length,
+                            itemBuilder: (context, index) {
+                              final item = playlists1[index];
+                              return Container(
+                                  margin: EdgeInsets.all(q.width * 0.02),
+                                  decoration: BoxDecoration(
+                                    borderRadius:
+                                        BorderRadius.circular(q.width * 0.05),
+                                    border: Border.all(color: Colors.black12),
+                                  ),
+                                  width: q.width * 0.95,
+                                  height: q.width * 0.3,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      Navigator.pushNamed(context, '/play',
+                                          arguments: {
+                                            'idplay': item["id"],
+                                            'pp': 5
+                                          });
+                                    },
+                                    child: Row(
+                                      children: [
+                                        SizedBox(
+                                          width: q.width * 0.01,
+                                        ),
+                                        Container(
+                                          height: q.width * 0.25,
+                                          width: q.width * 0.25,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(
+                                                q.width * 0.04),
+                                            image: DecorationImage(
+                                              image: NetworkImage(
+                                                  item["photoUrl"]!),
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(width: q.width * 0.04),
+                                        Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            SizedBox(height: q.width * 0.02),
+                                            SizedBox(
+                                              width: q.width * 0.3,
+                                              child: Text(
+                                                item["name"]!,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: q.width * 0.04,
+                                                ),
+                                                maxLines: 4,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(
+                                          width: q.width * 0.04,
+                                        ),
+                                        Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              SizedBox(
+                                                  width: q.width *
+                                                      0.2, // Constrain the width of the progress bar
+                                                  child: Column(children: [
+                                                    SizedBox(
+                                                      height: q.width * 0.02,
+                                                    ),
+                                                    Column(children: [
+                                                      Text(
+                                                        formatLikes(
+                                                            item["podcast"]!),
+                                                        style: TextStyle(
+                                                          fontSize:
+                                                              q.width * 0.035,
+                                                        ),
+                                                        maxLines: 4,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                      SizedBox(
+                                                        width: q.width * 0.03,
+                                                      ),
+                                                      Text(
+                                                        "Podcast",
+                                                        style: TextStyle(
+                                                          fontSize:
+                                                              q.width * 0.035,
+                                                        ),
+                                                        maxLines: 4,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ])
+                                                  ]))
+                                            ])
+                                      ],
+                                    ),
+                                  ));
                             },
                           ),
                         ),

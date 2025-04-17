@@ -648,60 +648,6 @@ class _PlaylistpageState extends State<Playlistpage>
                       ),
                     ),
 
-                    if (isYourPlaylist == false) ...[
-                      Positioned(
-                          top: w.height * 0.01,
-                          right: w.width * 0.03,
-                          child: Container(
-                              width: w.width * 0.09,
-                              height: w.width * 0.09,
-                              decoration: BoxDecoration(
-                                  color: Colors.black12,
-                                  borderRadius:
-                                      BorderRadius.circular(w.width * 0.05)),
-                              child: PopupMenuButton(
-                                icon: Image.network(
-                                  s49,
-                                  width: w.width * 0.06,
-                                  height: w.width * 0.06,
-                                ),
-                                color: Colors
-                                    .white, // Définit la couleur de fond du menu popup
-                                itemBuilder: (BuildContext context) => [
-                                  PopupMenuItem(
-                                    height: w.width * 0.12,
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors
-                                            .white, // Couleur de fond du container
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Image.network(
-                                            s50,
-                                            width: w.width * 0.05,
-                                            height: w.width * 0.05,
-                                          ),
-                                          SizedBox(width: w.width * 0.02),
-                                          Text(
-                                            "Report",
-                                            style: TextStyle(
-                                              fontSize: w.width * 0.04,
-                                              color: Colors
-                                                  .black, // Couleur du texte
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    onTap: () {
-                                      // Add your report functionality here
-                                    },
-                                  ),
-                                ],
-                              ))),
-                    ],
                     if (pp == 2) ...[
                       Positioned(
                           top: w.height * 0.01,
@@ -842,7 +788,52 @@ class _PlaylistpageState extends State<Playlistpage>
                         ),
                       ),
                     ],
-
+                    if (pp == 5) ...[
+                      Positioned(
+                          top: w.height * 0.01,
+                          left: w.width * 0.03,
+                          child: Container(
+                            width: w.width * 0.1,
+                            height: w.width * 0.1,
+                            decoration: BoxDecoration(
+                                color: Colors.black12,
+                                borderRadius:
+                                    BorderRadius.circular(w.width * 0.05)),
+                            child: IconButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              icon: Image.network(
+                                s18,
+                                width: w.width * 0.07,
+                                height: w.width * 0.07,
+                              ),
+                            ),
+                          )),
+                      Positioned(
+                        top: w.height * 0.27,
+                        right: w.width * 0.03,
+                        child: IconButton(
+                          onPressed: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/podcast',
+                              arguments: {
+                                'idpod': podcastPlaylists[0]["id"],
+                                'feat':
+                                    3, // remplace "someValue" par ce que tu veux représenter
+                              },
+                            );
+                          },
+                          icon: Image.network(
+                            s48,
+                            width: w.width * 0.14,
+                            height: w.width * 0.14,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ],
                     Positioned(
                       top: w.height * 0.28,
                       child: Container(
@@ -1433,7 +1424,7 @@ class _PlaylistpageState extends State<Playlistpage>
                                     },
                                   ),
                                 ),
-                                if (pp == 3 || pp == 4) ...[
+                                if (pp == 3 || pp == 4 || pp == 5) ...[
                                   SizedBox(
                                     height: w.height * 0.23,
                                     child: ListView.builder(
@@ -1463,6 +1454,14 @@ class _PlaylistpageState extends State<Playlistpage>
                                                     arguments: {
                                                       'idplay': playItem["id"],
                                                       'pp': 4
+                                                    });
+                                              }
+                                              if (pp == 5) {
+                                                Navigator.pushReplacementNamed(
+                                                    context, '/play',
+                                                    arguments: {
+                                                      'idplay': playItem["id"],
+                                                      'pp': 5
                                                     });
                                               }
                                             },

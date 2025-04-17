@@ -747,8 +747,10 @@ class _ChannelpageState extends State<Channelpage>
                                           Navigator.pushNamed(
                                             context,
                                             '/seeall',
-                                            arguments:
-                                                12, // Passe la valeur de r comme argument
+                                            arguments: {
+                                              'id': channels[0]["id"],
+                                              'r': 14
+                                            }, // Passe la valeur de r comme argument
                                           );
 
                                           print(r);
@@ -781,7 +783,14 @@ class _ChannelpageState extends State<Channelpage>
                                     child: GestureDetector(
                                       onTap: () {
                                         Navigator.pushNamed(
-                                            context, '/podcast');
+                                          context,
+                                          '/podcast',
+                                          arguments: {
+                                            'idpod': item["id"],
+                                            'feat':
+                                                12, // remplace "someValue" par ce que tu veux représenter
+                                          },
+                                        );
                                       },
                                       child: Row(
                                         children: [
@@ -987,8 +996,10 @@ class _ChannelpageState extends State<Channelpage>
                                           Navigator.pushNamed(
                                             context,
                                             '/seeall',
-                                            arguments:
-                                                13, // Passe la valeur de r comme argument
+                                            arguments: {
+                                              'id': channels[0]["id"],
+                                              'r': 15
+                                            }, // Passe la valeur de r comme argument
                                           );
 
                                           print(r);
@@ -1021,7 +1032,11 @@ class _ChannelpageState extends State<Channelpage>
                                     height: v.width * 0.3,
                                     child: GestureDetector(
                                       onTap: () {
-                                        Navigator.pushNamed(context, '/play');
+                                        Navigator.pushNamed(context, '/play',
+                                            arguments: {
+                                              'idplay': item["id"],
+                                              'pp': 5
+                                            });
                                       },
                                       child: Row(
                                         children: [

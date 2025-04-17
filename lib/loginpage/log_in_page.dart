@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:pfeapp/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -173,12 +172,12 @@ class _LoginPageState extends State<LoginPage> {
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
                           ),
-                          child: ClipOval(
+                          child: /* ClipOval(
                             child: Image.network(
                               user[0]['photoUrl'],
                               fit: BoxFit.cover,
-                            ),
-                          ),
+                            )),*/
+                              Text(""),
                         ),
                       ),
 

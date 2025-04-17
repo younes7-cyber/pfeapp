@@ -1690,6 +1690,51 @@ class _PodcastpageState extends State<Podcastpage>
                         ),
                       ),
                     ],
+                    if (feat == 12) ...[
+                      Positioned(
+                          top: w.height * 0.01,
+                          left: w.width * 0.03,
+                          child: Container(
+                            width: w.width * 0.1,
+                            height: w.width * 0.1,
+                            decoration: BoxDecoration(
+                                color: Colors.black12,
+                                borderRadius:
+                                    BorderRadius.circular(w.width * 0.05)),
+                            child: IconButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              icon: Image.network(
+                                s18,
+                                width: w.width * 0.07,
+                                height: w.width * 0.07,
+                              ),
+                            ),
+                          )),
+                      Positioned(
+                        top: w.height * 0.27,
+                        right: w.width * 0.03,
+                        child: IconButton(
+                          onPressed: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/listen',
+                              arguments: {
+                                'idpod': idpod,
+                                'featl': 12,
+                              },
+                            );
+                          },
+                          icon: Image.network(
+                            s48,
+                            width: w.width * 0.14,
+                            height: w.width * 0.14,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ],
                     Positioned(
                       top: w.height * 0.28,
                       child: Container(
@@ -2061,7 +2106,7 @@ class _PodcastpageState extends State<Podcastpage>
                             child: TabBarView(
                               controller: _tabController2,
                               children: [
-                                if (feat == 3) ...[
+                                if (feat == 3 || feat == 12) ...[
                                   SizedBox(
                                     height: w.height * 0.23,
                                     child: ListView.builder(
@@ -2078,15 +2123,28 @@ class _PodcastpageState extends State<Podcastpage>
                                               0.35, // Increased height to accommodate content
                                           child: GestureDetector(
                                             onTap: () {
-                                              Navigator.pushReplacementNamed(
-                                                context,
-                                                '/podcast',
-                                                arguments: {
-                                                  'idpod': podItem["id"],
-                                                  'feat':
-                                                      3, // remplace "someValue" par ce que tu veux représenter
-                                                },
-                                              );
+                                              if (feat == 3) {
+                                                Navigator.pushReplacementNamed(
+                                                  context,
+                                                  '/podcast',
+                                                  arguments: {
+                                                    'idpod': podItem["id"],
+                                                    'feat':
+                                                        3, // remplace "someValue" par ce que tu veux représenter
+                                                  },
+                                                );
+                                              }
+                                              if (feat == 12) {
+                                                Navigator.pushReplacementNamed(
+                                                  context,
+                                                  '/podcast',
+                                                  arguments: {
+                                                    'idpod': podItem["id"],
+                                                    'feat':
+                                                        12, // remplace "someValue" par ce que tu veux représenter
+                                                  },
+                                                );
+                                              }
                                             },
                                             child: Column(
                                               mainAxisSize:

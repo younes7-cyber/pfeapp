@@ -2175,8 +2175,9 @@ class _PodlypageState extends State<Podlypage> {
                             Navigator.pushNamed(
                               context,
                               '/seeall',
-                              arguments:
-                                  10, // Passe la valeur de r comme argument
+                              arguments: {
+                                'r': 10
+                              }, // Passe la valeur de r comme argument
                             );
                             print(r);
                           },

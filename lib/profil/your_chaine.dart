@@ -741,8 +741,9 @@ class _YourChainepageState extends State<YourChainepage>
                                           Navigator.pushNamed(
                                             context,
                                             '/seeall',
-                                            arguments:
-                                                12, // Passe la valeur de r comme argument
+                                            arguments: {
+                                              'r': 12
+                                            }, // Passe la valeur de r comme argument
                                           );
 
                                           print(r);
@@ -1025,8 +1026,9 @@ class _YourChainepageState extends State<YourChainepage>
                                           Navigator.pushNamed(
                                             context,
                                             '/seeall',
-                                            arguments:
-                                                13, // Passe la valeur de r comme argument
+                                            arguments: {
+                                              'r': 13
+                                            }, // Passe la valeur de r comme argument
                                           );
 
                                           print(r);
