@@ -2402,46 +2402,45 @@ class _PodlypageState extends State<Podlypage> {
                 ),
               ),
               Positioned(
-                  top: x.height * 0.11,
-                  left: x.width * 0.25,
-                  child: Row(
+                top: x.height * 0.11,
+                left: x.width * 0.25,
+                child: Container(
+                  width: x.width * 0.5,
+                  height: x.height * 0.1,
+                  child: Column(
                     children: [
                       Text(
-                        user[0]['firstName'],
+                        "${user[0]["firstName"]} ${user[0]["lastName"]}",
                         style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: x.width * 0.04),
+                          fontSize: x.width * 0.04,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        maxLines: 2,
                       ),
-                      Text(" "),
                       Text(
-                        user[0]['lastName'],
+                        user[0]['email'],
                         style: TextStyle(
                             color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: x.width * 0.04),
+                            // fontWeight: FontWeight.bold,
+                            fontSize: x.width * 0.03),
                       )
                     ],
-                  )),
+                  ),
+                ),
+              ),
               Positioned(
-                  top: x.height * 0.14,
-                  left: x.width * 0.25,
-                  child: Text(
-                    user[0]['email'],
-                    style: TextStyle(
-                        color: Colors.white,
-                        // fontWeight: FontWeight.bold,
-                        fontSize: x.width * 0.03),
-                  )),
+                  top: x.height * 0.14, left: x.width * 0.25, child: Text("")),
               Positioned(
                   top: x.height * 0.11,
                   right: x.width * 0.05,
                   child: IconButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, '/modif', arguments: 2);
+                      Navigator.pushNamed(context, '/modif',
+                          arguments: {'q': 2});
                     },
-                    icon: Image.asset(
-                      "images/modif.png",
+                    icon: Image.network(
+                      s81,
                       width: x.width * 0.05,
                       height: x.width * 0.05,
                       //   color:Colors.white,
@@ -2830,37 +2829,194 @@ class _PodlypageState extends State<Podlypage> {
 }
 
 class Search extends SearchDelegate<String> {
-  final List<String> suggestions = [
-    'BARCA',
-    'ALI AZROU',
-    'younes with coran',
-  ];
+  List<String> suggestions = [];
+  List<Map<String, dynamic>> searchResults = [];
 
-  final List<String> recentSearches = [
-    'Recent search 1',
-    'Recent search 2',
-    'Recent search 3',
-  ];
+  Future<void> fetchRecentsearch() async {
+    try {
+      final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('search')
+          .where('userId', isEqualTo: currentUserId)
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      debugPrint(
+          'Nombre de recherches trouvées : ${querySnapshot.docs.length}');
+
+      setState(() {
+        recentSearches = querySnapshot.docs
+            .map(
+                (doc) => (doc.data() as Map<String, dynamic>)['text'] as String)
+            .toList();
+      });
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des recherches récentes : $e');
+    }
+  }
+
+  Future<void> fetchFeaturedPodcasts() async {
+    try {
+      final sevenDaysAgo = DateTime.now().subtract(Duration(days: 7));
+
+      final recentPodcasts = await FirebaseFirestore.instance
+          .collection('podcasts')
+          .where('dateCreation',
+              isGreaterThan: Timestamp.fromDate(sevenDaysAgo))
+          .orderBy('dateCreation', descending: true)
+          .get();
+      setState(() {
+        feae = recentPodcasts.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des podcasts : $e');
+      setState(() {});
+    }
+  }
+
+  Future<void> saveSearchQuery(String query) async {
+    try {
+      final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+      if (currentUserId.isEmpty) {
+        debugPrint('Utilisateur non connecté');
+        return;
+      }
+
+      await FirebaseFirestore.instance.collection('search').add({
+        'userId': currentUserId,
+        'text': query,
+        'timestamp': Timestamp.now()
+      });
+
+      debugPrint('Recherche sauvegardée : $query');
+
+      // Refresh recent searches
+      await fetchRecentsearch();
+    } catch (e) {
+      debugPrint('Erreur lors de la sauvegarde de la recherche : $e');
+    }
+  }
+
+  Future<void> searchContent(String searchQuery) async {
+    if (searchQuery.isEmpty) return;
+
+    try {
+      final String lowercaseQuery = searchQuery.toLowerCase();
+      List<Map<String, dynamic>> results = [];
+
+      // Recherche dans les podcasts
+      final podcastsSnapshot = await FirebaseFirestore.instance
+          .collection('podcasts')
+          // Utiliser une recherche par sous-chaîne pour plus de flexibilité
+          .get();
+
+      for (var doc in podcastsSnapshot.docs) {
+        var data = doc.data();
+        String name = (data['name'] as String? ?? '').toLowerCase();
+        if (name.contains(lowercaseQuery)) {
+          data['type'] = 'podcast';
+          data['id'] = doc.id;
+          results.add(data);
+        }
+      }
+
+      // Recherche dans les chaînes
+      final channelsSnapshot =
+          await FirebaseFirestore.instance.collection('channels').get();
+
+      for (var doc in channelsSnapshot.docs) {
+        var data = doc.data();
+        String name = (data['name'] as String? ?? '').toLowerCase();
+        if (name.contains(lowercaseQuery)) {
+          data['type'] = 'channel';
+          data['id'] = doc.id;
+          results.add(data);
+        }
+      }
+
+      // Recherche dans les playlists
+      final playlistsSnapshot =
+          await FirebaseFirestore.instance.collection('playlist').get();
+
+      for (var doc in playlistsSnapshot.docs) {
+        var data = doc.data();
+        String name = (data['name'] as String? ?? '').toLowerCase();
+        if (name.contains(lowercaseQuery)) {
+          data['type'] = 'playlist';
+          data['id'] = doc.id;
+          results.add(data);
+        }
+      }
+
+      searchResults = results;
+      suggestions = results
+          .map((result) => result['name'] as String? ?? 'Sans nom')
+          .toList();
+
+      debugPrint('Résultats de recherche trouvés : ${results.length}');
+    } catch (e) {
+      debugPrint('Erreur lors de la recherche : $e');
+    }
+  }
+
+  List<Map<String, dynamic>> feae = [];
+  List<String> recentSearches = [];
+
+  void setState(Function() fn) {
+    fn();
+  }
+
+  Search() {
+    _initializeData();
+  }
+  Future<void> _initializeData() async {
+    await fetchRecentsearch();
+    await fetchFeaturedPodcasts();
+  }
 
   @override
   ThemeData appBarTheme(BuildContext context) {
-    // Personnalisation du thème de la barre de recherche
-    return ThemeData(
-      appBarTheme: AppBarTheme(
+    final ThemeData theme = Theme.of(context);
+    final double fontSize = 16.0; // petite taille de texte
+    return theme.copyWith(
+      appBarTheme: const AppBarTheme(
         backgroundColor: Colors.white,
         iconTheme: IconThemeData(color: Colors.black),
       ),
-      scaffoldBackgroundColor: Colors.white,
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: Colors.black,
+      ),
       inputDecorationTheme: InputDecorationTheme(
-        border: InputBorder.none,
-        hintStyle: TextStyle(color: Colors.grey),
+        isDense: true,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.of(context).size.width * 0.02,
+          vertical: MediaQuery.of(context).size.width * 0.025,
+        ),
+        hintStyle: TextStyle(color: Colors.grey, fontSize: fontSize),
+        filled: true,
+        fillColor: const Color(0xFFD9D9D9),
+        enabledBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+          borderSide: BorderSide(color: Color(0xFFD9D9D9)),
+        ),
+        focusedBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+          borderSide: BorderSide(color: Color(0xFFD9D9D9)),
+        ),
+      ),
+      textTheme: theme.textTheme.copyWith(
+        titleLarge: TextStyle(
+          fontSize: fontSize,
+          height: 1.2, // espace entre lignes, utile pour le curseur aussi
+        ),
       ),
     );
   }
 
   @override
   List<Widget> buildActions(BuildContext context) {
-    // Actions pour la barre d'application (bouton effacer)
     return [
       IconButton(
         icon: Icon(
@@ -2877,7 +3033,6 @@ class Search extends SearchDelegate<String> {
 
   @override
   Widget buildLeading(BuildContext context) {
-    // Icône de retour à gauche de la barre d'application
     return IconButton(
       icon: Image.asset(
         "images/retour.png",
@@ -2892,28 +3047,24 @@ class Search extends SearchDelegate<String> {
 
   @override
   Widget buildResults(BuildContext context) {
-    // Filtrer les résultats basés sur la requête de recherche
-    final results = suggestions
-        .where((suggestion) =>
-            suggestion.toLowerCase().contains(query.toLowerCase()))
-        .toList();
+    // Perform search and save query
+    if (query.isNotEmpty) {
+      saveSearchQuery(query);
+      searchContent(query);
+    }
 
-    // Au lieu d'afficher les résultats ici, naviguer vers une nouvelle page
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!Navigator.of(context).canPop()) {
-        // Éviter de naviguer plusieurs fois vers la page de résultats
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => SearchResultsPage(
-              query: query,
-              results: results,
-            ),
+      close(context, query);
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => SearchResultsPage(
+            query: query,
+            results: suggestions,
           ),
-        );
-      }
+        ),
+      );
     });
 
-    // Retourner un widget de chargement en attendant la navigation
     return Container(
       color: Colors.white,
       child: Center(
@@ -2924,32 +3075,89 @@ class Search extends SearchDelegate<String> {
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    // Afficher les suggestions lorsque quelqu'un cherche quelque chose
-    final suggestionList = query.isEmpty
-        ? recentSearches
-        : suggestions
-            .where((suggestion) =>
-                suggestion.toLowerCase().contains(query.toLowerCase()))
-            .toList();
+    // Show search results if query is not empty and we have results
+    if (query.isNotEmpty) {
+      // Recherche en direct pendant que l'utilisateur tape
+      searchContent(query);
+
+      // Afficher les résultats de recherche avec l'icône de recherche
+      return Container(
+        color: Colors.white,
+        child: ListView.builder(
+          itemCount: searchResults.length,
+          itemBuilder: (context, index) {
+            final item = searchResults[index];
+            final itemName = item['name'] as String? ?? 'Sans nom';
+
+            return ListTile(
+              leading: Icon(Icons.search, color: Colors.black),
+              title: Text(
+                itemName,
+                style: TextStyle(color: Colors.black),
+              ),
+              onTap: () {
+                query = itemName;
+                showResults(context);
+              },
+            );
+          },
+        ),
+      );
+    }
+
+    // Display either recent searches or featured podcasts
+    List<dynamic> displayList = [];
+    bool showingRecentSearches = true;
+
+    if (recentSearches.isNotEmpty) {
+      displayList = recentSearches;
+      showingRecentSearches = true;
+    }
+    if (recentSearches.isEmpty) {
+      displayList = feae;
+      showingRecentSearches = false;
+    }
 
     return Container(
       color: Colors.white,
       child: ListView.builder(
-        itemCount: suggestionList.length,
+        itemCount: displayList.length,
         itemBuilder: (context, index) {
-          return ListTile(
-            leading: query.isEmpty
-                ? Icon(Icons.history, color: Colors.black)
-                : Icon(Icons.search, color: Colors.black),
-            title: Text(
-              suggestionList[index],
-              style: TextStyle(color: Colors.black),
-            ),
-            onTap: () {
-              query = suggestionList[index];
-              showResults(context);
-            },
-          );
+          final item = displayList[index];
+
+          // For recent searches (strings)
+          if (showingRecentSearches) {
+            final searchText = item as String;
+            return ListTile(
+              leading: Icon(Icons.history, color: Colors.black),
+              title: Text(
+                searchText,
+                style: TextStyle(color: Colors.black),
+              ),
+              onTap: () {
+                query = searchText;
+                showResults(context);
+              },
+            );
+          }
+          // For featured podcasts (maps)
+          else {
+            final podcast = item as Map<String, dynamic>;
+            final podcastName =
+                podcast['name'] as String? ?? 'Podcast sans nom';
+
+            return ListTile(
+              leading: Icon(Icons.arrow_forward, color: Colors.black),
+              title: Text(
+                podcastName,
+                style: TextStyle(color: Colors.black),
+              ),
+              onTap: () {
+                query = podcastName;
+                showResults(context);
+              },
+            );
+          }
         },
       ),
     );
