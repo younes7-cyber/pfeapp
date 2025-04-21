@@ -2907,10 +2907,11 @@ class Search extends SearchDelegate<String> {
       List<Map<String, dynamic>> results = [];
 
       // Recherche dans les podcasts
-      final podcastsSnapshot = await FirebaseFirestore.instance
-          .collection('podcasts')
-          // Utiliser une recherche par sous-chaîne pour plus de flexibilité
-          .get();
+      final podcastsSnapshot =
+          await FirebaseFirestore.instance.collection('podcasts').get();
+
+      // Liste pour stocker les podcasts trouvés pour traitement ultérieur
+      List<Map<String, dynamic>> foundPodcasts = [];
 
       for (var doc in podcastsSnapshot.docs) {
         var data = doc.data();
@@ -2919,12 +2920,16 @@ class Search extends SearchDelegate<String> {
           data['type'] = 'podcast';
           data['id'] = doc.id;
           results.add(data);
+          foundPodcasts.add({...data, 'docId': doc.id});
         }
       }
 
       // Recherche dans les chaînes
       final channelsSnapshot =
           await FirebaseFirestore.instance.collection('channels').get();
+
+      // Liste pour stocker les channels trouvés pour traitement ultérieur
+      List<Map<String, dynamic>> foundChannels = [];
 
       for (var doc in channelsSnapshot.docs) {
         var data = doc.data();
@@ -2933,12 +2938,16 @@ class Search extends SearchDelegate<String> {
           data['type'] = 'channel';
           data['id'] = doc.id;
           results.add(data);
+          foundChannels.add({...data, 'docId': doc.id});
         }
       }
 
       // Recherche dans les playlists
       final playlistsSnapshot =
           await FirebaseFirestore.instance.collection('playlist').get();
+
+      // Liste pour stocker les playlists trouvées pour traitement ultérieur
+      List<Map<String, dynamic>> foundPlaylists = [];
 
       for (var doc in playlistsSnapshot.docs) {
         var data = doc.data();
@@ -2947,6 +2956,199 @@ class Search extends SearchDelegate<String> {
           data['type'] = 'playlist';
           data['id'] = doc.id;
           results.add(data);
+          foundPlaylists.add({...data, 'docId': doc.id});
+        }
+      }
+
+      // 1. Si on a trouvé des podcasts, chercher les channels associés et playlists
+      if (foundPodcasts.isNotEmpty) {
+        // Pour chaque podcast trouvé, récupérer son channel
+        for (var podcast in foundPodcasts) {
+          String podcastUserId = podcast['idUser'] ?? '';
+          String podcastId = podcast['docId'] ?? '';
+
+          if (podcastUserId.isNotEmpty) {
+            // Récupérer le channel associé au userId du podcast
+            final channelQuery = await FirebaseFirestore.instance
+                .collection('channels')
+                .where('userId', isEqualTo: podcastUserId)
+                .get();
+
+            for (var doc in channelQuery.docs) {
+              var data = doc.data();
+              // Vérifier si ce channel n'est pas déjà dans les résultats
+              bool alreadyExists = results.any(
+                  (item) => item['type'] == 'channel' && item['id'] == doc.id);
+
+              if (!alreadyExists) {
+                data['type'] = 'channel';
+                data['id'] = doc.id;
+                data['relatedTo'] = 'podcast:${podcast['name']}';
+                results.add(data);
+              }
+            }
+          }
+
+          if (podcastId.isNotEmpty) {
+            // Récupérer les playlists qui contiennent ce podcast
+            final playlistsForPodcast = await FirebaseFirestore.instance
+                .collection('playinpod')
+                .where('podcastId', isEqualTo: podcastId)
+                .get();
+
+            // Ensemble pour éviter les doublons de playlistId
+            Set<String> playlistIds = {};
+
+            for (var doc in playlistsForPodcast.docs) {
+              String playlistId = doc.data()['playlistId'] ?? '';
+              if (playlistId.isNotEmpty) {
+                playlistIds.add(playlistId);
+              }
+            }
+
+            // Récupérer les détails de chaque playlist
+            for (String playlistId in playlistIds) {
+              final playlistDoc = await FirebaseFirestore.instance
+                  .collection('playlist')
+                  .doc(playlistId)
+                  .get();
+
+              if (playlistDoc.exists) {
+                var data = playlistDoc.data() as Map<String, dynamic>;
+                // Vérifier si cette playlist n'est pas déjà dans les résultats
+                bool alreadyExists = results.any((item) =>
+                    item['type'] == 'playlist' && item['id'] == playlistId);
+
+                if (!alreadyExists) {
+                  data['type'] = 'playlist';
+                  data['id'] = playlistId;
+                  data['relatedTo'] = 'podcast:${podcast['name']}';
+                  results.add(data);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 2. Si on a trouvé des channels, chercher leurs podcasts et playlists récents
+      if (foundChannels.isNotEmpty) {
+        for (var channel in foundChannels) {
+          String channelUserId = channel['userId'] ?? '';
+
+          if (channelUserId.isNotEmpty) {
+            // Récupérer les 10 podcasts les plus récents de ce channel
+            final recentPodcasts = await FirebaseFirestore.instance
+                .collection('podcasts')
+                .where('idUser', isEqualTo: channelUserId)
+                .orderBy('dateCreation', descending: true)
+                .limit(10)
+                .get();
+
+            for (var doc in recentPodcasts.docs) {
+              var data = doc.data();
+              // Vérifier si ce podcast n'est pas déjà dans les résultats
+              bool alreadyExists = results.any(
+                  (item) => item['type'] == 'podcast' && item['id'] == doc.id);
+
+              if (!alreadyExists) {
+                data['type'] = 'podcast';
+                data['id'] = doc.id;
+                data['relatedTo'] = 'channel:${channel['name']}';
+                results.add(data);
+              }
+            }
+
+            // Récupérer les playlists créées par ce channel (userId)
+            final channelPlaylists = await FirebaseFirestore.instance
+                .collection('playlist')
+                .where('userId', isEqualTo: channelUserId)
+                .get();
+
+            for (var doc in channelPlaylists.docs) {
+              var data = doc.data();
+              // Vérifier si cette playlist n'est pas déjà dans les résultats
+              bool alreadyExists = results.any(
+                  (item) => item['type'] == 'playlist' && item['id'] == doc.id);
+
+              if (!alreadyExists) {
+                data['type'] = 'playlist';
+                data['id'] = doc.id;
+                data['relatedTo'] = 'channel:${channel['name']}';
+                results.add(data);
+              }
+            }
+          }
+        }
+      }
+
+      // 3. Si on a trouvé des playlists, chercher leurs channels et podcasts associés
+      if (foundPlaylists.isNotEmpty) {
+        for (var playlist in foundPlaylists) {
+          String playlistId = playlist['docId'] ?? '';
+          String playlistUserId = playlist['userId'] ?? '';
+
+          // Récupérer le channel associé à cette playlist via userId
+          if (playlistUserId.isNotEmpty) {
+            final channelQuery = await FirebaseFirestore.instance
+                .collection('channels')
+                .where('userId', isEqualTo: playlistUserId)
+                .get();
+
+            for (var doc in channelQuery.docs) {
+              var data = doc.data();
+              // Vérifier si ce channel n'est pas déjà dans les résultats
+              bool alreadyExists = results.any(
+                  (item) => item['type'] == 'channel' && item['id'] == doc.id);
+
+              if (!alreadyExists) {
+                data['type'] = 'channel';
+                data['id'] = doc.id;
+                data['relatedTo'] = 'playlist:${playlist['name']}';
+                results.add(data);
+              }
+            }
+          }
+
+          // Récupérer les podcasts associés à cette playlist
+          if (playlistId.isNotEmpty) {
+            final podcastsInPlaylist = await FirebaseFirestore.instance
+                .collection('playinpod')
+                .where('playlistId', isEqualTo: playlistId)
+                .get();
+
+            // Ensemble pour éviter les doublons de podcastId
+            Set<String> podcastIds = {};
+
+            for (var doc in podcastsInPlaylist.docs) {
+              String podcastId = doc.data()['podcastId'] ?? '';
+              if (podcastId.isNotEmpty) {
+                podcastIds.add(podcastId);
+              }
+            }
+
+            // Récupérer les détails de chaque podcast
+            for (String podcastId in podcastIds) {
+              final podcastDoc = await FirebaseFirestore.instance
+                  .collection('podcasts')
+                  .doc(podcastId)
+                  .get();
+
+              if (podcastDoc.exists) {
+                var data = podcastDoc.data() as Map<String, dynamic>;
+                // Vérifier si ce podcast n'est pas déjà dans les résultats
+                bool alreadyExists = results.any((item) =>
+                    item['type'] == 'podcast' && item['id'] == podcastId);
+
+                if (!alreadyExists) {
+                  data['type'] = 'podcast';
+                  data['id'] = podcastId;
+                  data['relatedTo'] = 'playlist:${playlist['name']}';
+                  results.add(data);
+                }
+              }
+            }
+          }
         }
       }
 
@@ -3034,8 +3236,8 @@ class Search extends SearchDelegate<String> {
   @override
   Widget buildLeading(BuildContext context) {
     return IconButton(
-      icon: Image.asset(
-        "images/retour.png",
+      icon: Image.network(
+        s18,
         width: MediaQuery.of(context).size.width * 0.06,
         height: MediaQuery.of(context).size.width * 0.06,
       ),
@@ -3059,7 +3261,7 @@ class Search extends SearchDelegate<String> {
         MaterialPageRoute(
           builder: (context) => SearchResultsPage(
             query: query,
-            results: suggestions,
+            results: searchResults,
           ),
         ),
       );
@@ -3166,7 +3368,7 @@ class Search extends SearchDelegate<String> {
 
 class SearchResultsPage extends StatefulWidget {
   final String query;
-  final List<String> results;
+  final List<Map<String, dynamic>> results;
 
   const SearchResultsPage({
     Key? key,
@@ -3182,11 +3384,16 @@ class _SearchResultsPageState extends State<SearchResultsPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
+  // Variables pour stocker l'état des filtres appliqués
+  Map<String, String> activeFilters = {};
+  List<Map<String, dynamic>> filteredResults = [];
+
   @override
   void initState() {
     super.initState();
-
     _tabController = TabController(length: 3, vsync: this);
+    // Initialiser les résultats filtrés avec tous les résultats
+    filteredResults = List.from(widget.results);
   }
 
   @override
@@ -3199,85 +3406,20 @@ class _SearchResultsPageState extends State<SearchResultsPage>
   Widget build(BuildContext context) {
     final q = MediaQuery.of(context).size;
 
-    // Sample data for podcasts
-    final List<Map<String, String>> podd = [
-      {
-        "img": "images/a.png",
-        "tit": "The Joe Rogen...",
-        "tite": "younes",
-        "cat": "music",
-        "like": "1K",
-        "view": "4k"
-      },
-      {
-        "img": "images/b.png",
-        "tit": "Needs A Freinds",
-        "tite": "younes",
-        "cat": "music",
-        "like": "900",
-        "view": "3.8k"
-      },
-      {
-        "img": "images/c.png",
-        "tit": "Follow Your Dream",
-        "tite": "younes",
-        "cat": "music",
-        "like": "700",
-        "view": "3.2k"
-      },
-      {
-        "img": "images/a.png",
-        "tit": "The Joe Rogen...",
-        "tite": "younes",
-        "cat": "music",
-        "like": "500",
-        "view": "2.8k"
-      },
-      {
-        "img": "images/b.png",
-        "tit": "The Joe Rogen...",
-        "tite": "younes",
-        "cat": "music",
-        "like": "200",
-        "view": "1k"
-      },
-    ];
-
-    // Sample data for channels
-    final List<Map<String, String>> craa = [
-      {
-        "img": "images/d.png",
-        "tite": "Younes cccccccccccc",
-        "fol": "275K",
-      },
-      {
-        "img": "images/e.png",
-        "tite": "ALi",
-        "fol": "150k",
-      },
-      {
-        "img": "images/f.png",
-        "tite": "Abderahmne",
-        "fol": "100K",
-      },
-      {"img": "images/g.png", "tite": "Mohammed", "fol": "37K"},
-      {"img": "images/h.png", "tite": "Amine", "fol": "22K"},
-    ];
-
-    // Sample data for playlists
-    final List<Map<String, String>> play = [
-      {"img": "images/person.jpg", "tit": "My Playlist", "tite": "50 Podcast"},
-      {"img": "images/k.png", "tit": "Need A Freind", "tite": "63 Podcast"},
-      {"img": "images/k.png", "tit": "Need A Freind", "tite": "70 Podcast"},
-      {"img": "images/xx.png", "tit": "Music", "tite": "15 Podcast"},
-    ];
+    // Filtrer les résultats selon le type pour chaque onglet
+    final podcasts =
+        filteredResults.where((item) => item['type'] == 'podcast').toList();
+    final channels =
+        filteredResults.where((item) => item['type'] == 'channel').toList();
+    final playlists =
+        filteredResults.where((item) => item['type'] == 'playlist').toList();
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
         leading: IconButton(
-          icon: Image.asset(
-            "images/retour.png",
+          icon: Image.network(
+            s18,
             width: q.width * 0.06,
             height: q.width * 0.06,
           ),
@@ -3285,13 +3427,79 @@ class _SearchResultsPageState extends State<SearchResultsPage>
             Navigator.of(context).pop();
           },
         ),
-        title: Text(
-          'Résultats pour "${widget.query}"',
-          style: const TextStyle(color: Colors.black),
+        title: GestureDetector(
+          onTap: () {
+            // Ouvrir le SearchDelegate existant
+            showSearch(
+              context: context,
+              delegate: Search(),
+            );
+          },
+          child: Container(
+            height: q.height * 0.045,
+            decoration: BoxDecoration(
+              color: const Color(0xFFD9D9D9),
+              borderRadius: BorderRadius.circular(q.width * 0.05),
+            ),
+            child: Row(
+              children: [
+                SizedBox(width: q.width * 0.03),
+                Icon(Icons.search, color: Colors.grey, size: q.width * 0.05),
+                SizedBox(width: q.width * 0.02),
+                Expanded(
+                  child: Text(
+                    widget.query,
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: q.width * 0.04,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
+        actions: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.filter_list,
+                  color: activeFilters.isNotEmpty ? Colors.blue : Colors.black,
+                  size: q.width * 0.06,
+                ),
+                onPressed: () {
+                  _showFilterOptions(context);
+                },
+              ),
+              if (activeFilters.isNotEmpty)
+                Positioned(
+                  top: q.height * 0.01,
+                  right: q.width * 0.02,
+                  child: Container(
+                    padding: EdgeInsets.all(q.width * 0.01),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      activeFilters.length.toString(),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: q.width * 0.025,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
         elevation: 1,
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48.0),
+          preferredSize: Size.fromHeight(q.height * 0.06),
           child: Container(
             color: Colors.white,
             child: TabBar(
@@ -3300,10 +3508,10 @@ class _SearchResultsPageState extends State<SearchResultsPage>
               unselectedLabelColor: Colors.grey,
               indicatorColor: Colors.black,
               indicatorSize: TabBarIndicatorSize.tab,
-              tabs: const [
-                Tab(text: 'Podcast'),
-                Tab(text: 'Channel'),
-                Tab(text: 'Playlist'),
+              tabs: [
+                Tab(text: 'Podcast (${podcasts.length})'),
+                Tab(text: 'Channel (${channels.length})'),
+                Tab(text: 'Playlist (${playlists.length})'),
               ],
             ),
           ),
@@ -3311,231 +3519,507 @@ class _SearchResultsPageState extends State<SearchResultsPage>
       ),
       body: Container(
         color: Colors.white,
-        child: widget.results.isEmpty
+        child: filteredResults.isEmpty
             ? Center(
                 child: Text(
                   'Aucun résultat trouvé pour "${widget.query}"',
-                  style: const TextStyle(color: Colors.black54, fontSize: 16),
+                  style: TextStyle(
+                    color: Colors.black54,
+                    fontSize: q.width * 0.04,
+                  ),
                 ),
               )
             : TabBarView(
                 controller: _tabController,
                 children: [
-                  // Podcast tab content
-                  ListView.builder(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.symmetric(vertical: q.width * 0.02),
-                    itemCount: podd.length,
-                    itemBuilder: (context, index) {
-                      final item = podd[index];
-                      return Container(
-                        margin: EdgeInsets.symmetric(
-                          horizontal: q.width * 0.03,
-                          vertical: q.width * 0.02,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(q.width * 0.05),
-                          border: Border.all(color: Colors.black12),
-                        ),
-                        width: q.width * 0.94,
-                        height: q.width * 0.3,
-                        child: Row(
-                          children: [
-                            SizedBox(width: q.width * 0.03),
-                            Image.asset(
-                              "images/play1.png",
-                              width: q.width * 0.09,
-                              height: q.width * 0.09,
-                              fit: BoxFit.cover,
-                            ),
-                            SizedBox(width: q.width * 0.03),
-                            Container(
-                              height: q.width * 0.2,
-                              width: q.width * 0.2,
-                              decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.circular(q.width * 0.04),
-                                image: DecorationImage(
-                                  image: AssetImage(item["img"]!),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: q.width * 0.04),
-                            Expanded(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item["tit"]!,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: q.width * 0.04,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  SizedBox(height: q.width * 0.01),
-                                  Text(
-                                    item["tite"]!,
-                                    style: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: q.width * 0.035,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(width: q.width * 0.02),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-
-                  // Channel tab content
-                  ListView.builder(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.symmetric(vertical: q.width * 0.02),
-                    itemCount: craa.length,
-                    itemBuilder: (context, index) {
-                      final item = craa[index];
-                      return Container(
-                        margin: EdgeInsets.symmetric(
-                          horizontal: q.width * 0.03,
-                          vertical: q.width * 0.02,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(q.width * 0.05),
-                          border: Border.all(color: Colors.black12),
-                        ),
-                        width: q.width * 0.94,
-                        height: q.width * 0.3,
-                        child: Row(
-                          children: [
-                            SizedBox(width: q.width * 0.03),
-                            Container(
-                              height: q.width * 0.2,
-                              width: q.width * 0.2,
-                              decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.circular(q.width * 0.1),
-                                image: DecorationImage(
-                                  image: AssetImage(item["img"]!),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: q.width * 0.04),
-                            Expanded(
-                              child: Text(
-                                item["tite"]!,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: q.width * 0.04,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            SizedBox(width: q.width * 0.02),
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "Followers",
-                                  style: TextStyle(
-                                    fontSize: q.width * 0.035,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  item["fol"]!,
-                                  style: TextStyle(
-                                    fontSize: q.width * 0.035,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(width: q.width * 0.03),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-
-                  // Playlist tab content
-                  ListView.builder(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.symmetric(vertical: q.width * 0.02),
-                    itemCount: play.length,
-                    itemBuilder: (context, index) {
-                      final item = play[index];
-                      return Container(
-                        margin: EdgeInsets.symmetric(
-                          horizontal: q.width * 0.03,
-                          vertical: q.width * 0.02,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(q.width * 0.05),
-                          border: Border.all(color: Colors.black12),
-                        ),
-                        width: q.width * 0.94,
-                        height: q.width * 0.3,
-                        child: Row(
-                          children: [
-                            SizedBox(width: q.width * 0.03),
-                            Container(
-                              height: q.width * 0.25,
-                              width: q.width * 0.25,
-                              decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.circular(q.width * 0.04),
-                                image: DecorationImage(
-                                  image: AssetImage(item["img"]!),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: q.width * 0.04),
-                            Expanded(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item["tit"]!,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: q.width * 0.04,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  SizedBox(height: q.width * 0.02),
-                                  Text(
-                                    item["tite"]!,
-                                    style: TextStyle(
-                                      fontSize: q.width * 0.035,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(width: q.width * 0.03),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                  // Podcasts
+                  buildListView(podcasts),
+                  // Channels
+                  buildListView(channels),
+                  // Playlists
+                  buildListView(playlists),
                 ],
               ),
       ),
     );
+  }
+
+  Widget buildListView(List<Map<String, dynamic>> items) {
+    final q = MediaQuery.of(context).size;
+
+    if (items.isEmpty) {
+      return Center(
+        child: Text(
+          'Aucun résultat pour cette catégorie',
+          style: TextStyle(
+            color: Colors.black54,
+            fontSize: q.width * 0.04,
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        final name = item['name'] ?? 'Sans nom';
+        final isRelated = item.containsKey('relatedTo');
+        final relatedToText = isRelated ? item['relatedTo'] as String : '';
+
+        // Déterminer l'icône en fonction du type
+        IconData iconData;
+        switch (item['type']) {
+          case 'podcast':
+            iconData = Icons.headset;
+            break;
+          case 'channel':
+            iconData = Icons.person;
+            break;
+          case 'playlist':
+            iconData = Icons.playlist_play;
+            break;
+          default:
+            iconData = Icons.play_circle_fill;
+        }
+
+        // Informations supplémentaires pour les podcasts
+        String? subtitle;
+        if (item['type'] == 'podcast') {
+          // Durée du podcast si disponible
+          if (item.containsKey('duration')) {
+            String durationStr = item['duration'] ?? '0:00';
+
+            List<String> parts = durationStr.split(':');
+            int minutes = int.tryParse(parts[0]) ?? 0;
+
+            subtitle = '$minutes min';
+          }
+
+          // Ajouter les vues et/ou likes si disponibles
+          if (item.containsKey('vue')) {
+            String viewCount = '${item['vue'] ?? 0} vues';
+            subtitle = subtitle != null ? '$subtitle • $viewCount' : viewCount;
+          }
+
+          if (item.containsKey('likes')) {
+            String likeCount = '${item['likes'] ?? 0} likes';
+            subtitle = subtitle != null ? '$subtitle • $likeCount' : likeCount;
+          }
+        }
+
+        // Si c'est un contenu relié et qu'aucun autre sous-titre n'est défini
+        if (isRelated && (subtitle == null || subtitle.isEmpty)) {
+          subtitle = 'Relié à $relatedToText';
+        } else if (isRelated) {
+          subtitle = '$subtitle • Relié à $relatedToText';
+        }
+
+        return Card(
+          elevation: 1,
+          margin: EdgeInsets.symmetric(
+            vertical: q.height * 0.005,
+            horizontal: q.width * 0.02,
+          ),
+          child: ListTile(
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: q.width * 0.03,
+              vertical: q.height * 0.005,
+            ),
+            leading: Icon(
+              iconData,
+              color: Colors.black87,
+              size: q.width * 0.07,
+            ),
+            title: Text(
+              name,
+              style: TextStyle(
+                color: Colors.black87,
+                fontWeight: isRelated ? FontWeight.normal : FontWeight.bold,
+                fontSize: q.width * 0.04,
+              ),
+            ),
+            subtitle: subtitle != null
+                ? Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: q.width * 0.03,
+                    ),
+                  )
+                : null,
+            trailing: Icon(
+              Icons.arrow_forward_ios,
+              size: q.width * 0.04,
+              color: Colors.grey,
+            ),
+            onTap: () {
+              final contentType = item['type'];
+              final contentId = item['id'];
+              debugPrint('Tapped on $name ($contentType, ID: $contentId)');
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  void _showFilterOptions(BuildContext context) {
+    final q = MediaQuery.of(context).size;
+
+    showModalBottomSheet(
+      backgroundColor: Colors.white,
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(q.width * 0.04),
+        ),
+      ),
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setStateModal) {
+            return Container(
+              padding: EdgeInsets.symmetric(
+                vertical: q.height * 0.025,
+                horizontal: q.width * 0.04,
+              ),
+              // Utiliser une hauteur relative pour le bottom sheet
+              height: q.height * 0.6,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: q.width * 0.1,
+                      height: q.height * 0.005,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(q.width * 0.005),
+                      ),
+                      margin: EdgeInsets.only(bottom: q.height * 0.02),
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Filtrer les résultats',
+                        style: TextStyle(
+                          fontSize: q.width * 0.05,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (activeFilters.isNotEmpty)
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _resetFilters();
+                          },
+                          child: Text(
+                            'Réinitialiser',
+                            style: TextStyle(
+                              color: Colors.blue,
+                              fontSize: q.width * 0.035,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  SizedBox(height: q.height * 0.02),
+
+                  // Filtres par durée
+                  Text(
+                    'Durée',
+                    style: TextStyle(
+                      fontSize: q.width * 0.04,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: q.height * 0.012),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildFilterChip(
+                          '< 10 min',
+                          () {
+                            setStateModal(() {
+                              _toggleFilter('duration', 'less10');
+                            });
+                          },
+                          isActive: activeFilters['duration'] == 'less10',
+                        ),
+                        SizedBox(width: q.width * 0.02),
+                        _buildFilterChip(
+                          '10-20 min',
+                          () {
+                            setStateModal(() {
+                              _toggleFilter('duration', '10to20');
+                            });
+                          },
+                          isActive: activeFilters['duration'] == '10to20',
+                        ),
+                        SizedBox(width: q.width * 0.02),
+                        _buildFilterChip(
+                          '> 20 min',
+                          () {
+                            setStateModal(() {
+                              _toggleFilter('duration', 'more20');
+                            });
+                          },
+                          isActive: activeFilters['duration'] == 'more20',
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: q.height * 0.025),
+
+                  // Tri par date
+                  Text(
+                    'Date',
+                    style: TextStyle(
+                      fontSize: q.width * 0.04,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: q.height * 0.012),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildFilterChip(
+                          'Plus récents',
+                          () {
+                            setStateModal(() {
+                              _toggleFilter('sort', 'recent');
+                            });
+                          },
+                          isActive: activeFilters['sort'] == 'recent',
+                        ),
+                        SizedBox(width: q.width * 0.02),
+                        _buildFilterChip(
+                          'Plus anciens',
+                          () {
+                            setStateModal(() {
+                              _toggleFilter('sort', 'oldest');
+                            });
+                          },
+                          isActive: activeFilters['sort'] == 'oldest',
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: q.height * 0.025),
+
+                  // Tri par popularité
+                  Text(
+                    'Popularité',
+                    style: TextStyle(
+                      fontSize: q.width * 0.04,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: q.height * 0.012),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildFilterChip(
+                          'Plus vus',
+                          () {
+                            setStateModal(() {
+                              _toggleFilter('popularity', 'views');
+                            });
+                          },
+                          isActive: activeFilters['popularity'] == 'views',
+                        ),
+                        SizedBox(width: q.width * 0.02),
+                        _buildFilterChip(
+                          'Plus aimés',
+                          () {
+                            setStateModal(() {
+                              _toggleFilter('popularity', 'likes');
+                            });
+                          },
+                          isActive: activeFilters['popularity'] == 'likes',
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Spacer(),
+
+                  // Bouton pour appliquer les filtres
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _applyFilters();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        minimumSize: Size(q.width * 0.8, q.height * 0.05),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(q.width * 0.05),
+                        ),
+                      ),
+                      child: Text(
+                        'Appliquer les filtres',
+                        style: TextStyle(
+                          fontSize: q.width * 0.04,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: q.height * 0.02),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterChip(String label, VoidCallback onTap,
+      {bool isActive = false}) {
+    final q = MediaQuery.of(context).size;
+
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: q.width * 0.04,
+          vertical: q.height * 0.01,
+        ),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.blue : Colors.grey[200],
+          borderRadius: BorderRadius.circular(q.width * 0.05),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isActive ? Colors.white : Colors.black87,
+            fontSize: q.width * 0.035,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _toggleFilter(String filterType, String value) {
+    // Si le filtre est déjà actif avec la même valeur, le supprimer
+    if (activeFilters[filterType] == value) {
+      activeFilters.remove(filterType);
+    } else {
+      // Sinon, définir/remplacer le filtre
+      activeFilters[filterType] = value;
+    }
+  }
+
+  void _applyFilters() {
+    if (activeFilters.isEmpty) {
+      // Si aucun filtre n'est actif, restaurer tous les résultats
+      setState(() {
+        filteredResults = List.from(widget.results);
+      });
+      return;
+    }
+
+    // Commencer avec tous les résultats
+    List<Map<String, dynamic>> results = List.from(widget.results);
+    List<Map<String, dynamic>> podcastResults =
+        results.where((item) => item['type'] == 'podcast').toList();
+
+    // Appliquer les filtres uniquement sur les podcasts
+    List<Map<String, dynamic>> filteredPodcasts = [];
+
+    for (var podcast in podcastResults) {
+      bool matchesFilters = true;
+
+      // Filtre de durée
+      if (activeFilters.containsKey('duration')) {
+        String durationSeconds = podcast['duration'] ?? '0:00';
+        List<String> parts = durationSeconds.split(':');
+        int durationMinutes = int.tryParse(parts[0]) ?? 0;
+        switch (activeFilters['duration']) {
+          case 'less10':
+            if (durationMinutes >= 10) matchesFilters = false;
+            break;
+          case '10to20':
+            if (durationMinutes < 10 || durationMinutes > 20)
+              matchesFilters = false;
+            break;
+          case 'more20':
+            if (durationMinutes <= 20) matchesFilters = false;
+            break;
+        }
+      }
+
+      // Si le podcast correspond aux critères de durée, l'ajouter
+      if (matchesFilters) {
+        filteredPodcasts.add(podcast);
+      }
+    }
+
+    // Trier les podcasts filtrés si nécessaire
+    if (activeFilters.containsKey('sort')) {
+      filteredPodcasts.sort((a, b) {
+        if (activeFilters['sort'] == 'recent') {
+          // Tri par date (plus récent d'abord)
+          Timestamp dateA =
+              a['dateCreation'] ?? Timestamp.fromDate(DateTime(2000));
+          Timestamp dateB =
+              b['dateCreation'] ?? Timestamp.fromDate(DateTime(2000));
+          return dateB.compareTo(dateA);
+        } else if (activeFilters['sort'] == 'oldest') {
+          // Tri par date (plus ancien d'abord)
+          Timestamp dateA =
+              a['dateCreation'] ?? Timestamp.fromDate(DateTime(2000));
+          Timestamp dateB =
+              b['dateCreation'] ?? Timestamp.fromDate(DateTime(2000));
+          return dateA.compareTo(dateB);
+        }
+        return 0;
+      });
+    }
+
+    // Trier par popularité si nécessaire
+    if (activeFilters.containsKey('popularity')) {
+      filteredPodcasts.sort((a, b) {
+        if (activeFilters['popularity'] == 'views') {
+          // Tri par nombre de vues (décroissant)
+          int viewsA = a['vue'] ?? 0;
+          int viewsB = b['vue'] ?? 0;
+          return viewsB.compareTo(viewsA);
+        } else if (activeFilters['popularity'] == 'likes') {
+          // Tri par nombre de likes (décroissant)
+          int likesA = a['likes'] ?? 0;
+          int likesB = b['likes'] ?? 0;
+          return likesB.compareTo(likesA);
+        }
+        return 0;
+      });
+    }
+
+    // Remplacer les podcasts dans les résultats
+    List<Map<String, dynamic>> nonPodcastResults =
+        results.where((item) => item['type'] != 'podcast').toList();
+
+    setState(() {
+      filteredResults = [...filteredPodcasts, ...nonPodcastResults];
+    });
+  }
+
+  void _resetFilters() {
+    setState(() {
+      activeFilters.clear();
+      filteredResults = List.from(widget.results);
+    });
   }
 }

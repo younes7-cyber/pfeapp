@@ -486,7 +486,7 @@ class _YourChainepageState extends State<YourChainepage>
                                   ),
                                   onTap: () {
                                     Navigator.pushNamed(context, '/modif',
-                                        arguments: 3);
+                                        arguments: {'q': 3});
                                   },
                                 ),
                               ],
@@ -942,7 +942,10 @@ class _YourChainepageState extends State<YourChainepage>
                                             onPressed: () {
                                               Navigator.pushNamed(
                                                   context, '/modif',
-                                                  arguments: 4);
+                                                  arguments: {
+                                                    'id1': item["id"],
+                                                    'q': 4
+                                                  });
                                             },
                                             icon: Image.network(
                                               s34,
@@ -1153,8 +1156,13 @@ class _YourChainepageState extends State<YourChainepage>
                                           IconButton(
                                             onPressed: () {
                                               Navigator.pushNamed(
-                                                  context, '/modif',
-                                                  arguments: 5);
+                                                context,
+                                                '/modif',
+                                                arguments: {
+                                                  'id2': item["id"],
+                                                  'q': 5
+                                                },
+                                              );
                                             },
                                             icon: Image.network(
                                               s34,

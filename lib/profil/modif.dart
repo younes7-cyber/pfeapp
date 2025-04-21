@@ -38,6 +38,121 @@ class _ModifpageState extends State<Modifpage> {
   }
 
   List<Map<String, dynamic>> user = [];
+  List<Map<String, dynamic>> channels = [];
+  Future<void> fetchChannels() async {
+    try {
+      final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('channels')
+          .where('userId', isEqualTo: currentUserId)
+          .get();
+
+      // Ajout des logs pour déboguer
+      debugPrint('Nombre de chaînes trouvées : ${querySnapshot.docs.length}');
+      debugPrint(
+          'Données des chaînes : ${querySnapshot.docs.map((doc) => doc.data()).toList()}');
+
+      setState(() {
+        channels = querySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des chaînes : $e');
+      setState(() {});
+    }
+  }
+
+  Future<void> fetchPlaylistsByPodcastId(String id1) async {
+    try {
+      final playinPodSnapshot = await FirebaseFirestore.instance
+          .collection('playinpod')
+          .orderBy('date', descending: true)
+          .where('podcastId', isEqualTo: id1)
+          .get();
+
+      final List<Map<String, dynamic>> playinPodData = playinPodSnapshot.docs
+          .map((doc) => {
+                "podcastId": doc['podcastId'],
+                "playlistId": doc['playlistId'],
+              })
+          .toList();
+
+      final List<String> playlistIds =
+          playinPodData.map((item) => item["playlistId"] as String).toList();
+
+      debugPrint("Playlists trouvées dans playinpod : $playlistIds");
+
+      if (playlistIds.isNotEmpty) {
+        // 2️⃣ Récupérer les playlists correspondant aux `playlistId`
+        final playlistSnapshot = await FirebaseFirestore.instance
+            .collection('playlist')
+            .orderBy('createdAt', descending: true)
+            .where(FieldPath.documentId, whereIn: playlistIds)
+            .get();
+
+        List<Map<String, dynamic>> loadedPlaylists = playlistSnapshot.docs
+            .map((doc) => {
+                  "id": doc.id,
+                  ...doc.data(),
+                })
+            .toList();
+
+        // 3️⃣ Associer les podcasts aux playlists
+        final playinPodSnapshot2 = await FirebaseFirestore.instance
+            .collection('playinpod')
+            .orderBy('date', descending: true)
+            .where('playlistId', whereIn: playlistIds)
+            .get();
+
+        Map<String, List<String>> podcastToPlaylists = {};
+        for (var doc in playinPodSnapshot2.docs) {
+          String podcastId = doc['podcastId'];
+          String playlistId = doc['playlistId'];
+
+          if (!podcastToPlaylists.containsKey(podcastId)) {
+            podcastToPlaylists[podcastId] = [];
+          }
+          podcastToPlaylists[podcastId]!.add(playlistId);
+        }
+
+        final List<String> podcastIds = podcastToPlaylists.keys.toList();
+        debugPrint("Podcasts liés aux playlists trouvés : $podcastIds");
+
+        if (podcastIds.isNotEmpty) {
+          // 4️⃣ Récupérer les podcasts avec `podcastIds`
+          final podcastSnapshot = await FirebaseFirestore.instance
+              .collection('podcasts')
+              .orderBy('dateCreation', descending: true)
+              .where(FieldPath.documentId, whereIn: podcastIds)
+              .get();
+
+          List<Map<String, dynamic>> loadedPodcasts =
+              podcastSnapshot.docs.map((doc) {
+            final podcastData = doc.data() as Map<String, dynamic>;
+            final podcastId = doc.id;
+            return {
+              "id": podcastId,
+              "playlistIds": podcastToPlaylists[podcastId] ?? [],
+              ...podcastData,
+            };
+          }).toList();
+
+          setState(() {
+            playlist = loadedPlaylists;
+            playinpod = loadedPodcasts;
+          });
+
+          debugPrint("Podcasts finaux récupérés : ${playinpod.length}");
+        }
+      }
+    } catch (e) {
+      debugPrint("Erreur lors du chargement des playlists : $e");
+    }
+  }
+
+  List<Map<String, dynamic>> playlist = [];
+  List<Map<String, dynamic>> playinpod = [];
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -50,13 +165,46 @@ class _ModifpageState extends State<Modifpage> {
         if (arguments.containsKey('q')) {
           q = arguments['q'];
         }
+        if (arguments.containsKey('id1')) {
+          id1 = arguments['id1'];
+        }
+        if (arguments.containsKey('id2')) {
+          id2 = arguments['id2'];
+        }
+        if (id1 != null) {
+          await fetchPodcastById(id1!);
+          await fetchPlaylistsByPodcastId(id1!);
+        }
         await fetchuser();
+        await fetchChannels();
       }
 
       setState(() => isLoading = false);
     });
   }
 
+  List<Map<String, dynamic>> podcast = [];
+  Future<void> fetchPodcastById(String id1) async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('podcasts')
+          .where('id', isEqualTo: id1)
+          .get();
+
+      setState(() {
+        podcast = querySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+
+      debugPrint("Podcasts récupérés : ${podcast.length}");
+    } catch (e) {
+      debugPrint("Erreur lors du chargement des podcasts : $e");
+    }
+  }
+
+  String? id1;
+  String? id2;
   bool isLoading = true;
   @override
   Widget build(BuildContext context) {
@@ -234,6 +382,7 @@ class _ModifpageState extends State<Modifpage> {
                                 style: TextStyle(
                                   fontSize: e.width * 0.04,
                                 ),
+                                maxLines: 2,
                               ))),
                       Positioned(
                         top: e.height * 0.52,
@@ -267,6 +416,7 @@ class _ModifpageState extends State<Modifpage> {
                                 style: TextStyle(
                                   fontSize: e.width * 0.04,
                                 ),
+                                maxLines: 2,
                               ))),
                       Positioned(
                         top: e.height * 0.585,
@@ -346,6 +496,7 @@ class _ModifpageState extends State<Modifpage> {
                                 style: TextStyle(
                                   fontSize: e.width * 0.04,
                                 ),
+                                maxLines: 2,
                               ))),
                       Positioned(
                           top: e.height * 0.78,
@@ -368,6 +519,7 @@ class _ModifpageState extends State<Modifpage> {
                                 style: TextStyle(
                                   fontSize: e.width * 0.04,
                                 ),
+                                maxLines: 2,
                               ))),
                       Positioned(
                           top: e.height * 0.83,
@@ -411,8 +563,8 @@ class _ModifpageState extends State<Modifpage> {
                               (route) => false,
                             );
                           },
-                          icon: Image.asset(
-                            "images/retour.png",
+                          icon: Image.network(
+                            s18,
                             width: e.width * 0.07,
                             height: e.width * 0.07,
                           ),
@@ -437,8 +589,8 @@ class _ModifpageState extends State<Modifpage> {
                                 borderRadius:
                                     BorderRadius.circular(e.width * 0.2)),
                             child: ClipOval(
-                              child: Image.asset(
-                                "images/person.jpg",
+                              child: Image.network(
+                                channels[0]["photoUrl"],
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -496,12 +648,16 @@ class _ModifpageState extends State<Modifpage> {
                       Positioned(
                           top: e.height * 0.37,
                           left: e.width * 0.35,
-                          child: Text(
-                            "Younes Benslimane",
-                            style: TextStyle(
-                              fontSize: e.width * 0.04,
-                            ),
-                          )),
+                          child: Container(
+                              width: e.width * 0.5,
+                              height: e.height * 0.1,
+                              child: Text(
+                                channels[0]["name"],
+                                style: TextStyle(
+                                  fontSize: e.width * 0.04,
+                                ),
+                                maxLines: 2,
+                              ))),
                       Positioned(
                         top: e.height * 0.355,
                         right: e.width * 0.01,
@@ -534,12 +690,16 @@ class _ModifpageState extends State<Modifpage> {
                       Positioned(
                           top: e.height * 0.45,
                           left: e.width * 0.35,
-                          child: Text(
-                            "23435",
-                            style: TextStyle(
-                              fontSize: e.width * 0.04,
-                            ),
-                          )),
+                          child: Container(
+                              width: e.width * 0.55,
+                              height: e.height * 0.1,
+                              child: Text(
+                                channels[0]["id"],
+                                style: TextStyle(
+                                  fontSize: e.width * 0.04,
+                                ),
+                                maxLines: 2,
+                              ))),
                       Positioned(
                         top: e.height * 0.43,
                         right: e.width * 0.01,
@@ -619,7 +779,7 @@ class _ModifpageState extends State<Modifpage> {
                               borderRadius:
                                   BorderRadius.circular(e.width * 0.04),
                               image: DecorationImage(
-                                image: AssetImage('images/person.jpg'),
+                                image: NetworkImage(podcast[0]["urlPhoto"]),
                                 fit: BoxFit.cover,
                                 onError: (exception, stackTrace) {
                                   // Gérer l'erreur si l'image ne se charge pas
@@ -681,14 +841,20 @@ class _ModifpageState extends State<Modifpage> {
                                 fontWeight: FontWeight.bold),
                           )),
                       Positioned(
-                          top: e.height * 0.37,
-                          left: e.width * 0.35,
+                        top: e.height * 0.37,
+                        left: e.width * 0.35,
+                        child: Container(
+                          height: e.height * 0.1,
+                          width: e.width * 0.5,
                           child: Text(
-                            "Art Of Messi",
+                            podcast[0]["name"],
                             style: TextStyle(
                               fontSize: e.width * 0.04,
                             ),
-                          )),
+                            maxLines: 2,
+                          ),
+                        ),
+                      ),
                       Positioned(
                           top: e.height * 0.43,
                           left: e.width * 0.07,
@@ -700,14 +866,20 @@ class _ModifpageState extends State<Modifpage> {
                                 fontWeight: FontWeight.bold),
                           )),
                       Positioned(
-                          top: e.height * 0.43,
-                          left: e.width * 0.35,
+                        top: e.height * 0.43,
+                        left: e.width * 0.35,
+                        child: Container(
+                          height: e.height * 0.1,
+                          width: e.width * 0.5,
                           child: Text(
-                            "23435",
+                            podcast[0]["id"],
                             style: TextStyle(
                               fontSize: e.width * 0.04,
                             ),
-                          )),
+                            maxLines: 2,
+                          ),
+                        ),
+                      ),
                       Positioned(
                         top: e.height * 0.41,
                         right: e.width * 0.01,
@@ -730,14 +902,20 @@ class _ModifpageState extends State<Modifpage> {
                                 fontWeight: FontWeight.bold),
                           )),
                       Positioned(
-                          top: e.height * 0.49,
-                          left: e.width * 0.35,
+                        top: e.height * 0.49,
+                        left: e.width * 0.35,
+                        child: Container(
+                          height: e.height * 0.1,
+                          width: e.width * 0.5,
                           child: Text(
-                            "Messi At 19 The Golden Boy  ",
+                            podcast[0]["description"],
                             style: TextStyle(
                               fontSize: e.width * 0.04,
                             ),
-                          )),
+                            maxLines: 2,
+                          ),
+                        ),
+                      ),
                       Positioned(
                           top: e.height * 0.55,
                           left: e.width * 0.07,
@@ -749,14 +927,20 @@ class _ModifpageState extends State<Modifpage> {
                                 fontWeight: FontWeight.bold),
                           )),
                       Positioned(
-                          top: e.height * 0.55,
-                          left: e.width * 0.35,
+                        top: e.height * 0.55,
+                        left: e.width * 0.35,
+                        child: Container(
+                          height: e.height * 0.1,
+                          width: e.width * 0.5,
                           child: Text(
-                            "Sport",
+                            podcast[0]["category"],
                             style: TextStyle(
                               fontSize: e.width * 0.04,
                             ),
-                          )),
+                            maxLines: 2,
+                          ),
+                        ),
+                      ),
                       Positioned(
                           top: e.height * 0.61,
                           left: e.width * 0.07,
@@ -767,17 +951,39 @@ class _ModifpageState extends State<Modifpage> {
                                 color: Colors.grey,
                                 fontWeight: FontWeight.bold),
                           )),
+                      /*                                          child: Container(
+                                            width: c.width * 0.7,
+                                            height: c.width *
+                                                0.06, // Définit une hauteur pour éviter les bugs d'affichage
+
+                                            
+                                          ),
+ */
                       Positioned(
-                          top: e.height * 0.61,
-                          left: e.width * 0.35,
-                          child: Text(
-                            "Barcelona 2007",
+                        top: e.height * 0.61,
+                        left: e.width * 0.35,
+                        child: Container(
+                          height: e.height * 0.1,
+                          width: e.width * 0.5,
+                          child: // Affiche un loader pendant le chargement
+                              Text(
+                            playinpod
+                                .firstWhere((p) => p["id"] == id1,
+                                    orElse: () =>
+                                        {"playlistIds": []})["playlistIds"]
+                                .map((pid) => playlist.firstWhere(
+                                    (pl) => pl["id"] == pid,
+                                    orElse: () => {"name": "Inconnue"})["name"])
+                                .join("   •   "), // Séparer par un symbole
                             style: TextStyle(
                               fontSize: e.width * 0.04,
                             ),
-                          )),
+                            maxLines: 2,
+                          ),
+                        ),
+                      ),
                       Positioned(
-                          top: e.height * 0.66,
+                          top: e.height * 0.68,
                           left: e.width * 0.07,
                           right: e.width * 0.07,
                           child: Container(

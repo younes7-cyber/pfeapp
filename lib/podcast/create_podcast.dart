@@ -10,6 +10,7 @@ import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:pfeapp/constants.dart';
 import 'package:nyx_converter/nyx_converter.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:just_audio/just_audio.dart';
 
 class Createpodcastpage extends StatefulWidget {
   const Createpodcastpage({super.key});
@@ -51,6 +52,20 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
   void initState() {
     super.initState();
     _loadPlaylists();
+  }
+
+// Fonction pour obtenir la durée d’un fichier audio
+  Future<Duration> _getAudioDuration(String filePath) async {
+    try {
+      final player = AudioPlayer();
+      await player.setFilePath(filePath);
+      Duration? duration = player.duration;
+      await player.dispose();
+      return duration ?? Duration.zero;
+    } catch (e) {
+      debugPrint('❌ Failed to get audio duration: $e');
+      return Duration.zero;
+    }
   }
 
   Future<void> _loadPlaylists() async {
@@ -303,6 +318,10 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
         );
         return;
       }
+      // 🔥 Obtenir la durée de l’audio
+      final duration = await _getAudioDuration(_selectedAudioPath!);
+      final formattedDuration =
+          "${duration.inMinutes}:${(duration.inSeconds % 60).toString().padLeft(2, '0')}";
 
       // Préparer les données à enregistrer dans Firestore
       final podcastData = {
@@ -319,6 +338,7 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
         'comments': 0,
         'shares': 0,
         'save': 0,
+        'duration': formattedDuration,
       };
 
       // Ajouter les données dans Firestore
