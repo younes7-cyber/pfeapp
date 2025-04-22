@@ -240,10 +240,10 @@ class _YourplaylistpageState extends State<Yourplaylistpage>
                           onPressed: () {
                             Navigator.pushNamed(
                               context,
-                              '/podcast',
+                              '/listen',
                               arguments: {
                                 'idpod': mesPodcasts[0]["id"],
-                                'feat':
+                                'featl':
                                     10, // remplace "someValue" par ce que tu veux représenter
                               },
                             );
@@ -365,7 +365,7 @@ class _YourplaylistpageState extends State<Yourplaylistpage>
                                                 arguments: {
                                                   'idpod': item["id"],
                                                   'feat':
-                                                      10, // remplace "someValue" par ce que tu veux représenter
+                                                      3, // remplace "someValue" par ce que tu veux représenter
                                                 },
                                               );
                                             },

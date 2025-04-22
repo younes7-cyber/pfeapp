@@ -437,6 +437,9 @@ class _YourChainepageState extends State<YourChainepage>
                               if (your == 4) {
                                 Navigator.pop(context);
                               }
+                              if (your == 5) {
+                                Navigator.pop(context);
+                              }
                             },
                             icon: Image.network(
                               s18,

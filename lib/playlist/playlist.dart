@@ -679,11 +679,12 @@ class _PlaylistpageState extends State<Playlistpage>
                           onPressed: () {
                             Navigator.pushNamed(
                               context,
-                              '/podcast',
+                              '/listen',
                               arguments: {
                                 'idpod': podcastPlaylists[0]["id"],
-                                'feat':
-                                    11, // remplace "someValue" par ce que tu veux représenter
+                                'featl': 11,
+                                'idplay1': playlist[0][
+                                    'id'] // remplace "someValue" par ce que tu veux représenter
                               },
                             );
                           },
@@ -789,6 +790,52 @@ class _PlaylistpageState extends State<Playlistpage>
                       ),
                     ],
                     if (pp == 5) ...[
+                      Positioned(
+                          top: w.height * 0.01,
+                          left: w.width * 0.03,
+                          child: Container(
+                            width: w.width * 0.1,
+                            height: w.width * 0.1,
+                            decoration: BoxDecoration(
+                                color: Colors.black12,
+                                borderRadius:
+                                    BorderRadius.circular(w.width * 0.05)),
+                            child: IconButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              icon: Image.network(
+                                s18,
+                                width: w.width * 0.07,
+                                height: w.width * 0.07,
+                              ),
+                            ),
+                          )),
+                      Positioned(
+                        top: w.height * 0.27,
+                        right: w.width * 0.03,
+                        child: IconButton(
+                          onPressed: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/podcast',
+                              arguments: {
+                                'idpod': podcastPlaylists[0]["id"],
+                                'feat':
+                                    3, // remplace "someValue" par ce que tu veux représenter
+                              },
+                            );
+                          },
+                          icon: Image.network(
+                            s48,
+                            width: w.width * 0.14,
+                            height: w.width * 0.14,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (pp == 6) ...[
                       Positioned(
                           top: w.height * 0.01,
                           left: w.width * 0.03,
@@ -1228,7 +1275,7 @@ class _PlaylistpageState extends State<Playlistpage>
                                                   arguments: {
                                                     'idpod': item["id"],
                                                     'feat':
-                                                        11, // remplace "someValue" par ce que tu veux représenter
+                                                        3, // remplace "someValue" par ce que tu veux représenter
                                                   },
                                                 );
                                               }
@@ -1244,6 +1291,28 @@ class _PlaylistpageState extends State<Playlistpage>
                                                 );
                                               }
                                               if (pp == 4) {
+                                                Navigator.pushNamed(
+                                                  context,
+                                                  '/podcast',
+                                                  arguments: {
+                                                    'idpod': item["id"],
+                                                    'feat':
+                                                        3, // remplace "someValue" par ce que tu veux représenter
+                                                  },
+                                                );
+                                              }
+                                              if (pp == 5) {
+                                                Navigator.pushNamed(
+                                                  context,
+                                                  '/podcast',
+                                                  arguments: {
+                                                    'idpod': item["id"],
+                                                    'feat':
+                                                        3, // remplace "someValue" par ce que tu veux représenter
+                                                  },
+                                                );
+                                              }
+                                              if (pp == 6) {
                                                 Navigator.pushNamed(
                                                   context,
                                                   '/podcast',
@@ -1424,7 +1493,10 @@ class _PlaylistpageState extends State<Playlistpage>
                                     },
                                   ),
                                 ),
-                                if (pp == 3 || pp == 4 || pp == 5) ...[
+                                if (pp == 3 ||
+                                    pp == 4 ||
+                                    pp == 5 ||
+                                    pp == 6) ...[
                                   SizedBox(
                                     height: w.height * 0.23,
                                     child: ListView.builder(
@@ -1462,6 +1534,14 @@ class _PlaylistpageState extends State<Playlistpage>
                                                     arguments: {
                                                       'idplay': playItem["id"],
                                                       'pp': 5
+                                                    });
+                                              }
+                                              if (pp == 6) {
+                                                Navigator.pushReplacementNamed(
+                                                    context, '/play',
+                                                    arguments: {
+                                                      'idplay': playItem["id"],
+                                                      'pp': 6
                                                     });
                                               }
                                             },

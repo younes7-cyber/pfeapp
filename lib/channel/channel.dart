@@ -470,6 +470,9 @@ class _ChannelpageState extends State<Channelpage>
                               if (chaine == 5) {
                                 Navigator.pop(context);
                               }
+                              if (chaine == 6) {
+                                Navigator.pop(context);
+                              }
                             },
                             icon: Image.network(
                               s18,

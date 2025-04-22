@@ -1600,96 +1600,6 @@ class _PodcastpageState extends State<Podcastpage>
                         ),
                       ),
                     ],
-                    if (feat == 10) ...[
-                      Positioned(
-                          top: w.height * 0.01,
-                          left: w.width * 0.03,
-                          child: Container(
-                            width: w.width * 0.1,
-                            height: w.width * 0.1,
-                            decoration: BoxDecoration(
-                                color: Colors.black12,
-                                borderRadius:
-                                    BorderRadius.circular(w.width * 0.05)),
-                            child: IconButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                              },
-                              icon: Image.network(
-                                s18,
-                                width: w.width * 0.07,
-                                height: w.width * 0.07,
-                              ),
-                            ),
-                          )),
-                      Positioned(
-                        top: w.height * 0.27,
-                        right: w.width * 0.03,
-                        child: IconButton(
-                          onPressed: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/listen',
-                              arguments: {
-                                'idpod': idpod,
-                                'featl': 10,
-                              },
-                            );
-                          },
-                          icon: Image.network(
-                            s48,
-                            width: w.width * 0.14,
-                            height: w.width * 0.14,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (feat == 11) ...[
-                      Positioned(
-                          top: w.height * 0.01,
-                          left: w.width * 0.03,
-                          child: Container(
-                            width: w.width * 0.1,
-                            height: w.width * 0.1,
-                            decoration: BoxDecoration(
-                                color: Colors.black12,
-                                borderRadius:
-                                    BorderRadius.circular(w.width * 0.05)),
-                            child: IconButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                              },
-                              icon: Image.network(
-                                s18,
-                                width: w.width * 0.07,
-                                height: w.width * 0.07,
-                              ),
-                            ),
-                          )),
-                      Positioned(
-                        top: w.height * 0.27,
-                        right: w.width * 0.03,
-                        child: IconButton(
-                          onPressed: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/listen',
-                              arguments: {
-                                'idpod': idpod,
-                                'featl': 11,
-                              },
-                            );
-                          },
-                          icon: Image.network(
-                            s48,
-                            width: w.width * 0.14,
-                            height: w.width * 0.14,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    ],
                     if (feat == 12) ...[
                       Positioned(
                           top: w.height * 0.01,
@@ -1723,6 +1633,51 @@ class _PodcastpageState extends State<Podcastpage>
                               arguments: {
                                 'idpod': idpod,
                                 'featl': 12,
+                              },
+                            );
+                          },
+                          icon: Image.network(
+                            s48,
+                            width: w.width * 0.14,
+                            height: w.width * 0.14,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (feat == 13) ...[
+                      Positioned(
+                          top: w.height * 0.01,
+                          left: w.width * 0.03,
+                          child: Container(
+                            width: w.width * 0.1,
+                            height: w.width * 0.1,
+                            decoration: BoxDecoration(
+                                color: Colors.black12,
+                                borderRadius:
+                                    BorderRadius.circular(w.width * 0.05)),
+                            child: IconButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              icon: Image.network(
+                                s18,
+                                width: w.width * 0.07,
+                                height: w.width * 0.07,
+                              ),
+                            ),
+                          )),
+                      Positioned(
+                        top: w.height * 0.27,
+                        right: w.width * 0.03,
+                        child: IconButton(
+                          onPressed: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/listen',
+                              arguments: {
+                                'idpod': idpod,
+                                'featl': 13,
                               },
                             );
                           },
@@ -2106,7 +2061,7 @@ class _PodcastpageState extends State<Podcastpage>
                             child: TabBarView(
                               controller: _tabController2,
                               children: [
-                                if (feat == 3 || feat == 12) ...[
+                                if (feat == 3 || feat == 12 || feat == 13) ...[
                                   SizedBox(
                                     height: w.height * 0.23,
                                     child: ListView.builder(
@@ -2145,79 +2100,17 @@ class _PodcastpageState extends State<Podcastpage>
                                                   },
                                                 );
                                               }
-                                            },
-                                            child: Column(
-                                              mainAxisSize:
-                                                  MainAxisSize.min, // Add this
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Container(
-                                                  height: w.width * 0.2,
-                                                  width: w.width * 0.2,
-                                                  decoration: BoxDecoration(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            w.width * 0.04),
-                                                    image: DecorationImage(
-                                                      image: NetworkImage(
-                                                          podItem["urlPhoto"]),
-                                                      fit: BoxFit.cover,
-                                                      onError: (exception,
-                                                          stackTrace) {
-                                                        print(
-                                                            'Error loading image: $exception');
-                                                      },
-                                                    ),
-                                                  ),
-                                                ),
-                                                SizedBox(
-                                                    height: w.width * 0.01),
-                                                Flexible(
-                                                    child: Text(
-                                                  podItem["name"],
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: w.width * 0.04,
-                                                  ),
-                                                  maxLines: 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                )),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                                if (feat == 11) ...[
-                                  SizedBox(
-                                    height: w.height * 0.23,
-                                    child: ListView.builder(
-                                      scrollDirection: Axis.horizontal,
-                                      itemCount: userPodcasts.length,
-                                      itemBuilder: (context, index) {
-                                        final podItem = userPodcasts[index];
-                                        return Container(
-                                          margin: EdgeInsets.symmetric(
-                                              horizontal: w.width * 0.02,
-                                              vertical: w.height * 0.01),
-                                          width: w.width * 0.2,
-                                          height: w.width *
-                                              0.35, // Increased height to accommodate content
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              Navigator.pushReplacementNamed(
-                                                context,
-                                                '/podcast',
-                                                arguments: {
-                                                  'idpod': podItem["id"],
-                                                  'feat':
-                                                      11, // remplace "someValue" par ce que tu veux représenter
-                                                },
-                                              );
+                                              if (feat == 13) {
+                                                Navigator.pushReplacementNamed(
+                                                  context,
+                                                  '/podcast',
+                                                  arguments: {
+                                                    'idpod': podItem["id"],
+                                                    'feat':
+                                                        13, // remplace "someValue" par ce que tu veux représenter
+                                                  },
+                                                );
+                                              }
                                             },
                                             child: Column(
                                               mainAxisSize:
@@ -2728,78 +2621,6 @@ class _PodcastpageState extends State<Podcastpage>
                                                 },
                                               );
                                             },
-                                            child: Column(
-                                              mainAxisSize:
-                                                  MainAxisSize.min, // Add this
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Container(
-                                                  height: w.width * 0.2,
-                                                  width: w.width * 0.2,
-                                                  decoration: BoxDecoration(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            w.width * 0.04),
-                                                    image: DecorationImage(
-                                                      image: NetworkImage(
-                                                          podItem["urlPhoto"]),
-                                                      fit: BoxFit.cover,
-                                                      onError: (exception,
-                                                          stackTrace) {
-                                                        print(
-                                                            'Error loading image: $exception');
-                                                      },
-                                                    ),
-                                                  ),
-                                                ),
-                                                SizedBox(
-                                                    height: w.width * 0.01),
-                                                Flexible(
-                                                    child: Text(
-                                                  podItem["name"],
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: w.width * 0.04,
-                                                  ),
-                                                  maxLines: 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                )),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                                if (feat == 10) ...[
-                                  SizedBox(
-                                    height: w.height * 0.23,
-                                    child: ListView.builder(
-                                      scrollDirection: Axis.horizontal,
-                                      itemCount: mesPodcasts.length,
-                                      itemBuilder: (context, index) {
-                                        final podItem = mesPodcasts[index];
-                                        return Container(
-                                          margin: EdgeInsets.symmetric(
-                                              horizontal: w.width * 0.02,
-                                              vertical: w.height * 0.01),
-                                          width: w.width * 0.2,
-                                          height: w.width * 0.35,
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              Navigator.pushReplacementNamed(
-                                                context,
-                                                '/podcast',
-                                                arguments: {
-                                                  'idpod': podItem["id"],
-                                                  'feat':
-                                                      10, // remplace "someValue" par ce que tu veux représenter
-                                                },
-                                              );
-                                            }, // Increased height to accommodate content
                                             child: Column(
                                               mainAxisSize:
                                                   MainAxisSize.min, // Add this

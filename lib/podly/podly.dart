@@ -2876,6 +2876,34 @@ class Search extends SearchDelegate<String> {
     }
   }
 
+  Future<void> deleteRecentSearch(String query) async {
+    try {
+      final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+      if (currentUserId.isEmpty) {
+        debugPrint('Utilisateur non connecté');
+        return;
+      }
+
+      final searchCollection = FirebaseFirestore.instance.collection('search');
+
+      final matchingDocs = await searchCollection
+          .where('userId', isEqualTo: currentUserId)
+          .where('text', isEqualTo: query)
+          .get();
+
+      for (var doc in matchingDocs.docs) {
+        await doc.reference.delete();
+      }
+
+      debugPrint('Recherche supprimée : $query');
+
+      // Rafraîchir les recherches récentes
+      await fetchRecentsearch();
+    } catch (e) {
+      debugPrint('Erreur lors de la suppression de la recherche : $e');
+    }
+  }
+
   Future<void> saveSearchQuery(String query) async {
     try {
       final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
@@ -2884,7 +2912,22 @@ class Search extends SearchDelegate<String> {
         return;
       }
 
-      await FirebaseFirestore.instance.collection('search').add({
+      final searchCollection = FirebaseFirestore.instance.collection('search');
+
+      // Vérifier si une recherche identique existe déjà pour ce user
+      final existingQuery = await searchCollection
+          .where('userId', isEqualTo: currentUserId)
+          .where('text', isEqualTo: query)
+          .limit(1)
+          .get();
+
+      if (existingQuery.docs.isNotEmpty) {
+        debugPrint('Requête déjà enregistrée : $query');
+        return;
+      }
+
+      // Ajouter la nouvelle recherche
+      await searchCollection.add({
         'userId': currentUserId,
         'text': query,
         'timestamp': Timestamp.now()
@@ -2892,7 +2935,7 @@ class Search extends SearchDelegate<String> {
 
       debugPrint('Recherche sauvegardée : $query');
 
-      // Refresh recent searches
+      // Rafraîchir les recherches récentes
       await fetchRecentsearch();
     } catch (e) {
       debugPrint('Erreur lors de la sauvegarde de la recherche : $e');
@@ -3222,7 +3265,7 @@ class Search extends SearchDelegate<String> {
     return [
       IconButton(
         icon: Icon(
-          Icons.clear,
+          Icons.refresh,
           color: Colors.black,
         ),
         onPressed: () {
@@ -3252,21 +3295,28 @@ class Search extends SearchDelegate<String> {
     // Perform search and save query
     if (query.isNotEmpty) {
       saveSearchQuery(query);
+
+      // This should be done in a way that updates the UI when complete
       searchContent(query);
+
+      // Navigate after current frame is complete
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Close the search delegate
+        close(context, query);
+
+        // Navigate to results page
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => SearchResultsPage(
+              query: query,
+              results: searchResults,
+            ),
+          ),
+        );
+      });
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      close(context, query);
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => SearchResultsPage(
-            query: query,
-            results: searchResults,
-          ),
-        ),
-      );
-    });
-
+    // Show loading indicator while waiting
     return Container(
       color: Colors.white,
       child: Center(
@@ -3336,8 +3386,15 @@ class Search extends SearchDelegate<String> {
                 searchText,
                 style: TextStyle(color: Colors.black),
               ),
+              trailing: IconButton(
+                icon: Icon(Icons.clear, color: Colors.black),
+                onPressed: () async {
+                  await deleteRecentSearch(searchText);
+                },
+              ),
               onTap: () {
                 query = searchText;
+
                 showResults(context);
               },
             );
@@ -3467,7 +3524,9 @@ class _SearchResultsPageState extends State<SearchResultsPage>
               IconButton(
                 icon: Icon(
                   Icons.filter_list,
-                  color: activeFilters.isNotEmpty ? Colors.blue : Colors.black,
+                  color: activeFilters.isNotEmpty
+                      ? Color(0xFF754CEF)
+                      : Colors.black,
                   size: q.width * 0.06,
                 ),
                 onPressed: () {
@@ -3509,9 +3568,9 @@ class _SearchResultsPageState extends State<SearchResultsPage>
               indicatorColor: Colors.black,
               indicatorSize: TabBarIndicatorSize.tab,
               tabs: [
-                Tab(text: 'Podcast (${podcasts.length})'),
-                Tab(text: 'Channel (${channels.length})'),
-                Tab(text: 'Playlist (${playlists.length})'),
+                Tab(text: 'Podcast(${formatLikes(podcasts.length)})'),
+                Tab(text: 'Channel(${formatLikes(channels.length)})'),
+                Tab(text: 'Playlist(${formatLikes(playlists.length)})'),
               ],
             ),
           ),
@@ -3560,106 +3619,328 @@ class _SearchResultsPageState extends State<SearchResultsPage>
     }
 
     return ListView.builder(
+      physics: const BouncingScrollPhysics(),
+      padding: EdgeInsets.symmetric(vertical: q.width * 0.02),
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
-        final name = item['name'] ?? 'Sans nom';
-        final isRelated = item.containsKey('relatedTo');
-        final relatedToText = isRelated ? item['relatedTo'] as String : '';
-
         // Déterminer l'icône en fonction du type
-        IconData iconData;
+
         switch (item['type']) {
           case 'podcast':
-            iconData = Icons.headset;
-            break;
+            return Container(
+                margin: EdgeInsets.symmetric(
+                  horizontal: q.width * 0.03,
+                  vertical: q.width * 0.02,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(q.width * 0.05),
+                  border: Border.all(color: Colors.black12),
+                ),
+                width: q.width * 0.94,
+                height: q.width * 0.3,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/podcast',
+                      arguments: {
+                        'idpod': item["id"],
+                        'feat':
+                            13, // remplace "someValue" par ce que tu veux représenter
+                      },
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      SizedBox(width: q.width * 0.03),
+                      Image.network(
+                        s48,
+                        width: q.width * 0.09,
+                        height: q.width * 0.09,
+                        fit: BoxFit.cover,
+                      ),
+                      SizedBox(width: q.width * 0.03),
+                      Container(
+                        height: q.width * 0.2,
+                        width: q.width * 0.2,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(q.width * 0.04),
+                          image: DecorationImage(
+                            image: NetworkImage(item["urlPhoto"]!),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: q.width * 0.04),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item["name"]!,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: q.width * 0.04,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            SizedBox(height: q.width * 0.01),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: q.width * 0.02),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                              width: q.width *
+                                  0.2, // Constrain the width of the progress bar
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      SizedBox(
+                                        child: Image.network(s37),
+                                        width: q.width * 0.05,
+                                        height: q.width * 0.05,
+                                      ),
+                                      SizedBox(
+                                        width: q.width * 0.01,
+                                      ),
+                                      Text(
+                                        formatLikes(item["likes"]!),
+                                        style: TextStyle(
+                                            fontSize: q.width * 0.035,
+                                            fontWeight: FontWeight.bold),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(
+                                    height: q.width * 0.02,
+                                  ),
+                                  Row(
+                                    children: [
+                                      SizedBox(
+                                        child: Image.network(s14),
+                                        width: q.width * 0.05,
+                                        height: q.width * 0.05,
+                                      ),
+                                      SizedBox(
+                                        width: q.width * 0.01,
+                                      ),
+                                      Text(
+                                        formatLikes(item["vue"]!),
+                                        style: TextStyle(
+                                            fontSize: q.width * 0.035,
+                                            fontWeight: FontWeight.bold),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(
+                                    height: q.width * 0.02,
+                                  ),
+                                  Row(
+                                    children: [
+                                      SizedBox(
+                                        child: Image.network(s38),
+                                        width: q.width * 0.05,
+                                        height: q.width * 0.05,
+                                      ),
+                                      SizedBox(
+                                        width: q.width * 0.01,
+                                      ),
+                                      Text(
+                                        formatLikes(item["comments"]!),
+                                        style: TextStyle(
+                                            fontSize: q.width * 0.035,
+                                            fontWeight: FontWeight.bold),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              )),
+                        ],
+                      ),
+                    ],
+                  ),
+                ));
+
           case 'channel':
-            iconData = Icons.person;
-            break;
+            return Container(
+                margin: EdgeInsets.symmetric(
+                  horizontal: q.width * 0.03,
+                  vertical: q.width * 0.02,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(q.width * 0.05),
+                  border: Border.all(color: Colors.black12),
+                ),
+                width: q.width * 0.94,
+                height: q.width * 0.3,
+                child: GestureDetector(
+                  onTap: () {
+                    if (userId == item["userId"]) {
+                      Navigator.pushNamed(context, '/your',
+                          arguments: {'your': 5});
+                    }
+                    if (userId != item["userId"]) {
+                      Navigator.pushNamed(
+                        context,
+                        '/channel',
+                        arguments: {
+                          'id': item["id"],
+                          'chaine': 2,
+                        },
+                      );
+                    }
+                  },
+                  child: Row(
+                    children: [
+                      SizedBox(width: q.width * 0.03),
+                      Container(
+                        height: q.width * 0.2,
+                        width: q.width * 0.2,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(q.width * 0.1),
+                          image: DecorationImage(
+                            image: NetworkImage(item["photoUrl"]!),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: q.width * 0.04),
+                      Expanded(
+                        child: Text(
+                          item["name"]!,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: q.width * 0.04,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      SizedBox(width: q.width * 0.02),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Followers",
+                            style: TextStyle(
+                              fontSize: q.width * 0.035,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            formatLikes(item["followers"]!),
+                            style: TextStyle(
+                              fontSize: q.width * 0.035,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(width: q.width * 0.03),
+                    ],
+                  ),
+                ));
+
           case 'playlist':
-            iconData = Icons.playlist_play;
-            break;
-          default:
-            iconData = Icons.play_circle_fill;
+            return Container(
+                margin: EdgeInsets.all(q.width * 0.02),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(q.width * 0.05),
+                  border: Border.all(color: Colors.black12),
+                ),
+                width: q.width * 0.95,
+                height: q.width * 0.3,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pushNamed(context, '/play',
+                        arguments: {'idplay': item["id"], 'pp': 5});
+                  },
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: q.width * 0.01,
+                      ),
+                      Container(
+                        height: q.width * 0.25,
+                        width: q.width * 0.25,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(q.width * 0.04),
+                          image: DecorationImage(
+                            image: NetworkImage(item["photoUrl"]!),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: q.width * 0.04),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: q.width * 0.02),
+                          SizedBox(
+                            width: q.width * 0.3,
+                            child: Text(
+                              item["name"]!,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: q.width * 0.04,
+                              ),
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(
+                        width: q.width * 0.04,
+                      ),
+                      Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                                width: q.width *
+                                    0.2, // Constrain the width of the progress bar
+                                child: Column(children: [
+                                  SizedBox(
+                                    height: q.width * 0.02,
+                                  ),
+                                  Column(children: [
+                                    Text(
+                                      formatLikes(item["podcast"]!),
+                                      style: TextStyle(
+                                        fontSize: q.width * 0.035,
+                                      ),
+                                      maxLines: 4,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    SizedBox(
+                                      width: q.width * 0.03,
+                                    ),
+                                    Text(
+                                      "Podcast",
+                                      style: TextStyle(
+                                        fontSize: q.width * 0.035,
+                                      ),
+                                      maxLines: 4,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ])
+                                ]))
+                          ])
+                    ],
+                  ),
+                ));
         }
-
-        // Informations supplémentaires pour les podcasts
-        String? subtitle;
-        if (item['type'] == 'podcast') {
-          // Durée du podcast si disponible
-          if (item.containsKey('duration')) {
-            String durationStr = item['duration'] ?? '0:00';
-
-            List<String> parts = durationStr.split(':');
-            int minutes = int.tryParse(parts[0]) ?? 0;
-
-            subtitle = '$minutes min';
-          }
-
-          // Ajouter les vues et/ou likes si disponibles
-          if (item.containsKey('vue')) {
-            String viewCount = '${item['vue'] ?? 0} vues';
-            subtitle = subtitle != null ? '$subtitle • $viewCount' : viewCount;
-          }
-
-          if (item.containsKey('likes')) {
-            String likeCount = '${item['likes'] ?? 0} likes';
-            subtitle = subtitle != null ? '$subtitle • $likeCount' : likeCount;
-          }
-        }
-
-        // Si c'est un contenu relié et qu'aucun autre sous-titre n'est défini
-        if (isRelated && (subtitle == null || subtitle.isEmpty)) {
-          subtitle = 'Relié à $relatedToText';
-        } else if (isRelated) {
-          subtitle = '$subtitle • Relié à $relatedToText';
-        }
-
-        return Card(
-          elevation: 1,
-          margin: EdgeInsets.symmetric(
-            vertical: q.height * 0.005,
-            horizontal: q.width * 0.02,
-          ),
-          child: ListTile(
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: q.width * 0.03,
-              vertical: q.height * 0.005,
-            ),
-            leading: Icon(
-              iconData,
-              color: Colors.black87,
-              size: q.width * 0.07,
-            ),
-            title: Text(
-              name,
-              style: TextStyle(
-                color: Colors.black87,
-                fontWeight: isRelated ? FontWeight.normal : FontWeight.bold,
-                fontSize: q.width * 0.04,
-              ),
-            ),
-            subtitle: subtitle != null
-                ? Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: q.width * 0.03,
-                    ),
-                  )
-                : null,
-            trailing: Icon(
-              Icons.arrow_forward_ios,
-              size: q.width * 0.04,
-              color: Colors.grey,
-            ),
-            onTap: () {
-              final contentType = item['type'];
-              final contentId = item['id'];
-              debugPrint('Tapped on $name ($contentType, ID: $contentId)');
-            },
-          ),
-        );
+        return null;
       },
     );
   }
@@ -3705,7 +3986,7 @@ class _SearchResultsPageState extends State<SearchResultsPage>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Filtrer les résultats',
+                        'Filter Results',
                         style: TextStyle(
                           fontSize: q.width * 0.05,
                           fontWeight: FontWeight.bold,
@@ -3718,9 +3999,9 @@ class _SearchResultsPageState extends State<SearchResultsPage>
                             _resetFilters();
                           },
                           child: Text(
-                            'Réinitialiser',
+                            'Reset',
                             style: TextStyle(
-                              color: Colors.blue,
+                              color: Color(0xFF754CEF),
                               fontSize: q.width * 0.035,
                             ),
                           ),
@@ -3731,7 +4012,7 @@ class _SearchResultsPageState extends State<SearchResultsPage>
 
                   // Filtres par durée
                   Text(
-                    'Durée',
+                    'Duration',
                     style: TextStyle(
                       fontSize: q.width * 0.04,
                       fontWeight: FontWeight.w500,
@@ -3790,7 +4071,7 @@ class _SearchResultsPageState extends State<SearchResultsPage>
                     child: Row(
                       children: [
                         _buildFilterChip(
-                          'Plus récents',
+                          'Most Recent',
                           () {
                             setStateModal(() {
                               _toggleFilter('sort', 'recent');
@@ -3800,7 +4081,7 @@ class _SearchResultsPageState extends State<SearchResultsPage>
                         ),
                         SizedBox(width: q.width * 0.02),
                         _buildFilterChip(
-                          'Plus anciens',
+                          'Older',
                           () {
                             setStateModal(() {
                               _toggleFilter('sort', 'oldest');
@@ -3815,7 +4096,7 @@ class _SearchResultsPageState extends State<SearchResultsPage>
 
                   // Tri par popularité
                   Text(
-                    'Popularité',
+                    'Popularity',
                     style: TextStyle(
                       fontSize: q.width * 0.04,
                       fontWeight: FontWeight.w500,
@@ -3827,7 +4108,7 @@ class _SearchResultsPageState extends State<SearchResultsPage>
                     child: Row(
                       children: [
                         _buildFilterChip(
-                          'Plus vus',
+                          'Most Viewed',
                           () {
                             setStateModal(() {
                               _toggleFilter('popularity', 'views');
@@ -3837,7 +4118,7 @@ class _SearchResultsPageState extends State<SearchResultsPage>
                         ),
                         SizedBox(width: q.width * 0.02),
                         _buildFilterChip(
-                          'Plus aimés',
+                          'Most Liked',
                           () {
                             setStateModal(() {
                               _toggleFilter('popularity', 'likes');
@@ -3859,7 +4140,7 @@ class _SearchResultsPageState extends State<SearchResultsPage>
                         _applyFilters();
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: Color(0xFF754CEF),
                         foregroundColor: Colors.white,
                         minimumSize: Size(q.width * 0.8, q.height * 0.05),
                         shape: RoundedRectangleBorder(
@@ -3867,7 +4148,7 @@ class _SearchResultsPageState extends State<SearchResultsPage>
                         ),
                       ),
                       child: Text(
-                        'Appliquer les filtres',
+                        'Apply Filters',
                         style: TextStyle(
                           fontSize: q.width * 0.04,
                           fontWeight: FontWeight.bold,
@@ -3897,7 +4178,7 @@ class _SearchResultsPageState extends State<SearchResultsPage>
           vertical: q.height * 0.01,
         ),
         decoration: BoxDecoration(
-          color: isActive ? Colors.blue : Colors.grey[200],
+          color: isActive ? Color(0xFF754CEF) : Colors.grey[200],
           borderRadius: BorderRadius.circular(q.width * 0.05),
         ),
         child: Text(
@@ -4021,5 +4302,33 @@ class _SearchResultsPageState extends State<SearchResultsPage>
       activeFilters.clear();
       filteredResults = List.from(widget.results);
     });
+  }
+
+  final String userId = FirebaseAuth.instance.currentUser?.uid ?? "";
+  String formatLikes(num likes) {
+    // Utiliser un pattern personnalisé avec exactement 2 décimales
+    final formatter = NumberFormat('#,##0.00', 'fr');
+    // Pour les nombres importants, appliquer une logique de compactage manuel
+    if (likes >= 1000000000000000) {
+      return formatter
+              .format(likes / 1000000000000000)
+              .replaceAll('\u202f', '') +
+          'P';
+    } else if (likes >= 1000000000000) {
+      return formatter.format(likes / 1000000000000).replaceAll('\u202f', '') +
+          'T';
+    } else if (likes >= 1000000000) {
+      return formatter.format(likes / 1000000000).replaceAll('\u202f', '') +
+          'G';
+    } else if (likes >= 1000000) {
+      return formatter.format(likes / 1000000).replaceAll('\u202f', '') + 'M';
+    } else if (likes >= 1000) {
+      return formatter.format(likes / 1000).replaceAll('\u202f', '') + 'k';
+    } else if (likes <= 999) {
+      final formatter1 = NumberFormat('#0', 'fr');
+      return formatter1.format(likes);
+    }
+
+    return formatter.format(likes).replaceAll('\u202f', '');
   }
 }
