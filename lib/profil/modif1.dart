@@ -1,7 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'package:drop_down_list/drop_down_list.dart';
 import 'package:drop_down_list/model/selected_list_item.dart';
+import 'package:pfeapp/constants.dart';
 
 class Modif1page extends StatefulWidget {
   const Modif1page({super.key});
@@ -11,33 +14,224 @@ class Modif1page extends StatefulWidget {
 }
 
 class _Modif1pageState extends State<Modif1page> {
-  late int n;
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final args = ModalRoute.of(context)!.settings.arguments;
-    if (args is int) {
-      n = args;
-    } else {
-      n = 0; // Valeur par défaut si aucun argument n'est passé
+  final _playlistController = TextEditingController();
+  String? _selectedPlaylistId;
+  List<SelectedListItem<PlaylistItem>> play = [];
+  List<SelectedListItem<PlaylistItem>> play1 = [];
+  List<SelectedListItem<PlaylistItem>> play2 = [];
+  List<SelectedListItem<PlaylistItem>> play3 = [];
+  late int n = 1;
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      setState(() => isLoading = true);
+
+      final arguments =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+      if (arguments != null) {
+        if (arguments.containsKey('n')) {
+          n = arguments['n'];
+        }
+        if (arguments.containsKey('id1')) {
+          idp = arguments['id1'];
+        }
+        if (arguments.containsKey('id2')) {
+          idpp = arguments['id2'];
+        }
+        if (idp != null) {
+          await _loadPlaylists(idp!);
+          await _loadPlaylists1(idp!);
+        }
+        if (idpp != null) {
+          await _loadPlaylist(idpp!);
+          await _loadPlaylist1(idpp!);
+        }
+      }
+
+      setState(() => isLoading = false);
+    });
+  }
+
+  String? idp;
+  String? idpp;
+  Future<void> _loadPlaylists1(String idp) async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUser == null) return;
+
+      // Étape 1 : Récupérer les playlistId déjà liés au podcast
+      final playinpodSnapshot = await FirebaseFirestore.instance
+          .collection('playinpod')
+          .where('podcastId', isEqualTo: idp)
+          .get();
+
+      final List<String> existingPlaylistIds = playinpodSnapshot.docs
+          .map((doc) => doc['playlistId'] as String)
+          .toList();
+
+      // Étape 2 : Récupérer les playlists de l'utilisateur
+      final playlistSnapshot = await FirebaseFirestore.instance
+          .collection('playlist')
+          .where('userId', isEqualTo: currentUser)
+          .get();
+
+      // Étape 3 : Filtrer les playlists non déjà liées au podcast
+      final List<SelectedListItem<PlaylistItem>> fetchedPlaylists =
+          playlistSnapshot.docs
+              .where((doc) => existingPlaylistIds.contains(doc.id))
+              .map((doc) {
+        final data = doc.data() as Map<String, dynamic>; // ✅ Cast nécessaire
+        final name = data['name'] ?? 'Unknown Playlist';
+        final id = doc.id;
+        return SelectedListItem<PlaylistItem>(
+          data: PlaylistItem(id: id, name: name),
+        );
+      }).toList();
+
+      // Mettre à jour l'état
+      setState(() {
+        play1.addAll(fetchedPlaylists);
+      });
+    } catch (e) {
+      print('Error loading playlists: $e');
     }
   }
 
-  final List<SelectedListItem<String>> play = [
-    SelectedListItem<String>(data: "Education"),
-    SelectedListItem<String>(data: "Needs a freinds"),
-    SelectedListItem<String>(data: "Nesdds a freinds"),
-    SelectedListItem<String>(data: "Music"),
-  ];
-  final TextEditingController _playController = TextEditingController();
-  final List<SelectedListItem<String>> pod = [
-    SelectedListItem<String>(data: "Education"),
-    SelectedListItem<String>(data: "Needs a freinds"),
-    SelectedListItem<String>(data: "Nesdds a freinds"),
-    SelectedListItem<String>(data: "Music"),
-  ];
-  final TextEditingController _playController1 = TextEditingController();
+  Future<void> _loadPlaylists(String idp) async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUser == null) return;
 
+      // Étape 1 : Récupérer les playlistId déjà liés au podcast
+      final playinpodSnapshot = await FirebaseFirestore.instance
+          .collection('playinpod')
+          .where('podcastId', isEqualTo: idp)
+          .get();
+
+      final List<String> existingPlaylistIds = playinpodSnapshot.docs
+          .map((doc) => doc['playlistId'] as String)
+          .toList();
+
+      // Étape 2 : Récupérer les playlists de l'utilisateur
+      final playlistSnapshot = await FirebaseFirestore.instance
+          .collection('playlist')
+          .where('userId', isEqualTo: currentUser)
+          .get();
+
+      // Étape 3 : Filtrer les playlists non déjà liées au podcast
+      final List<SelectedListItem<PlaylistItem>> fetchedPlaylists =
+          playlistSnapshot.docs
+              .where((doc) => !existingPlaylistIds.contains(doc.id))
+              .map((doc) {
+        final data = doc.data() as Map<String, dynamic>; // ✅ Cast nécessaire
+        final name = data['name'] ?? 'Unknown Playlist';
+        final id = doc.id;
+        return SelectedListItem<PlaylistItem>(
+          data: PlaylistItem(id: id, name: name),
+        );
+      }).toList();
+
+      // Mettre à jour l'état
+      setState(() {
+        play.addAll(fetchedPlaylists);
+      });
+    } catch (e) {
+      print('Error loading playlists: $e');
+    }
+  }
+
+  Future<void> _loadPlaylist1(String idpp) async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUser == null) return;
+
+      // Étape 1 : Récupérer les playlistId déjà liés au podcast
+      final playinpodSnapshot = await FirebaseFirestore.instance
+          .collection('playinpod')
+          .where('playlistId', isEqualTo: idpp)
+          .get();
+
+      final List<String> existingPlaylistIds = playinpodSnapshot.docs
+          .map((doc) => doc['podcastId'] as String)
+          .toList();
+
+      // Étape 2 : Récupérer les playlists de l'utilisateur
+      final playlistSnapshot = await FirebaseFirestore.instance
+          .collection('podcasts')
+          .where('idUser', isEqualTo: currentUser)
+          .get();
+
+      // Étape 3 : Filtrer les playlists non déjà liées au podcast
+      final List<SelectedListItem<PlaylistItem>> fetchedPlaylists =
+          playlistSnapshot.docs
+              .where((doc) => existingPlaylistIds.contains(doc.id))
+              .map((doc) {
+        final data = doc.data() as Map<String, dynamic>; // ✅ Cast nécessaire
+        final name = data['name'] ?? 'Unknown Playlist';
+        final id = doc.id;
+        return SelectedListItem<PlaylistItem>(
+          data: PlaylistItem(id: id, name: name),
+        );
+      }).toList();
+
+      // Mettre à jour l'état
+      setState(() {
+        play3.addAll(fetchedPlaylists);
+      });
+    } catch (e) {
+      print('Error loading playlists: $e');
+    }
+  }
+
+  Future<void> _loadPlaylist(String idpp) async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUser == null) return;
+
+      // Étape 1 : Récupérer les playlistId déjà liés au podcast
+      final playinpodSnapshot = await FirebaseFirestore.instance
+          .collection('playinpod')
+          .where('playlistId', isEqualTo: idpp)
+          .get();
+
+      final List<String> existingPlaylistIds = playinpodSnapshot.docs
+          .map((doc) => doc['podcastId'] as String)
+          .toList();
+
+      // Étape 2 : Récupérer les playlists de l'utilisateur
+      final playlistSnapshot = await FirebaseFirestore.instance
+          .collection('podcasts')
+          .where('idUser', isEqualTo: currentUser)
+          .get();
+
+      // Étape 3 : Filtrer les playlists non déjà liées au podcast
+      final List<SelectedListItem<PlaylistItem>> fetchedPlaylists =
+          playlistSnapshot.docs
+              .where((doc) => !existingPlaylistIds.contains(doc.id))
+              .map((doc) {
+        final data = doc.data() as Map<String, dynamic>; // ✅ Cast nécessaire
+        final name = data['name'] ?? 'Unknown Playlist';
+        final id = doc.id;
+        return SelectedListItem<PlaylistItem>(
+          data: PlaylistItem(id: id, name: name),
+        );
+      }).toList();
+
+      // Mettre à jour l'état
+      setState(() {
+        play2.addAll(fetchedPlaylists);
+      });
+    } catch (e) {
+      print('Error loading playlists: $e');
+    }
+  }
+
+  final emailController = TextEditingController();
+  bool isLoading = true;
+  final TextEditingController firstNameController = TextEditingController();
+  final TextEditingController lastNameController = TextEditingController();
+  final TextEditingController channel = TextEditingController();
   bool _obscureText2 = true;
   @override
   Widget build(BuildContext context) {
@@ -46,712 +240,1127 @@ class _Modif1pageState extends State<Modif1page> {
       body: SafeArea(
           child: Container(
         decoration: BoxDecoration(color: Colors.white),
-        child: Stack(
-          children: [
-            if (n == 2) ...[
-              Positioned(
-                top: i.height * 0.01,
-                left: i.width * 0.03,
-                child: IconButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  icon: Image.asset(
-                    "images/retour.png",
-                    width: i.width * 0.07,
-                    height: i.width * 0.07,
-                  ),
-                ),
-              ),
-              Positioned(
-                  top: i.height * 0.02,
-                  left: i.width * 0.15,
-                  child: Text(
-                    "Change Name",
-                    style: TextStyle(
-                        fontSize: i.width * 0.06, fontWeight: FontWeight.bold),
-                  )),
-              Positioned(
-                  top: i.height * 0.1,
-                  left: i.width * 0.05,
-                  child: Container(
-                    width: i.width,
-                    child: Text(
-                      "You Can Change Your Username And Use The Real Name For Esasy Utilisation ",
-                      style: TextStyle(color: Colors.grey),
-                      maxLines: 2,
-                    ),
-                  )),
-              Positioned(
-                top: i.height * 0.22,
-                left: i.width * 0.1,
-                child: const Text(
-                  "Username",
-                  style: TextStyle(
-                      color: Colors.black, fontWeight: FontWeight.bold),
-                ),
-              ),
-              Positioned(
-                top: i.height * 0.2525,
-                left: i.width * 0.07,
-                right: i.width * 0.07,
-                child: SizedBox(
-                  width: i.width - 60,
-                  child: TextField(
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: const Color(0xFFD9D9D9),
-
-                      hintText: "Enter New Username",
-                      hintStyle: const TextStyle(color: Colors.grey),
-                      // Utilisation d'une image depuis les assets comme prefixIcon
-                      prefixIcon: Padding(
-                        padding: EdgeInsets.all(i.width *
-                            0.028), // Ajustez le padding selon vos besoins
-                        child: Image.asset(
-                          "images/person.png", // Remplacez par le chemin de votre icône
-                          width: i.width *
-                              0.05, // Ajustez la taille selon vos besoins
-                          height: i.width * 0.05,
-                        ),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.all(Radius.circular(i.width * 0.05)),
-                        borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.all(Radius.circular(i.width * 0.05)),
-                        borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.all(Radius.circular(i.width * 0.05)),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFD9D9D9),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: i.height * 0.36,
-                left: i.width * 0.18,
-                child: Container(
-                  height: i.height * 0.075,
-                  width: i.width * 0.65,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF754CEF),
-                    borderRadius: BorderRadius.circular(i.width * 0.05),
-                  ),
-                  child: MaterialButton(
-                    onPressed: () {
-                      // Implement login logic
-                    },
-                    child: Text(
-                      "Save",
-                      style: TextStyle(
-                          color: Colors.white, fontSize: i.width * 0.042),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-            if (n == 3) ...[
-              Positioned(
-                top: i.height * 0.01,
-                left: i.width * 0.03,
-                child: IconButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  icon: Image.asset(
-                    "images/retour.png",
-                    width: i.width * 0.07,
-                    height: i.width * 0.07,
-                  ),
-                ),
-              ),
-              Positioned(
-                  top: i.height * 0.02,
-                  left: i.width * 0.15,
-                  child: Text(
-                    "Change Email",
-                    style: TextStyle(
-                        fontSize: i.width * 0.06, fontWeight: FontWeight.bold),
-                  )),
-              Positioned(
-                  top: i.height * 0.1,
-                  left: i.width * 0.05,
-                  child: Container(
-                    width: i.width,
-                    child: Text(
-                      "You Can Change Your Email If You Don't Remeber Or You Don't Use The Corrently Adress Email",
-                      style: TextStyle(color: Colors.grey),
-                      maxLines: 2,
-                    ),
-                  )),
-              Positioned(
-                top: i.height * 0.22,
-                left: i.width * 0.1,
-                child: const Text(
-                  "Email",
-                  style: TextStyle(
-                      color: Colors.black, fontWeight: FontWeight.bold),
-                ),
-              ),
-              Positioned(
-                top: i.height * 0.2525,
-                left: i.width * 0.07,
-                right: i.width * 0.07,
-                child: SizedBox(
-                  width: i.width - 60,
-                  child: TextField(
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: const Color(0xFFD9D9D9),
-
-                      hintText: "Enter New Email",
-                      hintStyle: const TextStyle(color: Colors.grey),
-                      // Utilisation d'une image depuis les assets comme prefixIcon
-                      prefixIcon: Padding(
-                        padding: EdgeInsets.all(i.width *
-                            0.028), // Ajustez le padding selon vos besoins
-                        child: Image.asset(
-                          "images/gmail.png", // Remplacez par le chemin de votre icône
-                          width: i.width *
-                              0.05, // Ajustez la taille selon vos besoins
-                          height: i.width * 0.05,
-                        ),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.all(Radius.circular(i.width * 0.05)),
-                        borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.all(Radius.circular(i.width * 0.05)),
-                        borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.all(Radius.circular(i.width * 0.05)),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFD9D9D9),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: i.height * 0.36,
-                left: i.width * 0.18,
-                child: Container(
-                  height: i.height * 0.075,
-                  width: i.width * 0.65,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF754CEF),
-                    borderRadius: BorderRadius.circular(i.width * 0.05),
-                  ),
-                  child: MaterialButton(
-                    onPressed: () {
-                      // Implement login logic
-                    },
-                    child: Text(
-                      "Save",
-                      style: TextStyle(
-                          color: Colors.white, fontSize: i.width * 0.042),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-            if (n == 4) ...[
-              Positioned(
-                top: i.height * 0.01,
-                left: i.width * 0.03,
-                child: IconButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  icon: Image.asset(
-                    "images/retour.png",
-                    width: i.width * 0.07,
-                    height: i.width * 0.07,
-                  ),
-                ),
-              ),
-              Positioned(
-                  top: i.height * 0.02,
-                  left: i.width * 0.15,
-                  child: Text(
-                    "Change Motpass",
-                    style: TextStyle(
-                        fontSize: i.width * 0.06, fontWeight: FontWeight.bold),
-                  )),
-              Positioned(
-                  top: i.height * 0.1,
-                  left: i.width * 0.05,
-                  child: Container(
-                    width: i.width,
-                    child: Text(
-                      "You Can Change Your Motpass If You Don't Remeber Or Your Corrently Motpass Is Easy To Know ",
-                      style: TextStyle(color: Colors.grey),
-                      maxLines: 2,
-                    ),
-                  )),
-              Positioned(
-                top: i.height * 0.22,
-                left: i.width * 0.1,
-                child: const Text(
-                  "Motpass",
-                  style: TextStyle(
-                      color: Colors.black, fontWeight: FontWeight.bold),
-                ),
-              ),
-              Positioned(
-                top: i.height * 0.2525,
-                left: i.width * 0.07,
-                right: i.width * 0.07,
-                child: SizedBox(
-                  width: i.width - 60,
-                  child: TextField(
-                    obscureText: _obscureText2,
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: const Color(0xFFD9D9D9),
-                      hintText: "Enter New Password",
-                      hintStyle: const TextStyle(color: Colors.grey),
-                      prefixIcon: Padding(
-                        padding: EdgeInsets.all(i.width * 0.028),
-                        child: Image.asset(
-                          "images/look.png",
-                          width: i.width * 0.05,
-                          height: 0.05,
-                        ),
-                      ),
-                      // Correction de la syntaxe du suffixIcon
-                      suffixIcon: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _obscureText2 = !_obscureText2;
-                          });
+        child: isLoading
+            ? Center(child: Text(""))
+            : Stack(
+                children: [
+                  if (n == 2) ...[
+                    Positioned(
+                      top: i.height * 0.01,
+                      left: i.width * 0.03,
+                      child: IconButton(
+                        onPressed: () {
+                          Navigator.pop(context);
                         },
-                        child: Padding(
-                          padding: EdgeInsets.all(i.width * 0.028),
-                          child: Image.asset(
-                            "images/view.png",
-                            width: i.width * 0.05,
-                            height: i.width * 0.05,
+                        icon: Image.network(
+                          s18,
+                          width: i.width * 0.07,
+                          height: i.width * 0.07,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                        top: i.height * 0.02,
+                        left: i.width * 0.15,
+                        child: Text(
+                          "Change Name",
+                          style: TextStyle(
+                              fontSize: i.width * 0.06,
+                              fontWeight: FontWeight.bold),
+                        )),
+                    Positioned(
+                        top: i.height * 0.1,
+                        left: i.width * 0.05,
+                        child: Container(
+                          width: i.width,
+                          child: Text(
+                            "You Can Change Your Username And Use The Real Name For Esasy Utilisation ",
+                            style: TextStyle(color: Colors.grey),
+                            maxLines: 2,
+                          ),
+                        )),
+                    Positioned(
+                      top: i.height * 0.22,
+                      left: i.width * 0.1,
+                      child: const Text(
+                        "FirstName",
+                        style: TextStyle(
+                            color: Colors.black, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Positioned(
+                      top: i.height * 0.2525,
+                      left: i.width * 0.07,
+                      right: i.width * 0.07,
+                      child: SizedBox(
+                        width: i.width - 60,
+                        child: TextField(
+                          controller: firstNameController,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: const Color(0xFFD9D9D9),
+
+                            hintText: "Enter New FirstName",
+                            hintStyle: const TextStyle(color: Colors.grey),
+                            // Utilisation d'une image depuis les assets comme prefixIcon
+                            prefixIcon: Padding(
+                              padding: EdgeInsets.all(i.width *
+                                  0.028), // Ajustez le padding selon vos besoins
+                              child: Image.network(
+                                s22, // Remplacez par le chemin de votre icône
+                                width: i.width *
+                                    0.05, // Ajustez la taille selon vos besoins
+                                height: i.width * 0.05,
+                              ),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(i.width * 0.05)),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFD9D9D9)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(i.width * 0.05)),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFD9D9D9)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(i.width * 0.05)),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFD9D9D9),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.all(Radius.circular(i.width * 0.05)),
-                        borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.all(Radius.circular(i.width * 0.05)),
-                        borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.all(Radius.circular(i.width * 0.05)),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFD9D9D9),
-                        ),
+                    ),
+                    Positioned(
+                      top: i.height * 0.36,
+                      left: i.width * 0.1,
+                      child: const Text(
+                        "LastName",
+                        style: TextStyle(
+                            color: Colors.black, fontWeight: FontWeight.bold),
                       ),
                     ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: i.height * 0.36,
-                left: i.width * 0.18,
-                child: Container(
-                  height: i.height * 0.075,
-                  width: i.width * 0.65,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF754CEF),
-                    borderRadius: BorderRadius.circular(i.width * 0.05),
-                  ),
-                  child: MaterialButton(
-                    onPressed: () {
-                      // Implement login logic
-                    },
-                    child: Text(
-                      "Save",
-                      style: TextStyle(
-                          color: Colors.white, fontSize: i.width * 0.042),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-            if (n == 5) ...[
-              Positioned(
-                top: i.height * 0.01,
-                left: i.width * 0.03,
-                child: IconButton(
-                  onPressed: () {
-                    /*     Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      '/your',
-                      (route) => false,
-                    );*/
-                    Navigator.pop(context);
-                  },
-                  icon: Image.asset(
-                    "images/retour.png",
-                    width: i.width * 0.07,
-                    height: i.width * 0.07,
-                  ),
-                ),
-              ),
-              Positioned(
-                  top: i.height * 0.02,
-                  left: i.width * 0.15,
-                  child: Text(
-                    "Change Name Channel",
-                    style: TextStyle(
-                        fontSize: i.width * 0.06, fontWeight: FontWeight.bold),
-                  )),
-              Positioned(
-                  top: i.height * 0.1,
-                  left: i.width * 0.05,
-                  child: Container(
-                    width: i.width,
-                    child: Text(
-                      "You Can Change Your Name Channel And Use The Real Name For Esasy Utilisation ",
-                      style: TextStyle(color: Colors.grey),
-                      maxLines: 2,
-                    ),
-                  )),
-              Positioned(
-                top: i.height * 0.22,
-                left: i.width * 0.1,
-                child: const Text(
-                  "Name Channel",
-                  style: TextStyle(
-                      color: Colors.black, fontWeight: FontWeight.bold),
-                ),
-              ),
-              Positioned(
-                top: i.height * 0.2525,
-                left: i.width * 0.07,
-                right: i.width * 0.07,
-                child: SizedBox(
-                  width: i.width - 60,
-                  child: TextField(
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: const Color(0xFFD9D9D9),
+                    Positioned(
+                      top: i.height * 0.3925,
+                      left: i.width * 0.07,
+                      right: i.width * 0.07,
+                      child: SizedBox(
+                        width: i.width - 60,
+                        child: TextField(
+                          controller: lastNameController,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: const Color(0xFFD9D9D9),
 
-                      hintText: "Enter New Nam Channel",
-                      hintStyle: const TextStyle(color: Colors.grey),
-                      // Utilisation d'une image depuis les assets comme prefixIcon
-                      prefixIcon: Padding(
-                        padding: EdgeInsets.all(i.width *
-                            0.028), // Ajustez le padding selon vos besoins
-                        child: Image.asset(
-                          "images/cha.png", // Remplacez par le chemin de votre icône
-                          width: i.width *
-                              0.05, // Ajustez la taille selon vos besoins
-                          height: i.width * 0.05,
+                            hintText: "Enter New LastName",
+                            hintStyle: const TextStyle(color: Colors.grey),
+                            // Utilisation d'une image depuis les assets comme prefixIcon
+                            prefixIcon: Padding(
+                              padding: EdgeInsets.all(i.width *
+                                  0.028), // Ajustez le padding selon vos besoins
+                              child: Image.network(
+                                s22, // Remplacez par le chemin de votre icône
+                                width: i.width *
+                                    0.05, // Ajustez la taille selon vos besoins
+                                height: i.width * 0.05,
+                              ),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(i.width * 0.05)),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFD9D9D9)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(i.width * 0.05)),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFD9D9D9)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(i.width * 0.05)),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFD9D9D9),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.all(Radius.circular(i.width * 0.05)),
-                        borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.all(Radius.circular(i.width * 0.05)),
-                        borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.all(Radius.circular(i.width * 0.05)),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFD9D9D9),
+                    ),
+                    Positioned(
+                      top: i.height * 0.52,
+                      left: i.width * 0.18,
+                      child: Container(
+                        height: i.height * 0.075,
+                        width: i.width * 0.65,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF754CEF),
+                          borderRadius: BorderRadius.circular(i.width * 0.05),
+                        ),
+                        child: MaterialButton(
+                          onPressed: () async {
+                            String firstName = firstNameController.text.trim();
+                            String lastName = lastNameController.text.trim();
+                            final uid = FirebaseAuth.instance.currentUser?.uid;
+
+                            if (firstName.isEmpty || lastName.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text('Fields must not be empty')),
+                              );
+                              return;
+                            }
+
+                            if (uid == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('User not logged in')),
+                              );
+                              return;
+                            }
+
+                            try {
+                              final querySnapshot = await FirebaseFirestore
+                                  .instance
+                                  .collection('users')
+                                  .where('userId', isEqualTo: uid)
+                                  .limit(
+                                      1) // On suppose qu’il y a un seul document par user
+                                  .get();
+
+                              if (querySnapshot.docs.isNotEmpty) {
+                                final docRef =
+                                    querySnapshot.docs.first.reference;
+
+                                await docRef.update({
+                                  'firstName': firstName,
+                                  'lastName': lastName,
+                                });
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content:
+                                          Text('Profile updated successfully')),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text('User document not found')),
+                                );
+                              }
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Failed to update: $e')),
+                              );
+                            }
+                          },
+                          child: Text(
+                            "Save",
+                            style: TextStyle(
+                                color: Colors.white, fontSize: i.width * 0.042),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: i.height * 0.36,
-                left: i.width * 0.18,
-                child: Container(
-                  height: i.height * 0.075,
-                  width: i.width * 0.65,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF754CEF),
-                    borderRadius: BorderRadius.circular(i.width * 0.05),
-                  ),
-                  child: MaterialButton(
-                    onPressed: () {
-                      // Implement login logic
-                    },
-                    child: Text(
-                      "Save",
-                      style: TextStyle(
-                          color: Colors.white, fontSize: i.width * 0.042),
+                  ],
+                  if (n == 3) ...[
+                    Positioned(
+                      top: i.height * 0.01,
+                      left: i.width * 0.03,
+                      child: IconButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        icon: Image.asset(
+                          "images/retour.png",
+                          width: i.width * 0.07,
+                          height: i.width * 0.07,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-            ],
-            if (n == 6) ...[
-              Positioned(
-                top: i.height * 0.01,
-                left: i.width * 0.03,
-                child: IconButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  icon: Image.asset(
-                    "images/retour.png",
-                    width: i.width * 0.07,
-                    height: i.width * 0.07,
-                  ),
-                ),
-              ),
-              Positioned(
-                  top: i.height * 0.02,
-                  left: i.width * 0.15,
-                  child: Text(
-                    "Add To A playlist",
-                    style: TextStyle(
-                        fontSize: i.width * 0.06, fontWeight: FontWeight.bold),
-                  )),
-              Positioned(
-                  top: i.height * 0.1,
-                  left: i.width * 0.05,
-                  child: Container(
-                    width: i.width,
-                    child: Text(
-                      "You Can  Add More Podcast To A Playlist For The Esealy Receivit ",
-                      style: TextStyle(color: Colors.grey),
-                      maxLines: 2,
+                    Positioned(
+                        top: i.height * 0.02,
+                        left: i.width * 0.15,
+                        child: Text(
+                          "Change Email",
+                          style: TextStyle(
+                              fontSize: i.width * 0.06,
+                              fontWeight: FontWeight.bold),
+                        )),
+                    Positioned(
+                        top: i.height * 0.1,
+                        left: i.width * 0.05,
+                        child: Container(
+                          width: i.width,
+                          child: Text(
+                            "You Can Change Your Email If You Don't Remeber Or You Don't Use The Corrently Adress Email",
+                            style: TextStyle(color: Colors.grey),
+                            maxLines: 2,
+                          ),
+                        )),
+                    Positioned(
+                      top: i.height * 0.22,
+                      left: i.width * 0.1,
+                      child: const Text(
+                        "Email",
+                        style: TextStyle(
+                            color: Colors.black, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                  )),
-              Positioned(
-                top: i.height * 0.22,
-                left: i.width * 0.1,
-                child: const Text(
-                  "",
-                  style: TextStyle(
-                      color: Colors.black, fontWeight: FontWeight.bold),
-                ),
-              ),
-              Positioned(
-                top: i.height * 0.22,
-                left: i.width * 0.1,
-                child: const Text(
-                  "Name Playlist ",
-                  style: TextStyle(
-                      color: Colors.black, fontWeight: FontWeight.bold),
-                ),
-              ),
-              Positioned(
-                top: i.height * 0.2525,
-                left: i.width * 0.07,
-                right: i.width * 0.07,
-                child: _buildDropDownField1(
-                  controller: _playController,
-                  hint: "Select Playlist",
-                  items: play,
-                  title: "Playlist",
-                ),
-              ),
-              Positioned(
-                top: i.height * 0.36,
-                left: i.width * 0.18,
-                child: Container(
-                  height: i.height * 0.075,
-                  width: i.width * 0.65,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF754CEF),
-                    borderRadius: BorderRadius.circular(i.width * 0.05),
-                  ),
-                  child: MaterialButton(
-                    onPressed: () {
-                      // Implement login logic
-                    },
-                    child: Text(
-                      "Save",
-                      style: TextStyle(
-                          color: Colors.white, fontSize: i.width * 0.042),
+                    Positioned(
+                      top: i.height * 0.2525,
+                      left: i.width * 0.07,
+                      right: i.width * 0.07,
+                      child: SizedBox(
+                        width: i.width - 60,
+                        child: TextField(
+                          controller: emailController,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: const Color(0xFFD9D9D9),
+
+                            hintText: "Enter New Email",
+                            hintStyle: const TextStyle(color: Colors.grey),
+                            // Utilisation d'une image depuis les assets comme prefixIcon
+                            prefixIcon: Padding(
+                              padding: EdgeInsets.all(i.width *
+                                  0.028), // Ajustez le padding selon vos besoins
+                              child: Image.network(
+                                s12, // Remplacez par le chemin de votre icône
+                                width: i.width *
+                                    0.05, // Ajustez la taille selon vos besoins
+                                height: i.width * 0.05,
+                              ),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(i.width * 0.05)),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFD9D9D9)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(i.width * 0.05)),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFD9D9D9)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(i.width * 0.05)),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFD9D9D9),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-            ],
-            if (n == 7) ...[
-              Positioned(
-                top: i.height * 0.01,
-                left: i.width * 0.03,
-                child: IconButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  icon: Image.asset(
-                    "images/retour.png",
-                    width: i.width * 0.07,
-                    height: i.width * 0.07,
-                  ),
-                ),
-              ),
-              Positioned(
-                  top: i.height * 0.02,
-                  left: i.width * 0.15,
-                  child: Text(
-                    "Add To A playlist",
-                    style: TextStyle(
-                        fontSize: i.width * 0.06, fontWeight: FontWeight.bold),
-                  )),
-              Positioned(
-                  top: i.height * 0.1,
-                  left: i.width * 0.05,
-                  child: Container(
-                    width: i.width,
-                    child: Text(
-                      "You Can  Add More Podcast To A Playlist For The Esealy Receivit ",
-                      style: TextStyle(color: Colors.grey),
-                      maxLines: 2,
+                    Positioned(
+                      top: i.height * 0.36,
+                      left: i.width * 0.18,
+                      child: Container(
+                        height: i.height * 0.075,
+                        width: i.width * 0.65,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF754CEF),
+                          borderRadius: BorderRadius.circular(i.width * 0.05),
+                        ),
+                        child: MaterialButton(
+                          onPressed: () async {
+                            final user = FirebaseAuth.instance.currentUser;
+                            final newEmail = emailController.text.trim();
+
+                            if (user == null || newEmail.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content:
+                                        Text("Email field must not be empty")),
+                              );
+                              return;
+                            }
+
+                            try {
+                              final providers = await FirebaseAuth.instance
+                                  .fetchSignInMethodsForEmail(user.email ?? '');
+
+                              // ⚠️ Cas: utilisateur Google → on bloque tout
+                              if (providers.contains("google.com")) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        "Impossible de modifier un email Google."),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              // ✅ Cas: utilisateur email/password → on continue
+                              final credential = EmailAuthProvider.credential(
+                                email: user.email!,
+                                password: '',
+                              );
+
+                              await user
+                                  .reauthenticateWithCredential(credential);
+                              await user.updateEmail(newEmail);
+
+                              // ✅ Mise à jour de Firestore (champ email)
+                              final userDoc = await FirebaseFirestore.instance
+                                  .collection('users')
+                                  .where('userId', isEqualTo: user.uid)
+                                  .limit(1)
+                                  .get();
+
+                              if (userDoc.docs.isNotEmpty) {
+                                await userDoc.docs.first.reference
+                                    .update({'email': newEmail});
+                              }
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content:
+                                        Text("Email updated successfully.")),
+                              );
+                            } on FirebaseAuthException catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text(
+                                        "FirebaseAuth Error: ${e.message}")),
+                              );
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text("Unexpected error: $e")),
+                              );
+                            }
+                          },
+                          child: Text(
+                            "Save",
+                            style: TextStyle(
+                                color: Colors.white, fontSize: i.width * 0.042),
+                          ),
+                        ),
+                      ),
                     ),
-                  )),
-              Positioned(
-                top: i.height * 0.22,
-                left: i.width * 0.1,
-                child: const Text(
-                  "Name Podcast ",
-                  style: TextStyle(
-                      color: Colors.black, fontWeight: FontWeight.bold),
-                ),
-              ),
-              Positioned(
-                top: i.height * 0.2525,
-                left: i.width * 0.07,
-                right: i.width * 0.07,
-                child: _buildDropDownField2(
-                  controller: _playController1,
-                  hint: "Select Podcast",
-                  items: pod,
-                  title: "Podcast",
-                ),
-              ),
-              Positioned(
-                top: i.height * 0.36,
-                left: i.width * 0.18,
-                child: Container(
-                  height: i.height * 0.075,
-                  width: i.width * 0.65,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF754CEF),
-                    borderRadius: BorderRadius.circular(i.width * 0.05),
-                  ),
-                  child: MaterialButton(
-                    onPressed: () {
-                      // Implement login logic
-                    },
-                    child: Text(
-                      "Save",
-                      style: TextStyle(
-                          color: Colors.white, fontSize: i.width * 0.042),
+                  ],
+                  if (n == 4) ...[
+                    Positioned(
+                      top: i.height * 0.01,
+                      left: i.width * 0.03,
+                      child: IconButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        icon: Image.asset(
+                          "images/retour.png",
+                          width: i.width * 0.07,
+                          height: i.width * 0.07,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-            ],
-            if (n == 8) ...[
-              Positioned(
-                top: i.height * 0.01,
-                left: i.width * 0.03,
-                child: IconButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  icon: Image.asset(
-                    "images/retour.png",
-                    width: i.width * 0.07,
-                    height: i.width * 0.07,
-                  ),
-                ),
-              ),
-              Positioned(
-                  top: i.height * 0.02,
-                  left: i.width * 0.15,
-                  child: Text(
-                    "Delete From playlist",
-                    style: TextStyle(
-                        fontSize: i.width * 0.06, fontWeight: FontWeight.bold),
-                  )),
-              Positioned(
-                  top: i.height * 0.1,
-                  left: i.width * 0.05,
-                  child: Container(
-                    width: i.width,
-                    child: Text(
-                      "You Can  Delete More Podcast From Playlist For The Esealy Receivit ",
-                      style: TextStyle(color: Colors.grey),
-                      maxLines: 2,
+                    Positioned(
+                        top: i.height * 0.02,
+                        left: i.width * 0.15,
+                        child: Text(
+                          "Change Motpass",
+                          style: TextStyle(
+                              fontSize: i.width * 0.06,
+                              fontWeight: FontWeight.bold),
+                        )),
+                    Positioned(
+                        top: i.height * 0.1,
+                        left: i.width * 0.05,
+                        child: Container(
+                          width: i.width,
+                          child: Text(
+                            "You Can Change Your Motpass If You Don't Remeber Or Your Corrently Motpass Is Easy To Know ",
+                            style: TextStyle(color: Colors.grey),
+                            maxLines: 2,
+                          ),
+                        )),
+                    Positioned(
+                      top: i.height * 0.22,
+                      left: i.width * 0.1,
+                      child: const Text(
+                        "Motpass",
+                        style: TextStyle(
+                            color: Colors.black, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                  )),
-              Positioned(
-                top: i.height * 0.22,
-                left: i.width * 0.1,
-                child: const Text(
-                  "Name Podcast ",
-                  style: TextStyle(
-                      color: Colors.black, fontWeight: FontWeight.bold),
-                ),
-              ),
-              Positioned(
-                top: i.height * 0.2525,
-                left: i.width * 0.07,
-                right: i.width * 0.07,
-                child: _buildDropDownField2(
-                  controller: _playController1,
-                  hint: "Select Podcast",
-                  items: pod,
-                  title: "Podcast",
-                ),
-              ),
-              Positioned(
-                top: i.height * 0.36,
-                left: i.width * 0.18,
-                child: Container(
-                  height: i.height * 0.075,
-                  width: i.width * 0.65,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF754CEF),
-                    borderRadius: BorderRadius.circular(i.width * 0.05),
-                  ),
-                  child: MaterialButton(
-                    onPressed: () {
-                      // Implement login logic
-                    },
-                    child: Text(
-                      "Delete",
-                      style: TextStyle(
-                          color: Colors.white, fontSize: i.width * 0.042),
+                    Positioned(
+                      top: i.height * 0.2525,
+                      left: i.width * 0.07,
+                      right: i.width * 0.07,
+                      child: SizedBox(
+                        width: i.width - 60,
+                        child: TextField(
+                          obscureText: _obscureText2,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: const Color(0xFFD9D9D9),
+                            hintText: "Enter New Password",
+                            hintStyle: const TextStyle(color: Colors.grey),
+                            prefixIcon: Padding(
+                              padding: EdgeInsets.all(i.width * 0.028),
+                              child: Image.asset(
+                                "images/look.png",
+                                width: i.width * 0.05,
+                                height: 0.05,
+                              ),
+                            ),
+                            // Correction de la syntaxe du suffixIcon
+                            suffixIcon: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _obscureText2 = !_obscureText2;
+                                });
+                              },
+                              child: Padding(
+                                padding: EdgeInsets.all(i.width * 0.028),
+                                child: Image.asset(
+                                  "images/view.png",
+                                  width: i.width * 0.05,
+                                  height: i.width * 0.05,
+                                ),
+                              ),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(i.width * 0.05)),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFD9D9D9)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(i.width * 0.05)),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFD9D9D9)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(i.width * 0.05)),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFD9D9D9),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                    Positioned(
+                      top: i.height * 0.36,
+                      left: i.width * 0.18,
+                      child: Container(
+                        height: i.height * 0.075,
+                        width: i.width * 0.65,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF754CEF),
+                          borderRadius: BorderRadius.circular(i.width * 0.05),
+                        ),
+                        child: MaterialButton(
+                          onPressed: () {
+                            // Implement login logic
+                          },
+                          child: Text(
+                            "Save",
+                            style: TextStyle(
+                                color: Colors.white, fontSize: i.width * 0.042),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (n == 5) ...[
+                    Positioned(
+                      top: i.height * 0.01,
+                      left: i.width * 0.03,
+                      child: IconButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        icon: Image.network(
+                          s18,
+                          width: i.width * 0.07,
+                          height: i.width * 0.07,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                        top: i.height * 0.02,
+                        left: i.width * 0.15,
+                        child: Text(
+                          "Change Name Channel",
+                          style: TextStyle(
+                              fontSize: i.width * 0.06,
+                              fontWeight: FontWeight.bold),
+                        )),
+                    Positioned(
+                        top: i.height * 0.1,
+                        left: i.width * 0.05,
+                        child: Container(
+                          width: i.width,
+                          child: Text(
+                            "You Can Change Your Name Channel And Use The Real Name For Esasy Utilisation ",
+                            style: TextStyle(color: Colors.grey),
+                            maxLines: 2,
+                          ),
+                        )),
+                    Positioned(
+                      top: i.height * 0.22,
+                      left: i.width * 0.1,
+                      child: const Text(
+                        "Name Channel",
+                        style: TextStyle(
+                            color: Colors.black, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Positioned(
+                      top: i.height * 0.2525,
+                      left: i.width * 0.07,
+                      right: i.width * 0.07,
+                      child: SizedBox(
+                        width: i.width - 60,
+                        child: TextField(
+                          controller: channel,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: const Color(0xFFD9D9D9),
+
+                            hintText: "Enter New Nam Channel",
+                            hintStyle: const TextStyle(color: Colors.grey),
+                            // Utilisation d'une image depuis les assets comme prefixIcon
+                            prefixIcon: Padding(
+                              padding: EdgeInsets.all(i.width *
+                                  0.028), // Ajustez le padding selon vos besoins
+                              child: Image.network(
+                                s29, // Remplacez par le chemin de votre icône
+                                width: i.width *
+                                    0.05, // Ajustez la taille selon vos besoins
+                                height: i.width * 0.05,
+                              ),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(i.width * 0.05)),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFD9D9D9)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(i.width * 0.05)),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFD9D9D9)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(i.width * 0.05)),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFD9D9D9),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: i.height * 0.36,
+                      left: i.width * 0.18,
+                      child: Container(
+                        height: i.height * 0.075,
+                        width: i.width * 0.65,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF754CEF),
+                          borderRadius: BorderRadius.circular(i.width * 0.05),
+                        ),
+                        child: MaterialButton(
+                          onPressed: () async {
+                            String cha = channel.text.trim();
+                            final uid = FirebaseAuth.instance.currentUser?.uid;
+
+                            if (cha.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text('Field must not be empty')),
+                              );
+                              return;
+                            }
+
+                            if (uid == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('User not logged in')),
+                              );
+                              return;
+                            }
+
+                            try {
+                              final querySnapshot = await FirebaseFirestore
+                                  .instance
+                                  .collection('channels')
+                                  .where('userId', isEqualTo: uid)
+                                  .limit(
+                                      1) // On suppose qu’il y a un seul document par user
+                                  .get();
+
+                              if (querySnapshot.docs.isNotEmpty) {
+                                final docRef =
+                                    querySnapshot.docs.first.reference;
+
+                                await docRef.update({
+                                  'name': cha,
+                                });
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content:
+                                          Text('Profile updated successfully')),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text('User document not found')),
+                                );
+                              }
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Failed to update: $e')),
+                              );
+                            }
+                          }, // Implement login logic
+
+                          child: Text(
+                            "Save",
+                            style: TextStyle(
+                                color: Colors.white, fontSize: i.width * 0.042),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (n == 6) ...[
+                    Positioned(
+                      top: i.height * 0.01,
+                      left: i.width * 0.03,
+                      child: IconButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        icon: Image.network(
+                          s18,
+                          width: i.width * 0.07,
+                          height: i.width * 0.07,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                        top: i.height * 0.02,
+                        left: i.width * 0.15,
+                        child: Text(
+                          "Add To A playlist",
+                          style: TextStyle(
+                              fontSize: i.width * 0.06,
+                              fontWeight: FontWeight.bold),
+                        )),
+                    Positioned(
+                        top: i.height * 0.1,
+                        left: i.width * 0.05,
+                        child: Container(
+                          width: i.width,
+                          child: Text(
+                            "You Can  Add More Podcast To A Playlist For The Esealy Receivit ",
+                            style: TextStyle(color: Colors.grey),
+                            maxLines: 2,
+                          ),
+                        )),
+                    Positioned(
+                      top: i.height * 0.22,
+                      left: i.width * 0.1,
+                      child: const Text(
+                        "",
+                        style: TextStyle(
+                            color: Colors.black, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Positioned(
+                      top: i.height * 0.22,
+                      left: i.width * 0.1,
+                      child: const Text(
+                        "Name Playlist ",
+                        style: TextStyle(
+                            color: Colors.black, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Positioned(
+                      top: i.height * 0.2525,
+                      left: i.width * 0.07,
+                      right: i.width * 0.07,
+                      child: _buildDropDownField1(
+                        controller: _playlistController,
+                        hint: "Select Playlist",
+                        items: play,
+                        title: "Playlist",
+                      ),
+                    ),
+                    Positioned(
+                      top: i.height * 0.36,
+                      left: i.width * 0.18,
+                      child: Container(
+                        height: i.height * 0.075,
+                        width: i.width * 0.65,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF754CEF),
+                          borderRadius: BorderRadius.circular(i.width * 0.05),
+                        ),
+                        child: MaterialButton(
+                          onPressed: () async {
+                            if (_selectedPlaylistId != null &&
+                                _selectedPlaylistId!.isNotEmpty) {
+                              await FirebaseFirestore.instance
+                                  .collection('playinpod')
+                                  .add({
+                                'podcastId': idp,
+                                'playlistId':
+                                    _selectedPlaylistId, // Utilisation directe de la variable
+                                'date': FieldValue.serverTimestamp(),
+                              });
+                              await FirebaseFirestore.instance
+                                  .collection('playlist')
+                                  .doc(_selectedPlaylistId)
+                                  .update({
+                                'podcast': FieldValue.increment(1),
+                              });
+                            }
+                          },
+                          child: Text(
+                            "Save",
+                            style: TextStyle(
+                                color: Colors.white, fontSize: i.width * 0.042),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (n == 7) ...[
+                    Positioned(
+                      top: i.height * 0.01,
+                      left: i.width * 0.03,
+                      child: IconButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        icon: Image.network(
+                          s18,
+                          width: i.width * 0.07,
+                          height: i.width * 0.07,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                        top: i.height * 0.02,
+                        left: i.width * 0.15,
+                        child: Text(
+                          "Add To A playlist",
+                          style: TextStyle(
+                              fontSize: i.width * 0.06,
+                              fontWeight: FontWeight.bold),
+                        )),
+                    Positioned(
+                        top: i.height * 0.1,
+                        left: i.width * 0.05,
+                        child: Container(
+                          width: i.width,
+                          child: Text(
+                            "You Can  Add More Podcast To A Playlist For The Esealy Receivit ",
+                            style: TextStyle(color: Colors.grey),
+                            maxLines: 2,
+                          ),
+                        )),
+                    Positioned(
+                      top: i.height * 0.22,
+                      left: i.width * 0.1,
+                      child: const Text(
+                        "Name Podcast ",
+                        style: TextStyle(
+                            color: Colors.black, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Positioned(
+                      top: i.height * 0.2525,
+                      left: i.width * 0.07,
+                      right: i.width * 0.07,
+                      child: _buildDropDownField1(
+                        controller: _playlistController,
+                        hint: "Select Podcast",
+                        items: play2,
+                        title: "Podcast",
+                      ),
+                    ),
+                    Positioned(
+                      top: i.height * 0.36,
+                      left: i.width * 0.18,
+                      child: Container(
+                        height: i.height * 0.075,
+                        width: i.width * 0.65,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF754CEF),
+                          borderRadius: BorderRadius.circular(i.width * 0.05),
+                        ),
+                        child: MaterialButton(
+                          onPressed: () async {
+                            if (_selectedPlaylistId != null &&
+                                _selectedPlaylistId!.isNotEmpty) {
+                              await FirebaseFirestore.instance
+                                  .collection('playinpod')
+                                  .add({
+                                'playlistId': idpp,
+                                'podcastId':
+                                    _selectedPlaylistId, // Utilisation directe de la variable
+                                'date': FieldValue.serverTimestamp(),
+                              });
+                              await FirebaseFirestore.instance
+                                  .collection('playlist')
+                                  .doc(idpp)
+                                  .update({
+                                'podcast': FieldValue.increment(1),
+                              });
+                            }
+                          }, // Implement login logic
+
+                          child: Text(
+                            "Save",
+                            style: TextStyle(
+                                color: Colors.white, fontSize: i.width * 0.042),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (n == 8) ...[
+                    Positioned(
+                      top: i.height * 0.01,
+                      left: i.width * 0.03,
+                      child: IconButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        icon: Image.network(
+                          s18,
+                          width: i.width * 0.07,
+                          height: i.width * 0.07,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                        top: i.height * 0.02,
+                        left: i.width * 0.15,
+                        child: Text(
+                          "Delete From playlist",
+                          style: TextStyle(
+                              fontSize: i.width * 0.06,
+                              fontWeight: FontWeight.bold),
+                        )),
+                    Positioned(
+                        top: i.height * 0.1,
+                        left: i.width * 0.05,
+                        child: Container(
+                          width: i.width,
+                          child: Text(
+                            "You Can  Delete More Podcast From Playlist For The Esealy Receivit ",
+                            style: TextStyle(color: Colors.grey),
+                            maxLines: 2,
+                          ),
+                        )),
+                    Positioned(
+                      top: i.height * 0.22,
+                      left: i.width * 0.1,
+                      child: const Text(
+                        "Name Podcast ",
+                        style: TextStyle(
+                            color: Colors.black, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Positioned(
+                      top: i.height * 0.2525,
+                      left: i.width * 0.07,
+                      right: i.width * 0.07,
+                      child: _buildDropDownField1(
+                        controller: _playlistController,
+                        hint: "Select Podcast",
+                        items: play3,
+                        title: "Podcast",
+                      ),
+                    ),
+                    Positioned(
+                      top: i.height * 0.36,
+                      left: i.width * 0.18,
+                      child: Container(
+                        height: i.height * 0.075,
+                        width: i.width * 0.65,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF754CEF),
+                          borderRadius: BorderRadius.circular(i.width * 0.05),
+                        ),
+                        child: MaterialButton(
+                          onPressed: () async {
+                            if (_selectedPlaylistId != null &&
+                                _selectedPlaylistId!.isNotEmpty) {
+                              try {
+                                // 1. Rechercher les documents à supprimer dans playinpod
+                                final snapshot = await FirebaseFirestore
+                                    .instance
+                                    .collection('playinpod')
+                                    .where('podcastId',
+                                        isEqualTo: _selectedPlaylistId)
+                                    .where('playlistId', isEqualTo: idpp)
+                                    .get();
+
+                                // 2. Supprimer chaque document trouvé
+                                for (var doc in snapshot.docs) {
+                                  await doc.reference.delete();
+                                }
+
+                                // 3. Décrémenter le champ 'podcast' de la playlist
+                                await FirebaseFirestore.instance
+                                    .collection('playlist')
+                                    .doc(idpp)
+                                    .update({
+                                  'podcast': FieldValue.increment(-1),
+                                });
+                              } catch (e) {
+                                print(
+                                    'Error deleting from playinpod or updating playlist: $e');
+                              }
+                            }
+                          },
+                          child: Text(
+                            "Delete",
+                            style: TextStyle(
+                                color: Colors.white, fontSize: i.width * 0.042),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (n == 9) ...[
+                    Positioned(
+                      top: i.height * 0.01,
+                      left: i.width * 0.03,
+                      child: IconButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        icon: Image.network(
+                          s18,
+                          width: i.width * 0.07,
+                          height: i.width * 0.07,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                        top: i.height * 0.02,
+                        left: i.width * 0.15,
+                        child: Text(
+                          "Delete From A playlist",
+                          style: TextStyle(
+                              fontSize: i.width * 0.06,
+                              fontWeight: FontWeight.bold),
+                        )),
+                    Positioned(
+                        top: i.height * 0.1,
+                        left: i.width * 0.05,
+                        child: Container(
+                          width: i.width,
+                          child: Text(
+                            "You Can  Delete More Podcast From A Playlist For The Esealy Receivit ",
+                            style: TextStyle(color: Colors.grey),
+                            maxLines: 2,
+                          ),
+                        )),
+                    Positioned(
+                      top: i.height * 0.22,
+                      left: i.width * 0.1,
+                      child: const Text(
+                        "",
+                        style: TextStyle(
+                            color: Colors.black, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Positioned(
+                      top: i.height * 0.22,
+                      left: i.width * 0.1,
+                      child: const Text(
+                        "Name Playlist ",
+                        style: TextStyle(
+                            color: Colors.black, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Positioned(
+                      top: i.height * 0.2525,
+                      left: i.width * 0.07,
+                      right: i.width * 0.07,
+                      child: _buildDropDownField1(
+                        controller: _playlistController,
+                        hint: "Select Playlist",
+                        items: play1,
+                        title: "Playlist",
+                      ),
+                    ),
+                    Positioned(
+                      top: i.height * 0.36,
+                      left: i.width * 0.18,
+                      child: Container(
+                        height: i.height * 0.075,
+                        width: i.width * 0.65,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF754CEF),
+                          borderRadius: BorderRadius.circular(i.width * 0.05),
+                        ),
+                        child: MaterialButton(
+                          onPressed: () async {
+                            if (_selectedPlaylistId != null &&
+                                _selectedPlaylistId!.isNotEmpty) {
+                              try {
+                                // 1. Rechercher les documents à supprimer dans playinpod
+                                final snapshot = await FirebaseFirestore
+                                    .instance
+                                    .collection('playinpod')
+                                    .where('playlistId',
+                                        isEqualTo: _selectedPlaylistId)
+                                    .where('podcastId', isEqualTo: idp)
+                                    .get();
+
+                                // 2. Supprimer chaque document trouvé
+                                for (var doc in snapshot.docs) {
+                                  await doc.reference.delete();
+                                }
+
+                                // 3. Décrémenter le champ 'podcast' de la playlist
+                                await FirebaseFirestore.instance
+                                    .collection('playlist')
+                                    .doc(_selectedPlaylistId)
+                                    .update({
+                                  'podcast': FieldValue.increment(-1),
+                                });
+                              } catch (e) {
+                                print(
+                                    'Error deleting from playinpod or updating playlist: $e');
+                              }
+                            }
+                          },
+                          child: Text(
+                            "Delete",
+                            style: TextStyle(
+                                color: Colors.white, fontSize: i.width * 0.042),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            ],
-          ],
-        ),
       )),
     );
   }
@@ -759,7 +1368,7 @@ class _Modif1pageState extends State<Modif1page> {
   Widget _buildDropDownField1({
     required TextEditingController controller,
     required String hint,
-    required List<SelectedListItem<String>> items,
+    required List<SelectedListItem<PlaylistItem>> items,
     required String title,
   }) {
     return SizedBox(
@@ -774,7 +1383,7 @@ class _Modif1pageState extends State<Modif1page> {
           hintStyle: const TextStyle(color: Colors.grey),
           prefixIcon: Padding(
             padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.028),
-            child: Image.asset("images/playl.png",
+            child: Image.network(s33,
                 width: MediaQuery.of(context).size.width * 0.05,
                 height: MediaQuery.of(context).size.width * 0.05),
           ),
@@ -808,76 +1417,17 @@ class _Modif1pageState extends State<Modif1page> {
               onSelected: (List<dynamic> selectedItems) {
                 if (selectedItems.isNotEmpty) {
                   final selectedItem =
-                      selectedItems.first as SelectedListItem<String>;
-                  setState(() {
-                    controller.text = selectedItem.data;
-                  });
-                }
-              },
-              enableMultipleSelection: false,
-            ),
-          ).showModal(context);
-        },
-      ),
-    );
-  }
+                      selectedItems.first as SelectedListItem<PlaylistItem>;
+                  final playlistItem = selectedItem.data;
 
-  Widget _buildDropDownField2({
-    required TextEditingController controller,
-    required String hint,
-    required List<SelectedListItem<String>> items,
-    required String title,
-  }) {
-    return SizedBox(
-      width: MediaQuery.of(context).size.width - 60,
-      child: TextField(
-        controller: controller,
-        readOnly: true,
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: const Color(0xFFD9D9D9),
-          hintText: hint,
-          hintStyle: const TextStyle(color: Colors.grey),
-          prefixIcon: Padding(
-            padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.028),
-            child: Image.asset("images/podcast.png",
-                width: MediaQuery.of(context).size.width * 0.05,
-                height: MediaQuery.of(context).size.width * 0.05),
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.all(
-                Radius.circular(MediaQuery.of(context).size.width * 0.05)),
-            borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(
-                Radius.circular(MediaQuery.of(context).size.width * 0.05)),
-            borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(
-                Radius.circular(MediaQuery.of(context).size.width * 0.05)),
-            borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-          ),
-        ),
-        onTap: () {
-          DropDownState(
-            dropDown: DropDown(
-              dropDownBackgroundColor: Colors.white,
-              isDismissible: true,
-              bottomSheetTitle: Text(
-                title,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 20.0),
-              ),
-              data: items,
-              onSelected: (List<dynamic> selectedItems) {
-                if (selectedItems.isNotEmpty) {
-                  final selectedItem =
-                      selectedItems.first as SelectedListItem<String>;
                   setState(() {
-                    controller.text = selectedItem.data;
+                    _selectedPlaylistId = playlistItem.id; // Stocke l'ID
+                    _playlistController.text =
+                        playlistItem.name; // Affiche le nom
                   });
+
+                  print('Selected Playlist ID: ${playlistItem.id}');
+                  print('Selected Playlist Name: ${playlistItem.name}');
                 }
               },
               enableMultipleSelection: false,
@@ -887,4 +1437,13 @@ class _Modif1pageState extends State<Modif1page> {
       ),
     );
   }
+}
+
+class PlaylistItem {
+  final String id;
+  final String name;
+
+  PlaylistItem({required this.id, required this.name});
+  @override
+  String toString() => name; // Retourne le nom de la playlist
 }

@@ -14,6 +14,41 @@ class Podcastpage extends StatefulWidget {
 class _PodcastpageState extends State<Podcastpage>
     with TickerProviderStateMixin {
   // Récupération de l'ID
+  Future<void> checkAndAddReport(String idpod) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final reportsRef = FirebaseFirestore.instance.collection('reports');
+
+      final query = await reportsRef
+          .where('user', isEqualTo: userId)
+          .where('pod', isEqualTo: idpod)
+          .get();
+
+      if (query.docs.isEmpty) {
+        // Aucune déclaration trouvée : on ajoute
+        await reportsRef.add({
+          'user': userId,
+          'pod': idpod,
+          'date': FieldValue.serverTimestamp(),
+        });
+        await FirebaseFirestore.instance
+            .collection('podcasts')
+            .doc(idpod)
+            .update({
+          'report': FieldValue.increment(1),
+        }); // Add
+
+        print("Report ajouté !");
+      } else {
+        print("Report existe déjà.");
+      }
+    } catch (e) {
+      print("Erreur lors de la vérification/ajout du report : $e");
+    }
+  }
+
   String? idpod;
   final String userId = FirebaseAuth.instance.currentUser?.uid ?? "";
   late int? feat;
@@ -1193,8 +1228,8 @@ class _PodcastpageState extends State<Podcastpage>
                                         ],
                                       ),
                                     ),
-                                    onTap: () {
-                                      // Add your report functionality here
+                                    onTap: () async {
+                                      await checkAndAddReport(idpod!);
                                     },
                                   ),
                                 ],

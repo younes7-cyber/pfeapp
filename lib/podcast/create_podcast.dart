@@ -338,6 +338,7 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
         'comments': 0,
         'shares': 0,
         'save': 0,
+        'report': 0,
         'duration': formattedDuration,
       };
 

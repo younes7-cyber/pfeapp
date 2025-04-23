@@ -16,17 +16,229 @@ class Listenpage extends StatefulWidget {
 class _ListenpageState extends State<Listenpage>
     with SingleTickerProviderStateMixin {
   String? idpod;
-  late int? feal;
+  late int featl = 1;
   String? replyingTo;
   List<Map<String, dynamic>> podcast = [];
   List<Map<String, dynamic>> playlist = [];
   List<Map<String, dynamic>> playinpod = [];
-  TextEditingController _commentController = TextEditingController();
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+  final TextEditingController _commentController = TextEditingController();
+
+  List<Map<String, dynamic>> mesPodcasts12 = [];
+  String formatLikes(num likes) {
+    // Utiliser un pattern personnalisé avec exactement 2 décimales
+    final formatter = NumberFormat('#,##0.00', 'fr');
+    // Pour les nombres importants, appliquer une logique de compactage manuel
+    if (likes >= 1000000000000000) {
+      return formatter
+              .format(likes / 1000000000000000)
+              .replaceAll('\u202f', '') +
+          'P';
+    } else if (likes >= 1000000000000) {
+      return formatter.format(likes / 1000000000000).replaceAll('\u202f', '') +
+          'T';
+    } else if (likes >= 1000000000) {
+      return formatter.format(likes / 1000000000).replaceAll('\u202f', '') +
+          'G';
+    } else if (likes >= 1000000) {
+      return formatter.format(likes / 1000000).replaceAll('\u202f', '') + 'M';
+    } else if (likes >= 1000) {
+      return formatter.format(likes / 1000).replaceAll('\u202f', '') + 'k';
+    } else if (likes <= 999) {
+      final formatter1 = NumberFormat('#0', 'fr');
+      return formatter1.format(likes);
+    }
+
+    return formatter.format(likes).replaceAll('\u202f', '');
   }
 
+  Future<void> nbrpodId() async {
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
+
+    try {
+      final playinPodSnapshot = await FirebaseFirestore.instance
+          .collection('myplaylist')
+          .where('iduser', isEqualTo: currentUserId)
+          .get();
+
+      List<Map<String, dynamic>> myPlayInfos = [];
+
+      for (var doc in playinPodSnapshot.docs) {
+        final data = doc.data();
+        if (data.containsKey('idpod') && data.containsKey('dateCreation')) {
+          myPlayInfos.add({
+            'idpod': data['idpod'],
+            'dateCreation': data['dateCreation'],
+          });
+        }
+      }
+
+      if (myPlayInfos.isNotEmpty) {
+        List<Map<String, dynamic>> allPodcasts = [];
+
+        List<String> podcastIds =
+            myPlayInfos.map((e) => e['idpod'] as String).toList();
+
+        for (int i = 0; i < podcastIds.length; i += 10) {
+          int end = (i + 10 < podcastIds.length) ? i + 10 : podcastIds.length;
+          List<String> batch = podcastIds.sublist(i, end);
+
+          final podSnapshot = await FirebaseFirestore.instance
+              .collection('podcasts')
+              .where('id', whereIn: batch)
+              .get();
+
+          for (var doc in podSnapshot.docs) {
+            final podcastData = doc.data() as Map<String, dynamic>;
+            final match = myPlayInfos.firstWhere(
+                (e) => e['idpod'] == podcastData['id'],
+                orElse: () => {});
+
+            if (match.isNotEmpty) {
+              podcastData['dateCreation'] = match['dateCreation'];
+            }
+
+            allPodcasts.add(podcastData);
+          }
+        }
+
+        // ⬇️ Tri décroissant sur `dateCreation`
+        allPodcasts.sort((a, b) {
+          Timestamp? dateA = a['dateCreation'];
+          Timestamp? dateB = b['dateCreation'];
+          if (dateA == null && dateB == null) return 0;
+          if (dateA == null) return 1;
+          if (dateB == null) return -1;
+          return dateB.compareTo(dateA); // Tri décroissant
+        });
+
+        setState(() {
+          mesPodcasts12 = allPodcasts;
+        });
+      } else {
+        setState(() {
+          mesPodcasts12 = [];
+        });
+        debugPrint("Aucun podcast trouvé dans la playlist.");
+      }
+    } catch (e) {
+      debugPrint("Erreur lors de la récupération des podcasts : $e");
+      setState(() {
+        mesPodcasts12 = [];
+      });
+    }
+  }
+
+  Future<void> fetchPlaylidtById12(String idplay1) async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('playlist')
+          .where('id', isEqualTo: idplay1)
+          .get();
+
+      setState(() {
+        playlist = querySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+
+      debugPrint("Podcasts récupérés : ${playlist.length}");
+    } catch (e) {
+      debugPrint("Erreur lors du chargement des podcasts : $e");
+    }
+  }
+
+  Future<void> fetchPlaylistsByPodcastId12(String idplay1) async {
+    try {
+      final playinPodSnapshot = await FirebaseFirestore.instance
+          .collection('playinpod')
+          .where('playlistId', isEqualTo: idplay1)
+          .orderBy('date',
+              descending: true) // ⬅️ Trie par date DESC de playinpod
+          .get();
+
+      // 🔁 Récupérer les podcasts avec leur date d'ajout
+      List<Map<String, dynamic>> podInfos = [];
+
+      for (var doc in playinPodSnapshot.docs) {
+        final data = doc.data();
+        final podcastId = data['podcastId'];
+        final date = data['date'];
+
+        // On garde l’ordre, donc on ne filtre pas les doublons ici
+        podInfos.add({
+          'podcastId': podcastId,
+          'date': date,
+        });
+      }
+
+      if (podInfos.isNotEmpty) {
+        List<Map<String, dynamic>> allPodcasts = [];
+
+        // Regrouper par lot de 10 les IDs de podcasts
+        for (int i = 0; i < podInfos.length; i += 10) {
+          int end = (i + 10 < podInfos.length) ? i + 10 : podInfos.length;
+          List<String> batch = podInfos
+              .sublist(i, end)
+              .map((e) => e['podcastId'] as String)
+              .toList();
+
+          final podcastsSnapshot = await FirebaseFirestore.instance
+              .collection('podcasts')
+              .where('id', whereIn: batch)
+              .get();
+
+          for (var doc in podcastsSnapshot.docs) {
+            final data = doc.data();
+            allPodcasts.add(data);
+          }
+        }
+
+        // Réassocier la date de playinpod pour trier
+        List<Map<String, dynamic>> sortedPods = [];
+
+        for (var info in podInfos) {
+          final match = allPodcasts.firstWhere(
+            (pod) => pod['id'] == info['podcastId'],
+            orElse: () => {},
+          );
+
+          if (match.isNotEmpty) {
+            match['playinpodDate'] = info['date'];
+            sortedPods.add(match);
+          }
+        }
+
+        // 🔁 Tri décroissant par la date de `playinpod`
+        sortedPods.sort((a, b) {
+          Timestamp? dateA = a['playinpodDate'];
+          Timestamp? dateB = b['playinpodDate'];
+          if (dateA == null && dateB == null) return 0;
+          if (dateA == null) return 1;
+          if (dateB == null) return -1;
+          return dateB.compareTo(dateA);
+        });
+
+        setState(() {
+          podcastPlaylists = sortedPods;
+        });
+
+        debugPrint(
+            "🎧 Podcasts récupérés et triés par date (playinpod) : ${podcastPlaylists.length}");
+      } else {
+        setState(() {
+          podcastPlaylists = [];
+        });
+        debugPrint("Aucun podcast trouvé pour cette playlist.");
+      }
+    } catch (e) {
+      debugPrint("Erreur lors de la récupération des podcasts : $e");
+      setState(() {
+        podcastPlaylists = [];
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> podcastPlaylists = [];
   Future<void> fetchPodcastsById(String idpod) async {
     try {
       final querySnapshot = await FirebaseFirestore.instance
@@ -54,33 +266,47 @@ class _ListenpageState extends State<Listenpage>
           .orderBy('date', descending: true)
           .where('podcastId', isEqualTo: idpod)
           .get();
-
       final List<Map<String, dynamic>> playinPodData = playinPodSnapshot.docs
           .map((doc) => {
                 "podcastId": doc['podcastId'],
                 "playlistId": doc['playlistId'],
+                "date": doc['date'], // Conserver la date pour le tri ultérieur
               })
           .toList();
-
       final List<String> playlistIds =
           playinPodData.map((item) => item["playlistId"] as String).toList();
-
       debugPrint("Playlists trouvées dans playinpod : $playlistIds");
 
       if (playlistIds.isNotEmpty) {
         // 2️⃣ Récupérer les playlists correspondant aux `playlistId`
         final playlistSnapshot = await FirebaseFirestore.instance
             .collection('playlist')
-            .orderBy('createdAt', descending: true)
             .where(FieldPath.documentId, whereIn: playlistIds)
             .get();
+
+        // Créer un Map pour faciliter la récupération des dates de playinpod
+        Map<String, dynamic> playlistDates = {};
+        for (var item in playinPodData) {
+          playlistDates[item["playlistId"]] = item["date"];
+        }
 
         List<Map<String, dynamic>> loadedPlaylists = playlistSnapshot.docs
             .map((doc) => {
                   "id": doc.id,
+                  "playinpodDate":
+                      playlistDates[doc.id], // Ajouter la date de playinpod
                   ...doc.data(),
                 })
             .toList();
+
+        // Trier les playlists par la date de playinpod
+        loadedPlaylists.sort((a, b) {
+          var dateA = a["playinpodDate"];
+          var dateB = b["playinpodDate"];
+          if (dateA == null) return 1;
+          if (dateB == null) return -1;
+          return dateB.compareTo(dateA); // Ordre décroissant
+        });
 
         // 3️⃣ Associer les podcasts aux playlists
         final playinPodSnapshot2 = await FirebaseFirestore.instance
@@ -90,13 +316,24 @@ class _ListenpageState extends State<Listenpage>
             .get();
 
         Map<String, List<String>> podcastToPlaylists = {};
+        Map<String, dynamic> podcastDates =
+            {}; // Pour stocker la date la plus récente pour chaque podcast
+
         for (var doc in playinPodSnapshot2.docs) {
           String podcastId = doc['podcastId'];
           String playlistId = doc['playlistId'];
+          var date = doc['date'];
 
           if (!podcastToPlaylists.containsKey(podcastId)) {
             podcastToPlaylists[podcastId] = [];
+            podcastDates[podcastId] = date;
+          } else if (date != null &&
+              (podcastDates[podcastId] == null ||
+                  date.compareTo(podcastDates[podcastId]) > 0)) {
+            podcastDates[podcastId] =
+                date; // Mettre à jour avec la date la plus récente
           }
+
           podcastToPlaylists[podcastId]!.add(playlistId);
         }
 
@@ -107,7 +344,6 @@ class _ListenpageState extends State<Listenpage>
           // 4️⃣ Récupérer les podcasts avec `podcastIds`
           final podcastSnapshot = await FirebaseFirestore.instance
               .collection('podcasts')
-              .orderBy('dateCreation', descending: true)
               .where(FieldPath.documentId, whereIn: podcastIds)
               .get();
 
@@ -118,15 +354,25 @@ class _ListenpageState extends State<Listenpage>
             return {
               "id": podcastId,
               "playlistIds": podcastToPlaylists[podcastId] ?? [],
+              "playinpodDate":
+                  podcastDates[podcastId], // Ajouter la date de playinpod
               ...podcastData,
             };
           }).toList();
+
+          // Trier les podcasts par date de playinpod
+          loadedPodcasts.sort((a, b) {
+            var dateA = a["playinpodDate"];
+            var dateB = b["playinpodDate"];
+            if (dateA == null) return 1;
+            if (dateB == null) return -1;
+            return dateB.compareTo(dateA); // Ordre décroissant
+          });
 
           setState(() {
             playlist = loadedPlaylists;
             playinpod = loadedPodcasts;
           });
-
           debugPrint("Podcasts finaux récupérés : ${playinpod.length}");
         }
       }
@@ -135,6 +381,9 @@ class _ListenpageState extends State<Listenpage>
     }
   }
 
+  /* Map<String, List<Map<String, dynamic>>> podcastsByPlaylist = {};
+  List<Map<String, dynamic>> allPodcasts = [];
+ */
   bool isLoading = true;
 
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -158,18 +407,25 @@ class _ListenpageState extends State<Listenpage>
           idpod = arguments['idpod'];
         }
 
-        if (arguments.containsKey('feal')) {
-          feal = arguments['feal'];
+        if (arguments.containsKey('featl')) {
+          featl = arguments['featl'];
         }
-
+        if (arguments.containsKey('idplay1')) {
+          idplay1 = arguments['idplay1'];
+        }
         if (idpod != null) {
           await fetchPodcastsById(idpod!);
           await fetchPlaylistsByPodcastId(idpod!);
-          _initAudioPlayer();
-          _fetchComments();
-          _fetchLikeStatus();
-          _fetchUnlikeStatus();
-          _fetchsaveStatus();
+          await _initAudioPlayer();
+          await _fetchComments();
+          await _fetchLikeStatus();
+          await _fetchUnlikeStatus();
+          await _fetchsaveStatus();
+          await nbrpodId();
+        }
+        if (idplay1 != null) {
+          await fetchPlaylidtById12(idplay1!);
+          await fetchPlaylistsByPodcastId12(idplay1!);
         }
       }
 
@@ -177,6 +433,7 @@ class _ListenpageState extends State<Listenpage>
     });
   }
 
+  String? idplay1;
 // First, let's add a specific function to debug a single user ID
   Future<void> _debugUserDocument(String userId) async {
     try {
@@ -216,6 +473,7 @@ class _ListenpageState extends State<Listenpage>
     }
   }
 
+  late int nbc = 0;
   Future<List<Map<String, dynamic>>> _fetchComments() async {
     try {
       print("Fetching comments for podcast ID: $idpod");
@@ -230,7 +488,7 @@ class _ListenpageState extends State<Listenpage>
       if (commentSnapshot.docs.isEmpty) return [];
 
       print("Found ${commentSnapshot.docs.length} comments");
-
+      nbc = commentSnapshot.docs.length;
       List<Map<String, dynamic>> comments = [];
       Set<String> userIds = {}; // Pour stocker les userId uniques
 
@@ -383,7 +641,6 @@ class _ListenpageState extends State<Listenpage>
     setState(() {});
   }
 
-// Modified method to show comment modal with nested replies support
   void _showCommentsModal() {
     showModalBottomSheet(
       context: context,
@@ -413,9 +670,15 @@ class _ListenpageState extends State<Listenpage>
                       color: Colors.grey[300],
                     ),
                   ),
-                  const Text("Comments",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Text(formatLikes(podcast[0]["comments"]),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(" "),
+                    Text("Comments",
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                  ]),
                   const SizedBox(height: 10),
                   Expanded(
                     child: FutureBuilder(
@@ -441,6 +704,8 @@ class _ListenpageState extends State<Listenpage>
                             final isCurrentUserComment =
                                 FirebaseAuth.instance.currentUser?.uid ==
                                     comment['userid'];
+                            final isCreator =
+                                comment['userid'] == podcast[0]['idUser'];
 
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -465,6 +730,15 @@ class _ListenpageState extends State<Listenpage>
                                               fontWeight: FontWeight.bold,
                                               color: Colors.black),
                                         ),
+                                        if (isCreator)
+                                          TextSpan(
+                                            text: " Creator",
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF754CEF),
+                                              fontSize: 12,
+                                            ),
+                                          ),
                                       ],
                                     ),
                                   ),
@@ -491,7 +765,10 @@ class _ListenpageState extends State<Listenpage>
                                           icon: const Icon(Icons.delete,
                                               color: Colors.red),
                                           onPressed: () =>
-                                              _deleteComment(comment['id']),
+                                              _showDeleteConfirmation(
+                                            context,
+                                            () => _deleteComment(comment['id']),
+                                          ),
                                         )
                                       : null,
                                 ),
@@ -541,6 +818,9 @@ class _ListenpageState extends State<Listenpage>
                                               FirebaseAuth.instance.currentUser
                                                       ?.uid ==
                                                   reply['userid'];
+                                          final isReplyCreator =
+                                              reply['userid'] ==
+                                                  podcast[0]['idUser'];
 
                                           return Column(
                                             crossAxisAlignment:
@@ -585,51 +865,58 @@ class _ListenpageState extends State<Listenpage>
                                                         children: [
                                                           Row(
                                                             children: [
-                                                              Column(
-                                                                crossAxisAlignment:
-                                                                    CrossAxisAlignment
-                                                                        .start,
-                                                                children: [
-                                                                  RichText(
-                                                                    text:
-                                                                        TextSpan(
-                                                                      style:
-                                                                          const TextStyle(
-                                                                        color: Colors
-                                                                            .black,
-                                                                        fontWeight:
-                                                                            FontWeight.bold,
-                                                                      ),
-                                                                      children: [
-                                                                        TextSpan(
-                                                                          text: reply['user'] != null
-                                                                              ? "${reply['user']['firstName']} ${reply['user']['lastName']}"
-                                                                              : "Unknown User",
-                                                                        ),
-                                                                        if (reply['replyToUsername'] !=
-                                                                                null &&
-                                                                            reply['replyToUsername'].isNotEmpty)
+                                                              Expanded(
+                                                                child: Column(
+                                                                  crossAxisAlignment:
+                                                                      CrossAxisAlignment
+                                                                          .start,
+                                                                  children: [
+                                                                    RichText(
+                                                                      text:
                                                                           TextSpan(
-                                                                            text:
-                                                                                " @ ${reply['replyToUsername']}",
-                                                                            style:
-                                                                                const TextStyle(
-                                                                              color: Colors.blue,
-                                                                            ),
+                                                                        style:
+                                                                            const TextStyle(
+                                                                          color:
+                                                                              Colors.black,
+                                                                          fontWeight:
+                                                                              FontWeight.bold,
+                                                                        ),
+                                                                        children: [
+                                                                          TextSpan(
+                                                                            text: reply['user'] != null
+                                                                                ? "${reply['user']['firstName']} ${reply['user']['lastName']}"
+                                                                                : "Unknown User",
                                                                           ),
-                                                                      ],
+                                                                          if (isReplyCreator)
+                                                                            TextSpan(
+                                                                              text: " Creator",
+                                                                              style: const TextStyle(
+                                                                                color: Color(0xFF754CEF),
+                                                                                fontSize: 12,
+                                                                              ),
+                                                                            ),
+                                                                          // Always display @username for all replies
+                                                                          if (reply['replyToUsername'] != null &&
+                                                                              reply['replyToUsername'].isNotEmpty)
+                                                                            TextSpan(
+                                                                              text: " @ ${reply['replyToUsername']}",
+                                                                              style: const TextStyle(
+                                                                                color: Color(0xFF754CEF),
+                                                                              ),
+                                                                            ),
+                                                                        ],
+                                                                      ),
                                                                     ),
-                                                                  ),
-                                                                  const SizedBox(
-                                                                      height:
-                                                                          4),
-                                                                  // Display the actual reply text separately
-                                                                  Text(reply[
-                                                                          'text'] ??
-                                                                      ""),
-                                                                ],
+                                                                    const SizedBox(
+                                                                        height:
+                                                                            4),
+                                                                    // Display the actual reply text separately
+                                                                    Text(reply[
+                                                                            'text'] ??
+                                                                        ""),
+                                                                  ],
+                                                                ),
                                                               ),
-                                                              Spacer(),
                                                               if (isCurrentUserReply)
                                                                 IconButton(
                                                                   icon: const Icon(
@@ -639,11 +926,14 @@ class _ListenpageState extends State<Listenpage>
                                                                       color: Colors
                                                                           .red),
                                                                   onPressed: () =>
-                                                                      _deleteReply(
-                                                                          comment[
-                                                                              'id'],
-                                                                          reply[
-                                                                              'id']),
+                                                                      _showDeleteConfirmation(
+                                                                    context,
+                                                                    () => _deleteReply(
+                                                                        comment[
+                                                                            'id'],
+                                                                        reply[
+                                                                            'id']),
+                                                                  ),
                                                                 ),
                                                             ],
                                                           ),
@@ -691,8 +981,7 @@ class _ListenpageState extends State<Listenpage>
                                                         context,
                                                         comment['id'],
                                                         reply['id'],
-                                                        replyUsername // Pass the username
-                                                        );
+                                                        replyUsername);
                                                   },
                                                 ),
                                               ),
@@ -724,7 +1013,8 @@ class _ListenpageState extends State<Listenpage>
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.send),
+                          icon:
+                              const Icon(Icons.send, color: Color(0xFF754CEF)),
                           onPressed: () {
                             _addComment();
                             FocusScope.of(context).unfocus();
@@ -742,67 +1032,82 @@ class _ListenpageState extends State<Listenpage>
     );
   }
 
-  void _showReplyInput(BuildContext context, String commentId,
-      String? parentReplyId, String? replyToUsername) {
-    final replyController = TextEditingController();
-
-    showModalBottomSheet(
+// Fonction pour afficher le dialogue de confirmation de suppression
+  void _showDeleteConfirmation(
+      BuildContext context, Function onDeleteConfirmed) {
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-              left: 16,
-              right: 16,
-              top: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                  parentReplyId == null
-                      ? "Reply to comment"
-                      : "Reply to ${replyToUsername ?? 'reply'}",
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              TextField(
-                controller: replyController,
-                decoration: const InputDecoration(
-                  hintText: "Write your reply",
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("Cancel"),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (replyController.text.isNotEmpty) {
-                        if (parentReplyId == null) {
-                          _addReply(commentId, replyController.text);
-                        } else {
-                          _addNestedReply(commentId, parentReplyId,
-                              replyController.text, replyToUsername ?? '');
-                        }
-                        Navigator.pop(context);
-                      }
-                    },
-                    child: const Text("Reply"),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-            ],
-          ),
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Confirm Deletion"),
+          content: const Text("Are you sure you want to delete this?"),
+          actions: [
+            TextButton(
+              child: const Text("No", style: TextStyle(color: Colors.grey)),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child:
+                  const Text("Yes", style: TextStyle(color: Color(0xFF754CEF))),
+              onPressed: () {
+                Navigator.of(context).pop();
+                onDeleteConfirmed();
+              },
+            ),
+          ],
         );
       },
+    );
+  }
+
+  void _showReplyInput(BuildContext context, String commentId,
+      String? parentReplyId, String? replyToUsername) {
+    final TextEditingController replyController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+            parentReplyId == null
+                ? "Reply to comment"
+                : "Reply to ${replyToUsername ?? 'reply'}",
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: replyController,
+          decoration: InputDecoration(
+            hintText: 'Write your reply...',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (replyController.text.isNotEmpty) {
+                if (parentReplyId == null) {
+                  // Fix: Pass parentReplyId instead of undefined replyId
+                  _addReply(commentId, null, replyController.text,
+                      replyToUsername ?? '');
+                } else {
+                  _addNestedReply(commentId, parentReplyId,
+                      replyController.text, replyToUsername ?? '');
+                }
+                Navigator.pop(context);
+              }
+            },
+            child: Text('Reply'),
+            style: TextButton.styleFrom(
+              foregroundColor: Color(0xFF754CEF),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -825,20 +1130,53 @@ class _ListenpageState extends State<Listenpage>
     }
   }
 
-  void _addReply(String commentId, String text) async {
-    await FirebaseFirestore.instance
-        .collection('comments')
-        .doc(commentId)
-        .collection('reply')
-        .add({
-      'userid': FirebaseAuth.instance.currentUser?.uid,
-      'text': text,
-      'date': Timestamp.now(),
-    });
-    await FirebaseFirestore.instance.collection('podcasts').doc(idpod).update({
-      'comments': FieldValue.increment(1),
-    });
-    setState(() {});
+  Future<void> _addReply(String commentId, String? replyToId, String replyText,
+      String replyToUsername) async {
+    if (replyText.trim().isEmpty) return;
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final userDataQuery = await FirebaseFirestore.instance
+          .collection('users')
+          .where('userId', isEqualTo: user.uid)
+          .get();
+
+      if (userDataQuery.docs.isEmpty) {
+        print("No user data found for user: ${user.uid}");
+        return;
+      }
+
+      final userData = userDataQuery.docs.first.data();
+
+      final replyId =
+          replyToId ?? DateTime.now().millisecondsSinceEpoch.toString();
+
+      final replyData = {
+        'id': replyId,
+        'text': replyText,
+        'userid': user.uid,
+        'date': FieldValue.serverTimestamp(),
+        'user': userData,
+        'replyToUsername': replyToUsername,
+      };
+      await FirebaseFirestore.instance
+          .collection('comments')
+          .doc(commentId)
+          .collection('reply')
+          .add(replyData);
+      await FirebaseFirestore.instance
+          .collection('podcasts')
+          .doc(idpod)
+          .update({
+        'comments': FieldValue.increment(1),
+      });
+
+      _commentController.clear();
+    } catch (e) {
+      print('Error adding reply: $e');
+    }
   }
 
   void _deleteComment(String commentId) async {
@@ -1341,11 +1679,76 @@ class _ListenpageState extends State<Listenpage>
       } else {
         // Case b: Open previous podcast
         String previousPodcastId = podcastsInPlaylist[currentIndex - 1]["id"];
-        Navigator.pushReplacementNamed(
-          context,
-          '/listen',
-          arguments: {'idpod': previousPodcastId},
-        );
+        if (featl == 2) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': previousPodcastId, 'featl': 2},
+          );
+        }
+        if (featl == 3) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': previousPodcastId, 'featl': 3},
+          );
+        }
+        if (featl == 4) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': previousPodcastId, 'featl': 4},
+          );
+        }
+        if (featl == 5) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': previousPodcastId, 'featl': 5},
+          );
+        }
+        if (featl == 6) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': previousPodcastId, 'featl': 6},
+          );
+        }
+        if (featl == 7) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': previousPodcastId, 'featl': 7},
+          );
+        }
+        if (featl == 8) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': previousPodcastId, 'featl': 8},
+          );
+        }
+        if (featl == 9) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': previousPodcastId, 'featl': 9},
+          );
+        }
+        if (featl == 12) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': previousPodcastId, 'featl': 12},
+          );
+        }
+        if (featl == 13) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': previousPodcastId, 'featl': 13},
+          );
+        }
       }
     } else {
       // Cases d & e: Podcast belongs to multiple playlists
@@ -1366,11 +1769,76 @@ class _ListenpageState extends State<Listenpage>
         if (currentIndex > 0) {
           // Found a playlist where this podcast isn't the first, navigate to previous
           String previousPodcastId = podcastsInPlaylist[currentIndex - 1]["id"];
-          Navigator.pushReplacementNamed(
-            context,
-            '/listen',
-            arguments: {'idpod': previousPodcastId},
-          );
+          if (featl == 2) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': previousPodcastId, 'featl': 2},
+            );
+          }
+          if (featl == 3) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': previousPodcastId, 'featl': 3},
+            );
+          }
+          if (featl == 4) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': previousPodcastId, 'featl': 4},
+            );
+          }
+          if (featl == 5) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': previousPodcastId, 'featl': 5},
+            );
+          }
+          if (featl == 6) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': previousPodcastId, 'featl': 6},
+            );
+          }
+          if (featl == 7) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': previousPodcastId, 'featl': 7},
+            );
+          }
+          if (featl == 8) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': previousPodcastId, 'featl': 8},
+            );
+          }
+          if (featl == 9) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': previousPodcastId, 'featl': 9},
+            );
+          }
+          if (featl == 12) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': previousPodcastId, 'featl': 12},
+            );
+          }
+          if (featl == 13) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': previousPodcastId, 'featl': 13},
+            );
+          }
           return;
         }
         // If it's the first podcast in this playlist, continue to check other playlists
@@ -1428,11 +1896,76 @@ class _ListenpageState extends State<Listenpage>
       } else {
         // Case b: Open next podcast
         String nextPodcastId = podcastsInPlaylist[currentIndex + 1]["id"];
-        Navigator.pushReplacementNamed(
-          context,
-          '/listen',
-          arguments: {'idpod': nextPodcastId},
-        );
+        if (featl == 2) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': nextPodcastId, 'featl': 2},
+          );
+        }
+        if (featl == 3) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': nextPodcastId, 'featl': 3},
+          );
+        }
+        if (featl == 4) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': nextPodcastId, 'featl': 4},
+          );
+        }
+        if (featl == 5) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': nextPodcastId, 'featl': 5},
+          );
+        }
+        if (featl == 6) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': nextPodcastId, 'featl': 6},
+          );
+        }
+        if (featl == 7) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': nextPodcastId, 'featl': 7},
+          );
+        }
+        if (featl == 8) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': nextPodcastId, 'featl': 8},
+          );
+        }
+        if (featl == 9) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': nextPodcastId, 'featl': 9},
+          );
+        }
+        if (featl == 12) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': nextPodcastId, 'featl': 12},
+          );
+        }
+        if (featl == 13) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/listen',
+            arguments: {'idpod': nextPodcastId, 'featl': 13},
+          );
+        }
       }
     } else {
       // Cases d & e: Podcast belongs to multiple playlists
@@ -1452,11 +1985,76 @@ class _ListenpageState extends State<Listenpage>
         if (currentIndex < podcastsInPlaylist.length - 1) {
           // Found a playlist where this podcast isn't the last, navigate to next
           String nextPodcastId = podcastsInPlaylist[currentIndex + 1]["id"];
-          Navigator.pushReplacementNamed(
-            context,
-            '/listen',
-            arguments: {'idpod': nextPodcastId},
-          );
+          if (featl == 2) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': nextPodcastId, 'featl': 2},
+            );
+          }
+          if (featl == 3) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': nextPodcastId, 'featl': 3},
+            );
+          }
+          if (featl == 4) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': nextPodcastId, 'featl': 4},
+            );
+          }
+          if (featl == 5) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': nextPodcastId, 'featl': 5},
+            );
+          }
+          if (featl == 6) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': nextPodcastId, 'featl': 6},
+            );
+          }
+          if (featl == 7) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': nextPodcastId, 'featl': 7},
+            );
+          }
+          if (featl == 8) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': nextPodcastId, 'featl': 8},
+            );
+          }
+          if (featl == 9) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': nextPodcastId, 'featl': 9},
+            );
+          }
+          if (featl == 12) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': nextPodcastId, 'featl': 12},
+            );
+          }
+          if (featl == 13) {
+            Navigator.pushReplacementNamed(
+              context,
+              '/listen',
+              arguments: {'idpod': nextPodcastId, 'featl': 13},
+            );
+          }
           return;
         }
         // If it's the last podcast in this playlist, continue to check other playlists
@@ -1467,38 +2065,377 @@ class _ListenpageState extends State<Listenpage>
     }
   }
 
+  void handlePreviousPodcast1() {
+    if (podcastPlaylists.isEmpty) {
+      debugPrint("Aucun podcast disponible dans cette playlist");
+      // Revenir au début du podcast actuel
+      _audioPlayer.seek(Duration.zero);
+      _audioPlayer.play();
+      return;
+    }
+
+    // Trouver l'index du podcast actuel
+    int currentIndex =
+        podcastPlaylists.indexWhere((podcast) => podcast["id"] == idpod);
+
+    if (currentIndex == -1) {
+      debugPrint("Podcast actuel non trouvé dans la playlist");
+      _audioPlayer.seek(Duration.zero);
+      _audioPlayer.play();
+      return;
+    }
+
+    if (currentIndex > 0) {
+      // Il y a un podcast précédent dans la playlist
+      String previousPodcastId = podcastPlaylists[currentIndex - 1]["id"];
+      debugPrint(
+          "Navigation vers le podcast précédent: ${podcastPlaylists[currentIndex - 1]["title"]}");
+
+      Navigator.pushReplacementNamed(
+        context,
+        '/listen',
+        arguments: {
+          'idpod': previousPodcastId,
+          'featl': 11,
+          'idplay1': playlist[0]['id']
+        },
+      );
+    } else {
+      // C'est le premier podcast de la playlist, revenir au début
+      debugPrint("Premier podcast de la playlist, retour au début");
+      _audioPlayer.seek(Duration.zero);
+      _audioPlayer.play();
+    }
+  }
+
+// Fonction pour naviguer au podcast suivant dans la playlist actuelle
+  void handleNextPodcast1() {
+    if (podcastPlaylists.isEmpty) {
+      debugPrint("Aucun podcast disponible dans cette playlist");
+      return;
+    }
+
+    // Trouver l'index du podcast actuel
+    int currentIndex =
+        podcastPlaylists.indexWhere((podcast) => podcast["id"] == idpod);
+
+    if (currentIndex == -1) {
+      debugPrint("Podcast actuel non trouvé dans la playlist");
+      return;
+    }
+
+    if (currentIndex < podcastPlaylists.length - 1) {
+      // Il y a un podcast suivant dans la playlist
+      String nextPodcastId = podcastPlaylists[currentIndex + 1]["id"];
+      debugPrint(
+          "Navigation vers le podcast suivant: ${podcastPlaylists[currentIndex + 1]["title"]}");
+
+      Navigator.pushReplacementNamed(
+        context,
+        '/listen',
+        arguments: {
+          'idpod': nextPodcastId,
+          'featl': 11,
+          'idplay1': playlist[0]['id']
+        },
+      );
+    } else {
+      // C'est le dernier podcast de la playlist, laisser se terminer naturellement
+      debugPrint("Dernier podcast de la playlist, aucune action");
+    }
+  }
+
+  void handlePreviousPodcast2() {
+    if (mesPodcasts12.isEmpty) {
+      debugPrint("Aucun podcast disponible dans cette playlist");
+      // Revenir au début du podcast actuel
+      _audioPlayer.seek(Duration.zero);
+      _audioPlayer.play();
+      return;
+    }
+
+    // Trouver l'index du podcast actuel
+    int currentIndex =
+        mesPodcasts12.indexWhere((podcast) => podcast["id"] == idpod);
+
+    if (currentIndex == -1) {
+      debugPrint("Podcast actuel non trouvé dans la playlist");
+      _audioPlayer.seek(Duration.zero);
+      _audioPlayer.play();
+      return;
+    }
+
+    if (currentIndex > 0) {
+      // Il y a un podcast précédent dans la playlist
+      String previousPodcastId = mesPodcasts12[currentIndex - 1]["id"];
+
+      Navigator.pushReplacementNamed(
+        context,
+        '/listen',
+        arguments: {
+          'idpod': previousPodcastId,
+          'featl': 10,
+        },
+      );
+    } else {
+      // C'est le premier podcast de la playlist, revenir au début
+      debugPrint("Premier podcast de la playlist, retour au début");
+      _audioPlayer.seek(Duration.zero);
+      _audioPlayer.play();
+    }
+  }
+
+// Fonction pour naviguer au podcast suivant dans la playlist actuelle
+  void handleNextPodcast2() {
+    if (mesPodcasts12.isEmpty) {
+      debugPrint("Aucun podcast disponible dans cette playlist");
+      return;
+    }
+
+    // Trouver l'index du podcast actuel
+    int currentIndex =
+        mesPodcasts12.indexWhere((podcast) => podcast["id"] == idpod);
+
+    if (currentIndex == -1) {
+      debugPrint("Podcast actuel non trouvé dans la playlist");
+      return;
+    }
+
+    if (currentIndex < mesPodcasts12.length - 1) {
+      // Il y a un podcast suivant dans la playlist
+      String nextPodcastId = mesPodcasts12[currentIndex + 1]["id"];
+
+      Navigator.pushReplacementNamed(
+        context,
+        '/listen',
+        arguments: {
+          'idpod': nextPodcastId,
+          'featl': 10,
+        },
+      );
+    } else {
+      // C'est le dernier podcast de la playlist, laisser se terminer naturellement
+      debugPrint("Dernier podcast de la playlist, aucune action");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final Size c = MediaQuery.of(context).size;
     return Scaffold(
         endDrawer: Drawer(
           backgroundColor: Colors.white,
-          child: ListView(
-            padding: EdgeInsets.all(c.width * 0.02),
-            children: playlist.map((playlistItem) {
-              final playlistName = playlistItem["name"];
-              final playlistId = playlistItem["id"];
+          child: ListView(padding: EdgeInsets.all(c.width * 0.02), children: [
+            if ([2, 3, 4, 5, 6, 7, 8, 9, 12, 13].contains(featl))
+              ...playlist.map((playlistItem) {
+                final playlistName = playlistItem["name"];
+                final playlistId = playlistItem["id"];
 
-              final associatedPodcasts = playinpod
-                  .where((podcast) =>
-                      (podcast["playlistIds"] as List).contains(playlistId))
-                  .toList();
-
-              return Column(
+                final associatedPodcasts = playinpod
+                    .where((podcast) =>
+                        (podcast["playlistIds"] as List).contains(playlistId))
+                    .toList();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.symmetric(vertical: c.width * 0.02),
+                      child: Text(
+                        playlistName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: c.width * 0.05,
+                        ),
+                      ),
+                    ),
+                    ...associatedPodcasts.map((item) {
+                      return Container(
+                        margin: EdgeInsets.all(c.width * 0.02),
+                        decoration: BoxDecoration(
+                          //  color: isFirst ? Colors.black12 : Colors.transparent,
+                          color: item["id"] == idpod
+                              ? Colors.black12
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(c.width * 0.04),
+                          border: Border.all(color: Colors.black12),
+                        ),
+                        width: c.width * 0.95,
+                        height: c.width * 0.3,
+                        child: GestureDetector(
+                          onTap: () {
+                            if (featl == 2) {
+                              idpod = item["id"];
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/listen',
+                                arguments: {'idpod': idpod, 'featl': 2},
+                              );
+                            }
+                            if (featl == 3) {
+                              idpod = item["id"];
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/listen',
+                                arguments: {'idpod': idpod, 'featl': 3},
+                              );
+                            }
+                            if (featl == 4) {
+                              idpod = item["id"];
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/listen',
+                                arguments: {'idpod': idpod, 'featl': 4},
+                              );
+                            }
+                            if (featl == 5) {
+                              idpod = item["id"];
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/listen',
+                                arguments: {'idpod': idpod, 'featl': 5},
+                              );
+                            }
+                            if (featl == 6) {
+                              idpod = item["id"];
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/listen',
+                                arguments: {'idpod': idpod, 'featl': 6},
+                              );
+                            }
+                            if (featl == 7) {
+                              idpod = item["id"];
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/listen',
+                                arguments: {'idpod': idpod, 'featl': 7},
+                              );
+                            }
+                            if (featl == 8) {
+                              idpod = item["id"];
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/listen',
+                                arguments: {'idpod': idpod, 'featl': 8},
+                              );
+                            }
+                            if (featl == 9) {
+                              idpod = item["id"];
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/listen',
+                                arguments: {'idpod': idpod, 'featl': 9},
+                              );
+                            }
+                            if (featl == 12) {
+                              idpod = item["id"];
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/listen',
+                                arguments: {'idpod': idpod, 'featl': 12},
+                              );
+                            }
+                            if (featl == 13) {
+                              idpod = item["id"];
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/listen',
+                                arguments: {'idpod': idpod, 'featl': 13},
+                              );
+                            }
+                          },
+                          child: Row(
+                            children: [
+                              SizedBox(width: c.width * 0.02),
+                              Image.network(s48,
+                                  width: c.width * 0.07,
+                                  height: c.width * 0.07),
+                              SizedBox(width: c.width * 0.02),
+                              Container(
+                                height: c.width * 0.2,
+                                width: c.width * 0.18,
+                                decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(c.width * 0.04),
+                                  image: DecorationImage(
+                                    image: NetworkImage(item["urlPhoto"]!),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: c.width * 0.02),
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item["name"]!,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: c.width * 0.035,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Image.network(s37,
+                                          width: c.width * 0.05,
+                                          height: c.width * 0.05),
+                                      SizedBox(width: c.width * 0.01),
+                                      Text(
+                                        item["likes"].toString(),
+                                      ),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      Image.network(s14,
+                                          width: c.width * 0.05,
+                                          height: c.width * 0.05),
+                                      SizedBox(width: c.width * 0.01),
+                                      Text(
+                                        item["vue"].toString(),
+                                      ),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      Image.network(s38,
+                                          width: c.width * 0.05,
+                                          height: c.width * 0.05),
+                                      SizedBox(width: c.width * 0.01),
+                                      Text(
+                                        item["comments"].toString(),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                );
+              }).toList(),
+            if (featl == 11) ...[
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
                     padding: EdgeInsets.symmetric(vertical: c.width * 0.02),
-                    child: Text(
-                      playlistName,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: c.width * 0.05,
-                      ),
-                    ),
                   ),
-                  ...associatedPodcasts.map((item) {
-                    return Container(
+                  for (var item in podcastPlaylists)
+                    Container(
                       margin: EdgeInsets.all(c.width * 0.02),
                       decoration: BoxDecoration(
                         //  color: isFirst ? Colors.black12 : Colors.transparent,
@@ -1516,7 +2453,12 @@ class _ListenpageState extends State<Listenpage>
                           Navigator.pushReplacementNamed(
                             context,
                             '/listen',
-                            arguments: {'idpod': idpod},
+                            arguments: {
+                              'idpod': idpod,
+                              'featl': 11,
+                              'idplay1': playlist[0][
+                                  'id'] // remplace "someValue" par ce que tu veux représenter
+                            },
                           );
                         },
                         child: Row(
@@ -1596,12 +2538,125 @@ class _ListenpageState extends State<Listenpage>
                           ],
                         ),
                       ),
-                    );
-                  }).toList(),
+                    ),
                 ],
-              );
-            }).toList(),
-          ),
+              ),
+            ],
+            if (featl == 10) ...[
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: c.width * 0.02),
+                  ),
+                  for (var item in mesPodcasts12)
+                    Container(
+                      margin: EdgeInsets.all(c.width * 0.02),
+                      decoration: BoxDecoration(
+                        //  color: isFirst ? Colors.black12 : Colors.transparent,
+                        color: item["id"] == idpod
+                            ? Colors.black12
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(c.width * 0.04),
+                        border: Border.all(color: Colors.black12),
+                      ),
+                      width: c.width * 0.95,
+                      height: c.width * 0.3,
+                      child: GestureDetector(
+                        onTap: () {
+                          idpod = item["id"];
+                          Navigator.pushReplacementNamed(
+                            context,
+                            '/listen',
+                            arguments: {
+                              'idpod': idpod,
+                              'featl':
+                                  10, // remplace "someValue" par ce que tu veux représenter
+                            },
+                          );
+                        },
+                        child: Row(
+                          children: [
+                            SizedBox(width: c.width * 0.02),
+                            Image.network(s48,
+                                width: c.width * 0.07, height: c.width * 0.07),
+                            SizedBox(width: c.width * 0.02),
+                            Container(
+                              height: c.width * 0.2,
+                              width: c.width * 0.18,
+                              decoration: BoxDecoration(
+                                borderRadius:
+                                    BorderRadius.circular(c.width * 0.04),
+                                image: DecorationImage(
+                                  image: NetworkImage(item["urlPhoto"]!),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: c.width * 0.02),
+                            Expanded(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item["name"]!,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: c.width * 0.035,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Row(
+                                  children: [
+                                    Image.network(s37,
+                                        width: c.width * 0.05,
+                                        height: c.width * 0.05),
+                                    SizedBox(width: c.width * 0.01),
+                                    Text(
+                                      item["likes"].toString(),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    Image.network(s14,
+                                        width: c.width * 0.05,
+                                        height: c.width * 0.05),
+                                    SizedBox(width: c.width * 0.01),
+                                    Text(
+                                      item["vue"].toString(),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    Image.network(s38,
+                                        width: c.width * 0.05,
+                                        height: c.width * 0.05),
+                                    SizedBox(width: c.width * 0.01),
+                                    Text(
+                                      item["comments"].toString(),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ]),
         ),
         body: isLoading
             ? Center(child: Text(""))
@@ -1618,7 +2673,20 @@ class _ListenpageState extends State<Listenpage>
                                     left: c.width * 0.03,
                                     child: IconButton(
                                       onPressed: () {
-                                        Navigator.pop(context);
+                                        if (featl == 2 ||
+                                            featl == 3 ||
+                                            featl == 4 ||
+                                            featl == 5 ||
+                                            featl == 6 ||
+                                            featl == 7 ||
+                                            featl == 8 ||
+                                            featl == 9 ||
+                                            featl == 12 ||
+                                            featl == 11 ||
+                                            featl == 10 ||
+                                            featl == 13) {
+                                          Navigator.pop(context);
+                                        }
                                       },
                                       icon: Image.network(
                                         s18,
@@ -1633,8 +2701,9 @@ class _ListenpageState extends State<Listenpage>
                                       top: c.height * 0.025,
                                       right: c.width * 0.04,
                                       child: GestureDetector(
-                                        onTap: () => Scaffold.of(context)
-                                            .openEndDrawer(),
+                                        onTap: () {
+                                          Scaffold.of(context).openEndDrawer();
+                                        },
                                         child: Image.network(s44,
                                             width: c.width * 0.06,
                                             height: c.width * 0.06),
@@ -1643,58 +2712,155 @@ class _ListenpageState extends State<Listenpage>
                                     SizedBox(
                                       height: c.height * 0.2,
                                       child: Stack(children: [
-                                        Positioned(
-                                          top: c.height * 0.04,
-                                          left: c.width * 0.17,
-                                          child: Container(
-                                            width: c.width * 0.7,
-                                            height: c.width *
-                                                0.06, // Définit une hauteur pour éviter les bugs d'affichage
+                                        if (featl == 2 ||
+                                            featl == 3 ||
+                                            featl == 4 ||
+                                            featl == 5 ||
+                                            featl == 6 ||
+                                            featl == 7 ||
+                                            featl == 8 ||
+                                            featl == 9 ||
+                                            featl == 12 ||
+                                            featl == 13) ...[
+                                          Positioned(
+                                            top: c.height * 0.04,
+                                            left: c.width * 0.17,
+                                            child: Container(
+                                              width: c.width * 0.7,
+                                              height: c.width *
+                                                  0.06, // Définit une hauteur pour éviter les bugs d'affichage
 
-                                            child: // Affiche un loader pendant le chargement
-                                                Marquee(
-                                              text: playinpod
-                                                  .firstWhere(
-                                                      (p) => p["id"] == idpod,
-                                                      orElse: () => {
-                                                            "playlistIds": []
-                                                          })["playlistIds"]
-                                                  .map((pid) =>
-                                                      playlist.firstWhere(
-                                                          (pl) =>
-                                                              pl["id"] == pid,
-                                                          orElse: () => {
-                                                                "name":
-                                                                    "Inconnue"
-                                                              })["name"])
-                                                  .join(
-                                                      "     •     "), // Séparer par un symbole
-                                              style: TextStyle(
-                                                fontSize: c.width * 0.05,
-                                                fontWeight: FontWeight.bold,
+                                              child: // Affiche un loader pendant le chargement
+                                                  Marquee(
+                                                text: playinpod
+                                                    .firstWhere(
+                                                        (p) => p["id"] == idpod,
+                                                        orElse: () => {
+                                                              "playlistIds": []
+                                                            })["playlistIds"]
+                                                    .map((pid) =>
+                                                        playlist.firstWhere(
+                                                            (pl) =>
+                                                                pl["id"] == pid,
+                                                            orElse: () => {
+                                                                  "name":
+                                                                      "Inconnue"
+                                                                })["name"])
+                                                    .join(
+                                                        "     •     "), // Séparer par un symbole
+                                                style: TextStyle(
+                                                  fontSize: c.width * 0.05,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                scrollAxis: Axis
+                                                    .horizontal, // Faire défiler horizontalement
+                                                blankSpace:
+                                                    50.0, // Espacement avant la répétition
+                                                velocity:
+                                                    30.0, // Vitesse du défilement
+                                                pauseAfterRound: Duration(
+                                                    seconds:
+                                                        1), // Pause après un tour
+                                                startPadding:
+                                                    10.0, // Espace initial
+                                                accelerationDuration: Duration(
+                                                    seconds:
+                                                        1), // Accélération au démarrage
+                                                accelerationCurve:
+                                                    Curves.easeIn,
+                                                decelerationDuration: Duration(
+                                                    milliseconds:
+                                                        500), // Décélération à la fin
+                                                decelerationCurve:
+                                                    Curves.easeOut,
                                               ),
-                                              scrollAxis: Axis
-                                                  .horizontal, // Faire défiler horizontalement
-                                              blankSpace:
-                                                  50.0, // Espacement avant la répétition
-                                              velocity:
-                                                  30.0, // Vitesse du défilement
-                                              pauseAfterRound: Duration(
-                                                  seconds:
-                                                      1), // Pause après un tour
-                                              startPadding:
-                                                  10.0, // Espace initial
-                                              accelerationDuration: Duration(
-                                                  seconds:
-                                                      1), // Accélération au démarrage
-                                              accelerationCurve: Curves.easeIn,
-                                              decelerationDuration: Duration(
-                                                  milliseconds:
-                                                      500), // Décélération à la fin
-                                              decelerationCurve: Curves.easeOut,
                                             ),
-                                          ),
-                                        ),
+                                          )
+                                        ],
+                                        if (featl == 11) ...[
+                                          Positioned(
+                                            top: c.height * 0.04,
+                                            left: c.width * 0.17,
+                                            child: Container(
+                                              width: c.width * 0.7,
+                                              height: c.width *
+                                                  0.06, // Définit une hauteur pour éviter les bugs d'affichage
+
+                                              child: // Affiche un loader pendant le chargement
+                                                  Marquee(
+                                                text: playlist[0][
+                                                    "name"], // Séparer par un symbole
+                                                style: TextStyle(
+                                                  fontSize: c.width * 0.05,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                scrollAxis: Axis
+                                                    .horizontal, // Faire défiler horizontalement
+                                                blankSpace:
+                                                    50.0, // Espacement avant la répétition
+                                                velocity:
+                                                    30.0, // Vitesse du défilement
+                                                pauseAfterRound: Duration(
+                                                    seconds:
+                                                        1), // Pause après un tour
+                                                startPadding:
+                                                    10.0, // Espace initial
+                                                accelerationDuration: Duration(
+                                                    seconds:
+                                                        1), // Accélération au démarrage
+                                                accelerationCurve:
+                                                    Curves.easeIn,
+                                                decelerationDuration: Duration(
+                                                    milliseconds:
+                                                        500), // Décélération à la fin
+                                                decelerationCurve:
+                                                    Curves.easeOut,
+                                              ),
+                                            ),
+                                          )
+                                        ],
+                                        if (featl == 10) ...[
+                                          Positioned(
+                                            top: c.height * 0.04,
+                                            left: c.width * 0.17,
+                                            child: Container(
+                                              width: c.width * 0.7,
+                                              height: c.width *
+                                                  0.06, // Définit une hauteur pour éviter les bugs d'affichage
+
+                                              child: // Affiche un loader pendant le chargement
+                                                  Marquee(
+                                                text:
+                                                    "My Playlist", // Séparer par un symbole
+                                                style: TextStyle(
+                                                  fontSize: c.width * 0.05,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                scrollAxis: Axis
+                                                    .horizontal, // Faire défiler horizontalement
+                                                blankSpace:
+                                                    50.0, // Espacement avant la répétition
+                                                velocity:
+                                                    30.0, // Vitesse du défilement
+                                                pauseAfterRound: Duration(
+                                                    seconds:
+                                                        1), // Pause après un tour
+                                                startPadding:
+                                                    10.0, // Espace initial
+                                                accelerationDuration: Duration(
+                                                    seconds:
+                                                        1), // Accélération au démarrage
+                                                accelerationCurve:
+                                                    Curves.easeIn,
+                                                decelerationDuration: Duration(
+                                                    milliseconds:
+                                                        500), // Décélération à la fin
+                                                decelerationCurve:
+                                                    Curves.easeOut,
+                                              ),
+                                            ),
+                                          )
+                                        ],
                                       ]),
                                     ),
                                   ]
@@ -1948,7 +3114,28 @@ class _ListenpageState extends State<Listenpage>
                                         child: InkWell(
                                           borderRadius:
                                               BorderRadius.circular(30),
-                                          onTap: handlePreviousPodcast,
+                                          onTap: () {
+                                            if (featl == 2 ||
+                                                featl == 3 ||
+                                                featl == 4 ||
+                                                featl == 5 ||
+                                                featl == 6 ||
+                                                featl == 7 ||
+                                                featl == 8 ||
+                                                featl == 9 ||
+                                                featl == 12 ||
+                                                featl == 11 ||
+                                                featl == 10 ||
+                                                featl == 13) {
+                                              handlePreviousPodcast();
+                                            }
+                                            if (featl == 11) {
+                                              handlePreviousPodcast1();
+                                            }
+                                            if (featl == 10) {
+                                              handlePreviousPodcast2();
+                                            }
+                                          },
                                           child: Container(
                                             padding:
                                                 EdgeInsets.all(c.width * 0.02),
@@ -1994,7 +3181,28 @@ class _ListenpageState extends State<Listenpage>
                                         child: InkWell(
                                           borderRadius:
                                               BorderRadius.circular(30),
-                                          onTap: handleNextPodcast,
+                                          onTap: () {
+                                            if (featl == 2 ||
+                                                featl == 3 ||
+                                                featl == 4 ||
+                                                featl == 5 ||
+                                                featl == 6 ||
+                                                featl == 7 ||
+                                                featl == 8 ||
+                                                featl == 9 ||
+                                                featl == 12 ||
+                                                featl == 11 ||
+                                                featl == 10 ||
+                                                featl == 13) {
+                                              handleNextPodcast();
+                                            }
+                                            if (featl == 11) {
+                                              handleNextPodcast1();
+                                            }
+                                            if (featl == 10) {
+                                              handleNextPodcast2();
+                                            }
+                                          },
                                           child: Container(
                                             padding:
                                                 EdgeInsets.all(c.width * 0.02),

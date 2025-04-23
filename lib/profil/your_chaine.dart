@@ -106,52 +106,6 @@ class _YourChainepageState extends State<YourChainepage>
           }
 
           DocumentSnapshot channelDoc = querySnapshot.docs.first;
-          /*  String? currentPhotoUrl = channelDoc.get('photoUrl');
-          if (currentPhotoUrl != null && currentPhotoUrl.isNotEmpty) {
-            try {
-              print("🔍 URL actuelle de la photo : $currentPhotoUrl");
-
-              // Extraire le chemin du fichier
-              String fileName = currentPhotoUrl.split('/').last;
-              String filePath = 'channel/$fileName';
-
-              print("📄 Chemin complet du fichier : $filePath");
-
-              try {
-                // Utiliser le SDK Supabase avec anon key ou service key
-                // Ces clés doivent être configurées lors de l'initialisation de Supabase
-                final response =
-                    await supabase.storage.from('pfeapp').remove([filePath]);
-
-                print("📊 Réponse Supabase: $response");
-              } catch (e) {
-                print("⚠️ Erreur Supabase : $e");
-
-                // Tentative alternative : appel HTTP avec clé API Supabase
-                try {
-                  // Remplacer par votre clé anon ou service_role de Supabase
-                  final supabaseApiKey =
-                      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pZ3dicWJ0Znpzem9wdmhkenJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5MjI3OTgsImV4cCI6MjA1NzQ5ODc5OH0.78NEfAWjrlWsjo_l9ZBLuKzNv13ikUWCBqE0DyCeZSA';
-
-                  final response = await http.delete(
-                    Uri.parse(
-                        'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/pfeapp/$filePath'),
-                    headers: {
-                      'apikey': supabaseApiKey,
-                      'Content-Type': 'application/json',
-                    },
-                  );
-
-                  print("🔄 Status HTTP: ${response.statusCode}");
-                  print("🔄 Corps HTTP: ${response.body}");
-                } catch (httpError) {
-                  print("❌ Erreur HTTP : $httpError");
-                }
-              }
-            } catch (e) {
-              print("❌ Erreur générale : $e");
-            }
-          }*/ // ⏳ **Étape 2 : Pause rapide pour éviter les conflits (optionnel)**
           await Future.delayed(Duration(milliseconds: 500));
 
           // 📤 **Étape 3 : Télécharger la nouvelle image**

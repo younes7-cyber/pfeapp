@@ -12,6 +12,38 @@ class Channelpage extends StatefulWidget {
 
 class _ChannelpageState extends State<Channelpage>
     with SingleTickerProviderStateMixin {
+  Future<void> checkAndAddReport(String id) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final reportsRef = FirebaseFirestore.instance.collection('reports');
+
+      final query = await reportsRef
+          .where('user', isEqualTo: user.uid)
+          .where('chaine', isEqualTo: id)
+          .get();
+
+      if (query.docs.isEmpty) {
+        // Aucune déclaration trouvée : on ajoute
+        await reportsRef.add({
+          'user': user.uid,
+          'chaine': id,
+          'date': FieldValue.serverTimestamp(),
+        });
+        await FirebaseFirestore.instance.collection('channels').doc(id).update({
+          'report': FieldValue.increment(1),
+        }); // Add
+
+        print("Report ajouté !");
+      } else {
+        print("Report existe déjà.");
+      }
+    } catch (e) {
+      print("Erreur lors de la vérification/ajout du report : $e");
+    }
+  }
+
   String formatLikes(num likes) {
     // Utiliser un pattern personnalisé avec exactement 2 décimales
     final formatter = NumberFormat('#,##0.00', 'fr');
@@ -520,8 +552,8 @@ class _ChannelpageState extends State<Channelpage>
                                       ],
                                     ),
                                   ),
-                                  onTap: () {
-                                    // Add your report functionality here
+                                  onTap: () async {
+                                    await checkAndAddReport(id!);
                                   },
                                 ),
                               ],

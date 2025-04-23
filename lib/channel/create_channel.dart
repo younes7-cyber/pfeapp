@@ -137,6 +137,7 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
         'photoUrl': photoUrl, // URL de l'image (ou URL par défaut)
         'followers': 0,
         'following': 0,
+        'report': 0,
         'createdAt': FieldValue.serverTimestamp(),
       };
 

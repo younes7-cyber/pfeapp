@@ -1,7 +1,13 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:pfeapp/constants.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class Modifpage extends StatefulWidget {
   const Modifpage({super.key});
@@ -13,6 +19,181 @@ class Modifpage extends StatefulWidget {
 class _ModifpageState extends State<Modifpage> {
   late int n = 1;
   late int? q;
+  final supabase1 = Supabase.instance.client;
+  final FirebaseFirestore firestore1 = FirebaseFirestore.instance;
+  Future<bool> _requestStoragePermission1() async {
+    final status = await Permission.storage.request();
+    return status.isGranted;
+  }
+
+  Future<void> _pickAndUploadImage1() async {
+    final String userId = FirebaseAuth.instance.currentUser?.uid ?? "";
+    if (userId.isEmpty) {
+      print("Utilisateur non connecté.");
+      return;
+    }
+
+    if (await _requestStoragePermission1()) {
+      try {
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          allowCompression: true,
+        );
+
+        if (result != null && result.files.isNotEmpty) {
+          File selectedImageFile = File(result.files.single.path!);
+
+          QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+              .collection('channels')
+              .where('userId', isEqualTo: userId)
+              .get();
+
+          if (querySnapshot.docs.isEmpty) {
+            print("❌ Erreur : Aucun document trouvé pour cet utilisateur.");
+            return;
+          }
+
+          DocumentSnapshot channelDoc = querySnapshot.docs.first;
+          await Future.delayed(Duration(milliseconds: 500));
+
+          // 📤 **Étape 3 : Télécharger la nouvelle image**
+          final filePath =
+              'channel/$userId-${DateTime.now().millisecondsSinceEpoch}.jpg';
+          await supabase1.storage
+              .from('pfeapp')
+              .upload(filePath, selectedImageFile);
+
+          // 🔗 **Étape 4 : Obtenir l'URL publique**
+          final newPhotoUrl =
+              supabase1.storage.from('pfeapp').getPublicUrl(filePath);
+
+          // 📝 **Étape 5 : Mettre à jour Firestore avec la nouvelle URL**
+          await channelDoc.reference.update({'photoUrl': newPhotoUrl});
+
+          print("✅ Nouvelle photo enregistrée : $newPhotoUrl");
+        }
+      } catch (e) {
+        print("❌ Erreur lors de l'importation de l'image : $e");
+      }
+    }
+  }
+
+  final supabase3 = Supabase.instance.client;
+  final FirebaseFirestore firestore3 = FirebaseFirestore.instance;
+  Future<bool> _requestStoragePermission3() async {
+    final status = await Permission.storage.request();
+    return status.isGranted;
+  }
+
+  Future<void> _pickAndUploadImage3(String id2) async {
+    final String userId = FirebaseAuth.instance.currentUser?.uid ?? "";
+    if (userId.isEmpty) {
+      print("Utilisateur non connecté.");
+      return;
+    }
+
+    if (await _requestStoragePermission3()) {
+      try {
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          allowCompression: true,
+        );
+
+        if (result != null && result.files.isNotEmpty) {
+          File selectedImageFile = File(result.files.single.path!);
+
+          QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+              .collection('playlist')
+              .where('id', isEqualTo: id2)
+              .get();
+
+          if (querySnapshot.docs.isEmpty) {
+            print("❌ Erreur : Aucun document trouvé pour cet utilisateur.");
+            return;
+          }
+
+          DocumentSnapshot channelDoc = querySnapshot.docs.first;
+          await Future.delayed(Duration(milliseconds: 500));
+
+          // 📤 **Étape 3 : Télécharger la nouvelle image**
+          final filePath =
+              'playlist/$userId-${DateTime.now().millisecondsSinceEpoch}.jpg';
+          await supabase3.storage
+              .from('pfeapp')
+              .upload(filePath, selectedImageFile);
+
+          // 🔗 **Étape 4 : Obtenir l'URL publique**
+          final newPhotoUrl =
+              supabase3.storage.from('pfeapp').getPublicUrl(filePath);
+
+          // 📝 **Étape 5 : Mettre à jour Firestore avec la nouvelle URL**
+          await channelDoc.reference.update({'photoUrl': newPhotoUrl});
+
+          print("✅ Nouvelle photo enregistrée : $newPhotoUrl");
+        }
+      } catch (e) {
+        print("❌ Erreur lors de l'importation de l'image : $e");
+      }
+    }
+  }
+
+  final supabase2 = Supabase.instance.client;
+  final FirebaseFirestore firestore2 = FirebaseFirestore.instance;
+  Future<bool> _requestStoragePermission2() async {
+    final status = await Permission.storage.request();
+    return status.isGranted;
+  }
+
+  Future<void> _pickAndUploadImage2(String id1) async {
+    final String userId = FirebaseAuth.instance.currentUser?.uid ?? "";
+    if (userId.isEmpty) {
+      print("Utilisateur non connecté.");
+      return;
+    }
+
+    if (await _requestStoragePermission2()) {
+      try {
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          allowCompression: true,
+        );
+
+        if (result != null && result.files.isNotEmpty) {
+          File selectedImageFile = File(result.files.single.path!);
+
+          QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+              .collection('podcasts')
+              .where('id', isEqualTo: id1)
+              .get();
+
+          if (querySnapshot.docs.isEmpty) {
+            print("❌ Erreur : Aucun document trouvé pour cet utilisateur.");
+            return;
+          }
+
+          DocumentSnapshot channelDoc = querySnapshot.docs.first;
+          await Future.delayed(Duration(milliseconds: 500));
+
+          // 📤 **Étape 3 : Télécharger la nouvelle image**
+          final filePath =
+              'podcast/photo/$userId-${DateTime.now().millisecondsSinceEpoch}.jpg';
+          await supabase2.storage
+              .from('pfeapp')
+              .upload(filePath, selectedImageFile);
+
+          // 🔗 **Étape 4 : Obtenir l'URL publique**
+          final newPhotoUrl =
+              supabase2.storage.from('pfeapp').getPublicUrl(filePath);
+
+          // 📝 **Étape 5 : Mettre à jour Firestore avec la nouvelle URL**
+          await channelDoc.reference.update({'urlPhoto': newPhotoUrl});
+        }
+      } catch (e) {
+        print("❌ Erreur lors de l'importation de l'image : $e");
+      }
+    }
+  }
+
   Future<void> fetchuser() async {
     try {
       final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
@@ -37,6 +218,26 @@ class _ModifpageState extends State<Modifpage> {
     }
   }
 
+  Future<void> fetchPlaylidtById(String id2) async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('playlist')
+          .where('id', isEqualTo: id2)
+          .get();
+
+      setState(() {
+        playlistt = querySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+
+      debugPrint("Podcasts récupérés : ${playlistt.length}");
+    } catch (e) {
+      debugPrint("Erreur lors du chargement des podcasts : $e");
+    }
+  }
+
+  List<Map<String, dynamic>> playlistt = [];
   List<Map<String, dynamic>> user = [];
   List<Map<String, dynamic>> channels = [];
   Future<void> fetchChannels() async {
@@ -153,6 +354,92 @@ class _ModifpageState extends State<Modifpage> {
 
   List<Map<String, dynamic>> playlist = [];
   List<Map<String, dynamic>> playinpod = [];
+  String formatLikes(num likes) {
+    // Utiliser un pattern personnalisé avec exactement 2 décimales
+    final formatter = NumberFormat('#,##0.00', 'fr');
+    // Pour les nombres importants, appliquer une logique de compactage manuel
+    if (likes >= 1000000000000000) {
+      return formatter
+              .format(likes / 1000000000000000)
+              .replaceAll('\u202f', '') +
+          'P';
+    } else if (likes >= 1000000000000) {
+      return formatter.format(likes / 1000000000000).replaceAll('\u202f', '') +
+          'T';
+    } else if (likes >= 1000000000) {
+      return formatter.format(likes / 1000000000).replaceAll('\u202f', '') +
+          'G';
+    } else if (likes >= 1000000) {
+      return formatter.format(likes / 1000000).replaceAll('\u202f', '') + 'M';
+    } else if (likes >= 1000) {
+      return formatter.format(likes / 1000).replaceAll('\u202f', '') + 'k';
+    } else if (likes <= 999) {
+      final formatter1 = NumberFormat('#0', 'fr');
+      return formatter1.format(likes);
+    }
+
+    return formatter.format(likes).replaceAll('\u202f', '');
+  }
+
+  final supabase = Supabase.instance.client;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  Future<bool> _requestStoragePermission() async {
+    final status = await Permission.storage.request();
+    return status.isGranted;
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    final String userId = FirebaseAuth.instance.currentUser?.uid ?? "";
+    if (userId.isEmpty) {
+      print("Utilisateur non connecté.");
+      return;
+    }
+
+    if (await _requestStoragePermission()) {
+      try {
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          allowCompression: true,
+        );
+
+        if (result != null && result.files.isNotEmpty) {
+          File selectedImageFile = File(result.files.single.path!);
+
+          QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .where('userId', isEqualTo: userId)
+              .get();
+
+          if (querySnapshot.docs.isEmpty) {
+            print("❌ Erreur : Aucun document trouvé pour cet utilisateur.");
+            return;
+          }
+
+          DocumentSnapshot channelDoc = querySnapshot.docs.first;
+          await Future.delayed(Duration(milliseconds: 500));
+
+          // 📤 **Étape 3 : Télécharger la nouvelle image**
+          final filePath =
+              'profile/$userId-${DateTime.now().millisecondsSinceEpoch}.jpg';
+          await supabase.storage
+              .from('pfeapp')
+              .upload(filePath, selectedImageFile);
+
+          // 🔗 **Étape 4 : Obtenir l'URL publique**
+          final newPhotoUrl =
+              supabase.storage.from('pfeapp').getPublicUrl(filePath);
+
+          // 📝 **Étape 5 : Mettre à jour Firestore avec la nouvelle URL**
+          await channelDoc.reference.update({'photoUrl': newPhotoUrl});
+
+          print("✅ Nouvelle photo enregistrée : $newPhotoUrl");
+        }
+      } catch (e) {
+        print("❌ Erreur lors de l'importation de l'image : $e");
+      }
+    }
+  }
+
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -175,6 +462,10 @@ class _ModifpageState extends State<Modifpage> {
           await fetchPodcastById(id1!);
           await fetchPlaylistsByPodcastId(id1!);
         }
+        if (id2 != null) {
+          await fetchPlaylidtById(id2!);
+        }
+
         await fetchuser();
         await fetchChannels();
       }
@@ -274,13 +565,15 @@ class _ModifpageState extends State<Modifpage> {
                           top: e.height * 0.171,
                           left: e.width * 0.56,
                           child: Container(
-                            width: e.width * 0.07,
-                            height: e.width * 0.07,
-                            decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.circular(e.width * 0.2)),
-                            child: Image.asset("images/add.png"),
-                          )),
+                              width: e.width * 0.07,
+                              height: e.width * 0.07,
+                              decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(e.width * 0.2)),
+                              child: GestureDetector(
+                                onTap: _pickAndUploadImage,
+                                child: Image.network(s26),
+                              ))),
                       Positioned(
                           top: e.height * 0.25,
                           left: e.width * 0.07,
@@ -332,8 +625,9 @@ class _ModifpageState extends State<Modifpage> {
                               Navigator.pushNamed(
                                 context,
                                 '/modif1',
-                                arguments:
-                                    2, // Passe la valeur de r comme argument
+                                arguments: {
+                                  'n': 2
+                                }, // Passe la valeur de r comme argument
                               );
                             },
                             child: Text(
@@ -426,8 +720,9 @@ class _ModifpageState extends State<Modifpage> {
                               Navigator.pushNamed(
                                 context,
                                 '/modif1',
-                                arguments:
-                                    3, // Passe la valeur de r comme argument
+                                arguments: {
+                                  'n': 3
+                                }, // Passe la valeur de r comme argument
                               );
                             },
                             child: Text(
@@ -464,8 +759,7 @@ class _ModifpageState extends State<Modifpage> {
                               Navigator.pushNamed(
                                 context,
                                 '/modif1',
-                                arguments:
-                                    4, // Passe la valeur de r comme argument
+                                arguments: {'n': 4},
                               );
                             },
                             child: Text(
@@ -610,13 +904,15 @@ class _ModifpageState extends State<Modifpage> {
                           top: e.height * 0.171,
                           left: e.width * 0.56,
                           child: Container(
-                            width: e.width * 0.07,
-                            height: e.width * 0.07,
-                            decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.circular(e.width * 0.2)),
-                            child: Image.asset("images/add.png"),
-                          )),
+                              width: e.width * 0.07,
+                              height: e.width * 0.07,
+                              decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(e.width * 0.2)),
+                              child: GestureDetector(
+                                onTap: _pickAndUploadImage1,
+                                child: Image.network(s26),
+                              ))),
                       Positioned(
                           top: e.height * 0.25,
                           left: e.width * 0.07,
@@ -666,8 +962,9 @@ class _ModifpageState extends State<Modifpage> {
                               Navigator.pushNamed(
                                 context,
                                 '/modif1',
-                                arguments:
-                                    5, // Passe la valeur de r comme argument
+                                arguments: {
+                                  'n': 5
+                                }, // Passe la valeur de r comme argument
                               );
                             },
                             child: Text(
@@ -753,8 +1050,8 @@ class _ModifpageState extends State<Modifpage> {
                               (route) => false,
                             );
                           },
-                          icon: Image.asset(
-                            "images/retour.png",
+                          icon: Image.network(
+                            s18,
                             width: e.width * 0.07,
                             height: e.width * 0.07,
                           ),
@@ -805,13 +1102,17 @@ class _ModifpageState extends State<Modifpage> {
                           top: e.height * 0.171,
                           left: e.width * 0.56,
                           child: Container(
-                            width: e.width * 0.07,
-                            height: e.width * 0.07,
-                            decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.circular(e.width * 0.2)),
-                            child: Image.asset("images/add.png"),
-                          )),
+                              width: e.width * 0.07,
+                              height: e.width * 0.07,
+                              decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(e.width * 0.2)),
+                              child: GestureDetector(
+                                onTap: () {
+                                  _pickAndUploadImage2(id1!);
+                                },
+                                child: Image.network(s26),
+                              ))),
                       Positioned(
                           top: e.height * 0.25,
                           left: e.width * 0.07,
@@ -997,7 +1298,10 @@ class _ModifpageState extends State<Modifpage> {
                           child: TextButton(
                               onPressed: () {
                                 Navigator.pushNamed(context, '/modif1',
-                                    arguments: 6);
+                                    arguments: {
+                                      'n': 6,
+                                      'id1': podcast[0]["id"]
+                                    });
                               },
                               child: Text(
                                 "Add To A Playlist",
@@ -1007,16 +1311,23 @@ class _ModifpageState extends State<Modifpage> {
                                     fontWeight: FontWeight.bold),
                               ))),
                       Positioned(
-                        top: e.height * 0.75,
-                        left: e.width * 0.07,
-                        child: Text(
-                          "Delete From A playlist",
-                          style: TextStyle(
-                              fontSize: e.width * 0.04,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red),
-                        ),
-                      ),
+                          top: e.height * 0.75,
+                          left: e.width * 0.07,
+                          child: TextButton(
+                              onPressed: () {
+                                Navigator.pushNamed(context, '/modif1',
+                                    arguments: {
+                                      'n': 9,
+                                      'id1': podcast[0]["id"]
+                                    });
+                              },
+                              child: Text(
+                                "Delete From A Playlist",
+                                style: TextStyle(
+                                    fontSize: e.width * 0.04,
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold),
+                              ))),
                       Positioned(
                         top: e.height * 0.81,
                         left: e.width * 0.04,
@@ -1059,8 +1370,8 @@ class _ModifpageState extends State<Modifpage> {
                               (route) => false,
                             );
                           },
-                          icon: Image.asset(
-                            "images/retour.png",
+                          icon: Image.network(
+                            s18,
                             width: e.width * 0.07,
                             height: e.width * 0.07,
                           ),
@@ -1085,7 +1396,7 @@ class _ModifpageState extends State<Modifpage> {
                               borderRadius:
                                   BorderRadius.circular(e.width * 0.04),
                               image: DecorationImage(
-                                image: AssetImage('images/person.jpg'),
+                                image: NetworkImage(playlistt[0]["photoUrl"]),
                                 fit: BoxFit.cover,
                                 onError: (exception, stackTrace) {
                                   // Gérer l'erreur si l'image ne se charge pas
@@ -1111,13 +1422,17 @@ class _ModifpageState extends State<Modifpage> {
                           top: e.height * 0.171,
                           left: e.width * 0.56,
                           child: Container(
-                            width: e.width * 0.07,
-                            height: e.width * 0.07,
-                            decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.circular(e.width * 0.2)),
-                            child: Image.asset("images/add.png"),
-                          )),
+                              width: e.width * 0.07,
+                              height: e.width * 0.07,
+                              decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(e.width * 0.2)),
+                              child: GestureDetector(
+                                onTap: () {
+                                  _pickAndUploadImage3(id2!);
+                                },
+                                child: Image.network(s26),
+                              ))),
                       Positioned(
                           top: e.height * 0.25,
                           left: e.width * 0.07,
@@ -1147,14 +1462,19 @@ class _ModifpageState extends State<Modifpage> {
                                 fontWeight: FontWeight.bold),
                           )),
                       Positioned(
-                          top: e.height * 0.37,
-                          left: e.width * 0.35,
-                          child: Text(
-                            " TAHIA barca ",
-                            style: TextStyle(
-                              fontSize: e.width * 0.04,
-                            ),
-                          )),
+                        top: e.height * 0.37,
+                        left: e.width * 0.35,
+                        child: Container(
+                            width: e.width * 0.5,
+                            height: e.height * 0.1,
+                            child: Text(
+                              playlistt[0]["name"],
+                              style: TextStyle(
+                                fontSize: e.width * 0.04,
+                              ),
+                              maxLines: 2,
+                            )),
+                      ),
                       Positioned(
                           top: e.height * 0.43,
                           left: e.width * 0.07,
@@ -1166,14 +1486,19 @@ class _ModifpageState extends State<Modifpage> {
                                 fontWeight: FontWeight.bold),
                           )),
                       Positioned(
-                          top: e.height * 0.43,
-                          left: e.width * 0.35,
-                          child: Text(
-                            "23435",
-                            style: TextStyle(
-                              fontSize: e.width * 0.04,
-                            ),
-                          )),
+                        top: e.height * 0.43,
+                        left: e.width * 0.35,
+                        child: Container(
+                            width: e.width * 0.5,
+                            height: e.height * 0.1,
+                            child: Text(
+                              playlistt[0]["id"],
+                              style: TextStyle(
+                                fontSize: e.width * 0.04,
+                              ),
+                              maxLines: 2,
+                            )),
+                      ),
                       Positioned(
                         top: e.height * 0.41,
                         right: e.width * 0.01,
@@ -1196,14 +1521,19 @@ class _ModifpageState extends State<Modifpage> {
                                 fontWeight: FontWeight.bold),
                           )),
                       Positioned(
-                          top: e.height * 0.49,
-                          left: e.width * 0.35,
-                          child: Text(
-                            "Messi At 19 The Golden Boy  ",
-                            style: TextStyle(
-                              fontSize: e.width * 0.04,
-                            ),
-                          )),
+                        top: e.height * 0.49,
+                        left: e.width * 0.35,
+                        child: Container(
+                            width: e.width * 0.5,
+                            height: e.height * 0.1,
+                            child: Text(
+                              playlistt[0]["description"],
+                              style: TextStyle(
+                                fontSize: e.width * 0.04,
+                              ),
+                              maxLines: 2,
+                            )),
+                      ),
                       Positioned(
                           top: e.height * 0.55,
                           left: e.width * 0.07,
@@ -1217,12 +1547,16 @@ class _ModifpageState extends State<Modifpage> {
                       Positioned(
                           top: e.height * 0.55,
                           left: e.width * 0.35,
-                          child: Text(
-                            "20",
-                            style: TextStyle(
-                              fontSize: e.width * 0.04,
-                            ),
-                          )),
+                          child: Container(
+                              width: e.width * 0.5,
+                              height: e.height * 0.1,
+                              child: Text(
+                                formatLikes(playlistt[0]["podcast"]),
+                                style: TextStyle(
+                                  fontSize: e.width * 0.04,
+                                ),
+                                maxLines: 2,
+                              ))),
                       Positioned(
                           top: e.height * 0.62,
                           left: e.width * 0.07,
@@ -1238,7 +1572,10 @@ class _ModifpageState extends State<Modifpage> {
                           child: TextButton(
                               onPressed: () {
                                 Navigator.pushNamed(context, '/modif1',
-                                    arguments: 7);
+                                    arguments: {
+                                      'n': 7,
+                                      'id1': playlistt[0]["id"]
+                                    });
                               },
                               child: Text(
                                 "Add More Podcast",
@@ -1253,7 +1590,7 @@ class _ModifpageState extends State<Modifpage> {
                         child: TextButton(
                           onPressed: () {
                             Navigator.pushNamed(context, '/modif1',
-                                arguments: 8);
+                                arguments: {'n': 8, 'id2': playlistt[0]["id"]});
                           },
                           child: Text(
                             "Delete From Podcast ",
