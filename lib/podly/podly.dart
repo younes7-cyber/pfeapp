@@ -2478,8 +2478,8 @@ class _PodlypageState extends State<Podlypage> {
                     onTap: () {
                       Navigator.pushNamed(context, '/your');
                     },
-                    child: Image.asset(
-                      "images/cha1.jpg",
+                    child: Image.network(
+                      s85,
                       width: x.width * 0.07,
                       height: x.width * 0.07,
                     ),
@@ -2527,8 +2527,8 @@ class _PodlypageState extends State<Podlypage> {
                     onTap: () {
                       Navigator.pushNamed(context, '/stat');
                     },
-                    child: Image.asset(
-                      "images/stat1.jpg",
+                    child: Image.network(
+                      s86,
                       width: x.width * 0.07,
                       height: x.width * 0.07,
                     ),
@@ -2575,8 +2575,8 @@ class _PodlypageState extends State<Podlypage> {
                     onTap: () {
                       Navigator.pushNamed(context, '/about');
                     },
-                    child: Image.asset(
-                      "images/about1.png",
+                    child: Image.network(
+                      s87,
                       width: x.width * 0.07,
                       height: x.width * 0.07,
                     ),
@@ -2616,7 +2616,55 @@ class _PodlypageState extends State<Podlypage> {
                         )),
                   )),
               Positioned(
-                top: x.height * 0.52,
+                top: x.height * 0.5,
+                left: x.width * 0.03,
+                child: Container(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(context, '/pryv');
+                    },
+                    child: Image.network(
+                      s88,
+                      width: x.width * 0.07,
+                      height: x.width * 0.07,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                  top: x.height * 0.49,
+                  left: x.width * 0.15,
+                  child: Container(
+                    width: x.width,
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.pushNamed(context, '/pryv');
+                      },
+                      child: Text(
+                        "Account Privicy",
+                        style: TextStyle(
+                            fontSize: x.width * 0.045,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  )),
+              Positioned(
+                  top: x.height * 0.52,
+                  left: x.width * 0.15,
+                  child: Container(
+                    width: x.width,
+                    child: GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(context, '/pryv');
+                        },
+                        child: Text(
+                          "You Can Manage Your Account",
+                          style: TextStyle(
+                              fontSize: x.width * 0.025, color: Colors.grey),
+                        )),
+                  )),
+              Positioned(
+                top: x.height * 0.54,
                 left: x.width * 0.03,
                 child: Text(
                   "App Settings",

@@ -151,7 +151,7 @@ class _Modif1pageState extends State<Modif1page> {
           .collection('playinpod')
           .where('playlistId', isEqualTo: idpp)
           .get();
-
+      print('playinpod documents trouvés : ${playinpodSnapshot.docs.length}');
       final List<String> existingPlaylistIds = playinpodSnapshot.docs
           .map((doc) => doc['podcastId'] as String)
           .toList();
@@ -187,43 +187,58 @@ class _Modif1pageState extends State<Modif1page> {
   Future<void> _loadPlaylist(String idpp) async {
     try {
       final currentUser = FirebaseAuth.instance.currentUser?.uid;
-      if (currentUser == null) return;
+      if (currentUser == null) {
+        print('Utilisateur non connecté.');
+        return;
+      }
 
-      // Étape 1 : Récupérer les playlistId déjà liés au podcast
+      // Étape 1 : Récupérer les podcastId liés à cette playlist (inverse de l’autre logique)
       final playinpodSnapshot = await FirebaseFirestore.instance
           .collection('playinpod')
           .where('playlistId', isEqualTo: idpp)
           .get();
 
-      final List<String> existingPlaylistIds = playinpodSnapshot.docs
-          .map((doc) => doc['podcastId'] as String)
-          .toList();
+      print('playinpod documents trouvés : ${playinpodSnapshot.docs.length}');
 
-      // Étape 2 : Récupérer les playlists de l'utilisateur
-      final playlistSnapshot = await FirebaseFirestore.instance
+      final List<String> existingPodcastIds = playinpodSnapshot.docs.map((doc) {
+        final data = doc.data();
+        print('playinpod doc: ${data}');
+        return data['podcastId'] as String;
+      }).toList();
+
+      print('Liste des podcastId déjà liés : $existingPodcastIds');
+
+      // Étape 2 : Récupérer les podcasts de l'utilisateur
+      final podcastSnapshot = await FirebaseFirestore.instance
           .collection('podcasts')
           .where('idUser', isEqualTo: currentUser)
           .get();
 
-      // Étape 3 : Filtrer les playlists non déjà liées au podcast
+      print('Podcasts utilisateur trouvés : ${podcastSnapshot.docs.length}');
+
+      // Étape 3 : Filtrer les podcasts non liés à la playlist
       final List<SelectedListItem<PlaylistItem>> fetchedPlaylists =
-          playlistSnapshot.docs
-              .where((doc) => !existingPlaylistIds.contains(doc.id))
+          podcastSnapshot.docs
+              .where((doc) => !existingPodcastIds.contains(doc.id))
               .map((doc) {
-        final data = doc.data() as Map<String, dynamic>; // ✅ Cast nécessaire
+        final data = doc.data() as Map<String, dynamic>;
         final name = data['name'] ?? 'Unknown Playlist';
         final id = doc.id;
+        print('Podcast retenu : $id - $name');
         return SelectedListItem<PlaylistItem>(
           data: PlaylistItem(id: id, name: name),
         );
       }).toList();
+
+      print(
+          'Nombre de podcasts filtrés ajoutés à play2 : ${fetchedPlaylists.length}');
 
       // Mettre à jour l'état
       setState(() {
         play2.addAll(fetchedPlaylists);
       });
     } catch (e) {
-      print('Error loading playlists: $e');
+      print('Erreur lors du chargement : $e');
     }
   }
 

@@ -733,43 +733,6 @@ class _ModifpageState extends State<Modifpage> {
                             )),
                       ),
                       Positioned(
-                          top: e.height * 0.66,
-                          left: e.width * 0.07,
-                          child: Text(
-                            "Motpass",
-                            style: TextStyle(
-                                fontSize: e.width * 0.04,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold),
-                          )),
-                      Positioned(
-                          top: e.height * 0.625,
-                          left: e.width * 0.3,
-                          child: Text(
-                            "........",
-                            style: TextStyle(
-                              fontSize: e.width * 0.1,
-                            ),
-                          )),
-                      Positioned(
-                        top: e.height * 0.645,
-                        right: e.width * 0.01,
-                        child: TextButton(
-                            onPressed: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/modif1',
-                                arguments: {'n': 4},
-                              );
-                            },
-                            child: Text(
-                              ">",
-                              style: TextStyle(
-                                  fontSize: e.width * 0.06,
-                                  color: Colors.black),
-                            )),
-                      ),
-                      Positioned(
                           top: e.height * 0.72,
                           left: e.width * 0.07,
                           child: Text(
@@ -1322,7 +1285,7 @@ class _ModifpageState extends State<Modifpage> {
                                     });
                               },
                               child: Text(
-                                "Delete From A Playlist",
+                                "Delete Playlist",
                                 style: TextStyle(
                                     fontSize: e.width * 0.04,
                                     color: Colors.red,
@@ -1574,7 +1537,7 @@ class _ModifpageState extends State<Modifpage> {
                                 Navigator.pushNamed(context, '/modif1',
                                     arguments: {
                                       'n': 7,
-                                      'id1': playlistt[0]["id"]
+                                      'id2': playlistt[0]["id"]
                                     });
                               },
                               child: Text(
@@ -1593,7 +1556,7 @@ class _ModifpageState extends State<Modifpage> {
                                 arguments: {'n': 8, 'id2': playlistt[0]["id"]});
                           },
                           child: Text(
-                            "Delete From Podcast ",
+                            "Delete Podcast From A Playlist",
                             style: TextStyle(
                                 fontSize: e.width * 0.04,
                                 fontWeight: FontWeight.bold,
