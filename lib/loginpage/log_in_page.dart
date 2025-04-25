@@ -75,12 +75,11 @@ class _LoginPageState extends State<LoginPage> {
 
       print("Email Google sélectionné: ${googleUser.email}");
 
-      // Vérifier si l'email existe déjà dans Firebase
-      List<String> signInMethods = await FirebaseAuth.instance
-          .fetchSignInMethodsForEmail(googleUser.email);
+      // Vérifier si l'utilisateur existe dans la base de données avec méthode google
+      bool userExistsInDatabase =
+          await checkIfUserExistsWithGoogleMethod(googleUser.email);
 
-      if (signInMethods.isEmpty) {
-        // L'email n'existe pas, afficher un message d'erreur
+      if (!userExistsInDatabase) {
         setState(() {
           errorMessage =
               "Aucun compte n'existe avec cet email. Veuillez d'abord vous inscrire.";
@@ -88,7 +87,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // L'email existe, récupérer l'authentification Google
+      // L'utilisateur existe dans votre base, procéder à la connexion Google
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
@@ -96,37 +95,58 @@ class _LoginPageState extends State<LoginPage> {
         idToken: googleAuth.idToken,
       );
 
-      // Connexion Firebase avec Google
-      final UserCredential userCredential =
-          await FirebaseAuth.instance.signInWithCredential(credential);
+      try {
+        final UserCredential userCredential =
+            await FirebaseAuth.instance.signInWithCredential(credential);
 
-      if (userCredential.user != null) {
-        if (_rememberMe) {
-          await saveUser(googleUser.email);
+        print("User is signed in!");
+        print(
+            "Connexion réussie avec l'utilisateur: ${userCredential.user?.email}");
+
+        if (userCredential.user != null) {
+          if (_rememberMe) {
+            await saveUser(googleUser.email);
+          }
+          // Navigation vers la page Podly après connexion réussie
+          Navigator.pushNamed(context, '/podly');
         }
-        Navigator.pushNamed(context, '/podly');
+      } on FirebaseAuthException catch (authError) {
+        print("Erreur de connexion: ${authError.code} - ${authError.message}");
+        setState(() {
+          errorMessage = "Erreur de connexion: ${authError.message}";
+        });
+
+        // Si l'authentification crée un utilisateur automatiquement, le supprimer
+        try {
+          await FirebaseAuth.instance.currentUser?.delete();
+        } catch (e) {
+          // Ignorer les erreurs de suppression
+        }
+        await FirebaseAuth.instance.signOut();
       }
-    } on FirebaseAuthException catch (e) {
-      print("Firebase Auth Error: ${e.code} - ${e.message}");
-      setState(() {
-        switch (e.code) {
-          case 'account-exists-with-different-credential':
-            errorMessage =
-                "Un compte existe déjà avec cet email, mais avec une autre méthode d'authentification.";
-            break;
-          case 'invalid-credential':
-            errorMessage =
-                "Les informations de connexion Google sont invalides.";
-            break;
-          default:
-            errorMessage = "Erreur d'authentification: ${e.message}";
-        }
-      });
     } catch (e) {
       print("Erreur générale: $e");
       setState(() {
         errorMessage = "Une erreur inattendue est survenue.";
       });
+    }
+  }
+
+// Fonction modifiée pour vérifier si l'utilisateur existe avec la méthode google
+  Future<bool> checkIfUserExistsWithGoogleMethod(String email) async {
+    try {
+      // Vérification dans votre collection Firestore avec l'email ET la méthode
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .where('methode', isEqualTo: 'google')
+          .limit(1)
+          .get();
+
+      return querySnapshot.docs.isNotEmpty;
+    } catch (e) {
+      print("Erreur lors de la vérification de l'utilisateur: $e");
+      return false;
     }
   }
 
@@ -430,7 +450,25 @@ class _LoginPageState extends State<LoginPage> {
                               // Validate form
                               if (_formKey.currentState!.validate()) {
                                 try {
-                                  // Attempt to sign in
+                                  // Vérifier d'abord si l'utilisateur existe dans Firestore
+                                  final QuerySnapshot userCheck =
+                                      await FirebaseFirestore.instance
+                                          .collection('users')
+                                          .where('email',
+                                              isEqualTo: emailController.text)
+                                          .where('methode',
+                                              isEqualTo: 'password')
+                                          .get();
+
+                                  // Si aucun document n'est trouvé, l'utilisateur n'existe pas
+                                  if (userCheck.docs.isEmpty) {
+                                    setState(() {
+                                      errorMessage = "User does not exist";
+                                    });
+                                    return; // Arrêter l'exécution ici
+                                  }
+
+                                  // L'utilisateur existe, procéder à l'authentification
                                   UserCredential userCredential =
                                       await FirebaseAuth.instance
                                           .signInWithEmailAndPassword(
@@ -438,9 +476,9 @@ class _LoginPageState extends State<LoginPage> {
                                     password: passwordController.text,
                                   );
 
-                                  // ✅ AJOUT : Si l'utilisateur est connecté avec succès
+                                  // Si l'utilisateur est connecté avec succès
                                   if (userCredential.user != null) {
-                                    // ✅ AJOUT : Vérifier si "Remember Me" est coché
+                                    // Vérifier si "Remember Me" est coché
                                     if (_rememberMe) {
                                       await saveUser(emailController.text);
                                     }
@@ -551,8 +589,8 @@ class _LoginPageState extends State<LoginPage> {
                                 BorderRadius.circular(siz.width * 0.05),
                           ),
                           child: MaterialButton(
-                            onPressed: () {
-                              signInWithGoogle();
+                            onPressed: () async {
+                              await signInWithGoogle();
                             },
                             child: Row(
                               // mainAxisAlignment: MainAxisAlignment.center,

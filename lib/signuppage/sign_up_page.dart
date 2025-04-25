@@ -1,8 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:pfeapp/constants.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
 class SignUppage extends StatefulWidget {
   const SignUppage({super.key});
@@ -19,90 +19,6 @@ class _SignUppageState extends State<SignUppage> {
   TextEditingController pass = TextEditingController();
   TextEditingController confirm = TextEditingController();
   String? errorMessage;
-  Future<void> signInWithFacebook(BuildContext context) async {
-    try {
-      // Trigger the sign-in flow
-      final LoginResult loginResult = await FacebookAuth.instance.login();
-
-      // Check if login was successful
-      if (loginResult.status != LoginStatus.success) {
-        // User cancelled or failed to login
-        return;
-      }
-
-      // Get user data including email
-      final userData = await FacebookAuth.instance.getUserData(fields: "email");
-      final userEmail = userData['email'] as String?;
-
-      if (userEmail == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                "Could not get email from Facebook. Please try another method."),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      // Try to check if email exists by attempting to create a user
-      try {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: userEmail,
-          password:
-              "temporary_password_${DateTime.now().millisecondsSinceEpoch}",
-        );
-
-        // If we get here, the email doesn't exist yet
-        // Delete this temporary user
-        await FirebaseAuth.instance.currentUser?.delete();
-
-        // Now proceed with Facebook auth
-        final OAuthCredential facebookAuthCredential =
-            FacebookAuthProvider.credential(
-                loginResult.accessToken!.tokenString);
-
-        final UserCredential userCredential = await FirebaseAuth.instance
-            .signInWithCredential(facebookAuthCredential);
-
-        await userCredential.user?.sendEmailVerification();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                "A verification email has been sent. Please check your inbox."),
-            backgroundColor: Color(0xFF754CEF),
-          ),
-        );
-
-        Navigator.pushNamed(context, '/verif');
-      } catch (e) {
-        if (e is FirebaseAuthException && e.code == 'email-already-in-use') {
-          // Email exists
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  "This Facebook account is already registered. Please log in instead."),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        } else {
-          // Other error
-          throw e;
-        }
-      }
-    } catch (e) {
-      print("Facebook Sign-In Error: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Facebook sign-in failed: ${e.toString()}"),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
   Future<void> signInWithGoogle(BuildContext context) async {
     try {
       // First, make sure we're signed out of Google
@@ -125,65 +41,36 @@ class _SignUppageState extends State<SignUppage> {
         idToken: googleAuth.idToken,
       );
 
-      // Try to check if email exists more directly
-      bool emailExists = false;
+      // Check if email exists in Firestore 'users' collection with Google method
+      final QuerySnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: googleUser.email)
+          .get();
 
-      try {
-        // Store current auth state if any
-        FirebaseAuth auth = FirebaseAuth.instance;
-        User? currentUser = auth.currentUser;
-
-        // Sign out to prevent auth conflicts
-        if (currentUser != null) {
-          await auth.signOut();
-        }
-
-        // Try to create the user with email only
-        await auth
-            .createUserWithEmailAndPassword(
-          email: googleUser.email,
-          password:
-              "temporary_password_${DateTime.now().millisecondsSinceEpoch}",
-        )
-            .then((userCred) async {
-          // If we get here, the email wasn't in use
-          // Delete this temporary user
-          await userCred.user?.delete();
-          emailExists = false;
-        }).catchError((error) {
-          if (error is FirebaseAuthException &&
-              error.code == 'email-already-in-use') {
-            emailExists = true;
-          }
-        });
-
-        // If there was a user signed in before, sign them back in
-        if (currentUser != null) {
-          // We can't directly restore the user, but we can sign out
-          // so the app returns to a clean auth state
-          await auth.signOut();
-        }
-      } catch (e) {
-        print("Error checking if email exists: $e");
-        // If there's an error checking, we'll assume the email might exist
-        emailExists = true;
-      }
-
-      if (emailExists) {
-        // Email exists, show error and stop
+      // If email already exists with Google method, show error and return
+      if (userDoc.docs.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-                "This Google account is already registered. Please log in instead."),
+            content: Text("This email is already in use"),
             backgroundColor: Colors.red,
           ),
         );
-        return; // Important: Return to stop execution
+        return;
       }
 
-      // Continue with creating the user since email doesn't exist
+      // Continue with creating the user since email doesn't exist with Google method
       final UserCredential userCredential =
           await FirebaseAuth.instance.signInWithCredential(credential);
+
+      // Get current user ID
+      final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
+
+      // Add user data to Firestore
+      await FirebaseFirestore.instance.collection('users').add({
+        'email': googleUser.email,
+        'userId': currentUserId,
+        'methode': 'google'
+      });
 
       // Send verification email
       await userCredential.user?.sendEmailVerification();
@@ -548,29 +435,48 @@ class _SignUppageState extends State<SignUppage> {
                         setState(() {
                           errorMessage = null;
                         });
-
                         // Validate form
                         if (_formKey.currentState!.validate()) {
                           try {
-                            final userExists = (await FirebaseAuth.instance
-                                    .fetchSignInMethodsForEmail(email.text))
-                                .isNotEmpty;
+                            // First check if email exists in Firestore 'users' collection
+                            final QuerySnapshot userDoc =
+                                await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .where('email', isEqualTo: email.text)
+                                    .get();
 
-                            if (userExists) {
+                            // Check if user already exists in Firestore
+                            if (userDoc.docs.isNotEmpty) {
                               setState(() {
                                 errorMessage = "This email is already in use";
                               });
                               return;
                             }
 
+                            // If not in Firestore, proceed with Firebase Auth creation
                             await FirebaseAuth.instance
                                 .createUserWithEmailAndPassword(
                               email: email.text,
                               password: pass.text,
                             );
 
+                            // Get current user ID after creation
+                            final String currentUserId =
+                                FirebaseAuth.instance.currentUser!.uid;
+
+                            // Add user data to Firestore
+                            await FirebaseFirestore.instance
+                                .collection('users')
+                                .add({
+                              'email': email.text,
+                              'userId': currentUserId,
+                              'methode': 'password'
+                            });
+
+                            // Send verification email
                             FirebaseAuth.instance.currentUser!
                                 .sendEmailVerification();
+
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(
@@ -578,6 +484,7 @@ class _SignUppageState extends State<SignUppage> {
                                 backgroundColor: Color(0xFF754CEF),
                               ),
                             );
+
                             Navigator.pushNamed(context, '/verif');
                           } on FirebaseAuthException catch (e) {
                             setState(() {

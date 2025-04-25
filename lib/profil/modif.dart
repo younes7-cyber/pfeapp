@@ -506,308 +506,284 @@ class _ModifpageState extends State<Modifpage> {
           decoration: BoxDecoration(color: Colors.white),
           child: isLoading
               ? Center(child: Text(""))
-              : Stack(
-                  children: [
-                    if (q == 2) ...[
-                      Positioned(
-                        top: e.height * 0.01,
-                        left: e.width * 0.03,
-                        child: IconButton(
-                          onPressed: () {
-                            Navigator.pushNamedAndRemoveUntil(
-                                context, '/podly', (route) => false,
-                                arguments: {'selectedIndex': 4});
-                          },
-                          icon: Image.network(
-                            s18,
-                            width: e.width * 0.07,
-                            height: e.width * 0.07,
-                          ),
+              : Stack(children: [
+                  if (q == 2) ...[
+                    Positioned(
+                      top: e.height * 0.01,
+                      left: e.width * 0.03,
+                      child: IconButton(
+                        onPressed: () {
+                          Navigator.pushNamedAndRemoveUntil(
+                              context, '/podly', (route) => false,
+                              arguments: {'selectedIndex': 4});
+                        },
+                        icon: Image.network(
+                          s18,
+                          width: e.width * 0.07,
+                          height: e.width * 0.07,
                         ),
                       ),
-                      Positioned(
-                          top: e.height * 0.02,
-                          left: e.width * 0.15,
-                          child: Text(
-                            "Profile",
-                            style: TextStyle(
-                                fontSize: e.width * 0.06,
-                                fontWeight: FontWeight.bold),
-                          )),
-                      Positioned(
-                          top: e.height * 0.08,
-                          left: e.width * 0.38,
-                          child: Container(
-                            width: e.width * 0.25,
-                            height: e.width * 0.25,
-                            decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.circular(e.width * 0.2)),
-                            child: ClipOval(
-                              child: Image.network(
-                                user[0]["photoUrl"],
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          )),
-                      Positioned(
-                          top: e.height * 0.166,
-                          left: e.width * 0.55,
-                          child: Container(
-                            width: e.width * 0.09,
-                            height: e.width * 0.09,
-                            decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius:
-                                    BorderRadius.circular(e.width * 0.2)),
-                          )),
-                      Positioned(
-                          top: e.height * 0.171,
-                          left: e.width * 0.56,
-                          child: Container(
-                              width: e.width * 0.07,
-                              height: e.width * 0.07,
-                              decoration: BoxDecoration(
-                                  borderRadius:
-                                      BorderRadius.circular(e.width * 0.2)),
-                              child: GestureDetector(
-                                onTap: _pickAndUploadImage,
-                                child: Image.network(s26),
-                              ))),
-                      Positioned(
-                          top: e.height * 0.25,
-                          left: e.width * 0.07,
-                          right: e.width * 0.07,
-                          child: Container(
-                            width: e.width * 0.8,
-                            height: e.height * 0.002, // Épaisseur de la ligne
-                            color: Colors.grey[400],
-                          )),
-                      Positioned(
-                          top: e.height * 0.3,
-                          left: e.width * 0.07,
-                          child: Text(
-                            "Profile Information",
-                            style: TextStyle(
-                                fontSize: e.width * 0.05,
-                                fontWeight: FontWeight.bold),
-                          )),
-                      Positioned(
-                          top: e.height * 0.37,
-                          left: e.width * 0.07,
-                          child: Text(
-                            "Username",
-                            style: TextStyle(
-                                fontSize: e.width * 0.04,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold),
-                          )),
-                      Positioned(
-                        top: e.height * 0.37,
-                        left: e.width * 0.3,
-                        child: Container(
-                          width: e.width * 0.55,
-                          height: e.height * 0.1,
-                          child: Text(
-                            "${user[0]["firstName"]} ${user[0]["lastName"]}",
-                            style: TextStyle(
-                              fontSize: e.width * 0.04,
-                            ),
-                            maxLines: 2,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: e.height * 0.355,
-                        right: e.width * 0.01,
-                        child: TextButton(
-                            onPressed: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/modif1',
-                                arguments: {
-                                  'n': 2
-                                }, // Passe la valeur de r comme argument
-                              );
-                            },
-                            child: Text(
-                              ">",
-                              style: TextStyle(
-                                  fontSize: e.width * 0.06,
-                                  color: Colors.black),
-                            )),
-                      ),
-                      Positioned(
-                          top: e.height * 0.45,
-                          left: e.width * 0.07,
-                          right: e.width * 0.07,
-                          child: Container(
-                            width: e.width * 0.8,
-                            height: e.height * 0.002, // Épaisseur de la ligne
-                            color: Colors.grey[400],
-                          )),
-                      Positioned(
-                          top: e.height * 0.47,
-                          left: e.width * 0.07,
-                          child: Text(
-                            "Personal Information",
-                            style: TextStyle(
-                                fontSize: e.width * 0.05,
-                                fontWeight: FontWeight.bold),
-                          )),
-                      Positioned(
-                          top: e.height * 0.54,
-                          left: e.width * 0.07,
-                          child: Text(
-                            "User Id",
-                            style: TextStyle(
-                                fontSize: e.width * 0.04,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold),
-                          )),
-                      Positioned(
-                          top: e.height * 0.54,
-                          left: e.width * 0.3,
-                          child: Container(
-                              width: e.width * 0.55,
-                              height: e.height * 0.1,
-                              child: Text(
-                                user[0]["userId"],
-                                style: TextStyle(
-                                  fontSize: e.width * 0.04,
-                                ),
-                                maxLines: 2,
-                              ))),
-                      Positioned(
-                        top: e.height * 0.52,
-                        right: e.width * 0.01,
-                        child: TextButton(
-                            onPressed: () {},
-                            child: Image.asset(
-                              "images/copier.png",
-                              width: e.width * 0.05,
-                              height: e.height * 0.05,
-                            )),
-                      ),
-                      Positioned(
-                          top: e.height * 0.6,
-                          left: e.width * 0.07,
-                          child: Text(
-                            "Email",
-                            style: TextStyle(
-                                fontSize: e.width * 0.04,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold),
-                          )),
-                      Positioned(
-                          top: e.height * 0.6,
-                          left: e.width * 0.3,
-                          child: Container(
-                              width: e.width * 0.55,
-                              height: e.height * 0.1,
-                              child: Text(
-                                user[0]["email"],
-                                style: TextStyle(
-                                  fontSize: e.width * 0.04,
-                                ),
-                                maxLines: 2,
-                              ))),
-                      Positioned(
-                        top: e.height * 0.585,
-                        right: e.width * 0.01,
-                        child: TextButton(
-                            onPressed: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/modif1',
-                                arguments: {
-                                  'n': 3
-                                }, // Passe la valeur de r comme argument
-                              );
-                            },
-                            child: Text(
-                              ">",
-                              style: TextStyle(
-                                  fontSize: e.width * 0.06,
-                                  color: Colors.black),
-                            )),
-                      ),
-                      Positioned(
-                          top: e.height * 0.72,
-                          left: e.width * 0.07,
-                          child: Text(
-                            "Country",
-                            style: TextStyle(
-                                fontSize: e.width * 0.04,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold),
-                          )),
-                      Positioned(
-                          top: e.height * 0.72,
-                          left: e.width * 0.3,
-                          child: Container(
-                              width: e.width * 0.55,
-                              height: e.height * 0.1,
-                              child: Text(
-                                user[0]["country"],
-                                style: TextStyle(
-                                  fontSize: e.width * 0.04,
-                                ),
-                                maxLines: 2,
-                              ))),
-                      Positioned(
-                          top: e.height * 0.78,
-                          left: e.width * 0.07,
-                          child: Text(
-                            "Age",
-                            style: TextStyle(
-                                fontSize: e.width * 0.04,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold),
-                          )),
-                      Positioned(
-                          top: e.height * 0.78,
-                          left: e.width * 0.3,
-                          child: Container(
-                              width: e.width * 0.55,
-                              height: e.height * 0.1,
-                              child: Text(
-                                user[0]["age"].toString(),
-                                style: TextStyle(
-                                  fontSize: e.width * 0.04,
-                                ),
-                                maxLines: 2,
-                              ))),
-                      Positioned(
-                          top: e.height * 0.83,
-                          left: e.width * 0.07,
-                          right: e.width * 0.07,
-                          child: Container(
-                            width: e.width * 0.8,
-                            height: e.height * 0.002, // Épaisseur de la ligne
-                            color: Colors.grey[400],
-                          )),
-                      Positioned(
-                        top: e.height * 0.86,
-                        left: e.width * 0.04,
-                        child: Image.asset(
-                          "images/delete.png",
-                          width: e.width * 0.06,
-                          height: e.width * 0.06,
-                        ),
-                      ),
-                      Positioned(
-                        top: e.height * 0.86,
+                    ),
+                    Positioned(
+                        top: e.height * 0.02,
                         left: e.width * 0.15,
                         child: Text(
-                          "Delete User",
+                          "Profile",
                           style: TextStyle(
-                              fontSize: e.width * 0.045,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red),
+                              fontSize: e.width * 0.06,
+                              fontWeight: FontWeight.bold),
+                        )),
+                    Positioned(
+                        top: e.height * 0.08,
+                        left: e.width * 0.38,
+                        child: Container(
+                          width: e.width * 0.25,
+                          height: e.width * 0.25,
+                          decoration: BoxDecoration(
+                              borderRadius:
+                                  BorderRadius.circular(e.width * 0.2)),
+                          child: ClipOval(
+                            child: Image.network(
+                              user[0]["photoUrl"],
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        )),
+                    Positioned(
+                        top: e.height * 0.166,
+                        left: e.width * 0.55,
+                        child: Container(
+                          width: e.width * 0.09,
+                          height: e.width * 0.09,
+                          decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius:
+                                  BorderRadius.circular(e.width * 0.2)),
+                        )),
+                    Positioned(
+                        top: e.height * 0.171,
+                        left: e.width * 0.56,
+                        child: Container(
+                            width: e.width * 0.07,
+                            height: e.width * 0.07,
+                            decoration: BoxDecoration(
+                                borderRadius:
+                                    BorderRadius.circular(e.width * 0.2)),
+                            child: GestureDetector(
+                              onTap: _pickAndUploadImage,
+                              child: Image.network(s26),
+                            ))),
+                    Positioned(
+                        top: e.height * 0.25,
+                        left: e.width * 0.07,
+                        right: e.width * 0.07,
+                        child: Container(
+                          width: e.width * 0.8,
+                          height: e.height * 0.002, // Épaisseur de la ligne
+                          color: Colors.grey[400],
+                        )),
+                    Positioned(
+                        top: e.height * 0.3,
+                        left: e.width * 0.07,
+                        child: Text(
+                          "Profile Information",
+                          style: TextStyle(
+                              fontSize: e.width * 0.05,
+                              fontWeight: FontWeight.bold),
+                        )),
+                    Positioned(
+                        top: e.height * 0.37,
+                        left: e.width * 0.07,
+                        child: Text(
+                          "Username",
+                          style: TextStyle(
+                              fontSize: e.width * 0.04,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.bold),
+                        )),
+                    Positioned(
+                      top: e.height * 0.37,
+                      left: e.width * 0.3,
+                      child: Container(
+                        width: e.width * 0.55,
+                        height: e.height * 0.1,
+                        child: Text(
+                          "${user[0]["firstName"]} ${user[0]["lastName"]}",
+                          style: TextStyle(
+                            fontSize: e.width * 0.04,
+                          ),
+                          maxLines: 2,
                         ),
                       ),
-                    ],
+                    ),
+                    Positioned(
+                      top: e.height * 0.355,
+                      right: e.width * 0.01,
+                      child: TextButton(
+                          onPressed: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/modif1',
+                              arguments: {
+                                'n': 2
+                              }, // Passe la valeur de r comme argument
+                            );
+                          },
+                          child: Text(
+                            ">",
+                            style: TextStyle(
+                                fontSize: e.width * 0.06, color: Colors.black),
+                          )),
+                    ),
+                    Positioned(
+                        top: e.height * 0.45,
+                        left: e.width * 0.07,
+                        right: e.width * 0.07,
+                        child: Container(
+                          width: e.width * 0.8,
+                          height: e.height * 0.002, // Épaisseur de la ligne
+                          color: Colors.grey[400],
+                        )),
+                    Positioned(
+                        top: e.height * 0.47,
+                        left: e.width * 0.07,
+                        child: Text(
+                          "Personal Information",
+                          style: TextStyle(
+                              fontSize: e.width * 0.05,
+                              fontWeight: FontWeight.bold),
+                        )),
+                    Positioned(
+                        top: e.height * 0.54,
+                        left: e.width * 0.07,
+                        child: Text(
+                          "User Id",
+                          style: TextStyle(
+                              fontSize: e.width * 0.04,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.bold),
+                        )),
+                    Positioned(
+                        top: e.height * 0.54,
+                        left: e.width * 0.3,
+                        child: Container(
+                            width: e.width * 0.55,
+                            height: e.height * 0.1,
+                            child: Text(
+                              user[0]["userId"],
+                              style: TextStyle(
+                                fontSize: e.width * 0.04,
+                              ),
+                              maxLines: 2,
+                            ))),
+                    Positioned(
+                      top: e.height * 0.52,
+                      right: e.width * 0.01,
+                      child: TextButton(
+                          onPressed: () {},
+                          child: Image.asset(
+                            "images/copier.png",
+                            width: e.width * 0.05,
+                            height: e.height * 0.05,
+                          )),
+                    ),
+                    Positioned(
+                        top: e.height * 0.6,
+                        left: e.width * 0.07,
+                        child: Text(
+                          "Email",
+                          style: TextStyle(
+                              fontSize: e.width * 0.04,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.bold),
+                        )),
+                    Positioned(
+                        top: e.height * 0.6,
+                        left: e.width * 0.3,
+                        child: Container(
+                            width: e.width * 0.55,
+                            height: e.height * 0.1,
+                            child: Text(
+                              user[0]["email"],
+                              style: TextStyle(
+                                fontSize: e.width * 0.04,
+                              ),
+                              maxLines: 2,
+                            ))),
+                    Positioned(
+                      top: e.height * 0.585,
+                      right: e.width * 0.01,
+                      child: TextButton(
+                          onPressed: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/modif1',
+                              arguments: {
+                                'n': 3
+                              }, // Passe la valeur de r comme argument
+                            );
+                          },
+                          child: Text(
+                            ">",
+                            style: TextStyle(
+                                fontSize: e.width * 0.06, color: Colors.black),
+                          )),
+                    ),
+                    Positioned(
+                        top: e.height * 0.72,
+                        left: e.width * 0.07,
+                        child: Text(
+                          "Country",
+                          style: TextStyle(
+                              fontSize: e.width * 0.04,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.bold),
+                        )),
+                    Positioned(
+                        top: e.height * 0.72,
+                        left: e.width * 0.3,
+                        child: Container(
+                            width: e.width * 0.55,
+                            height: e.height * 0.1,
+                            child: Text(
+                              user[0]["country"],
+                              style: TextStyle(
+                                fontSize: e.width * 0.04,
+                              ),
+                              maxLines: 2,
+                            ))),
+                    Positioned(
+                        top: e.height * 0.78,
+                        left: e.width * 0.07,
+                        child: Text(
+                          "Age",
+                          style: TextStyle(
+                              fontSize: e.width * 0.04,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.bold),
+                        )),
+                    Positioned(
+                        top: e.height * 0.78,
+                        left: e.width * 0.3,
+                        child: Container(
+                            width: e.width * 0.55,
+                            height: e.height * 0.1,
+                            child: Text(
+                              user[0]["age"].toString(),
+                              style: TextStyle(
+                                fontSize: e.width * 0.04,
+                              ),
+                              maxLines: 2,
+                            ))),
+                    Positioned(
+                        top: e.height * 0.83,
+                        left: e.width * 0.07,
+                        right: e.width * 0.07,
+                        child: Container(
+                          width: e.width * 0.8,
+                          height: e.height * 0.002, // Épaisseur de la ligne
+                          color: Colors.grey[400],
+                        )),
                     if (q == 3) ...[
                       Positioned(
                         top: e.height * 0.01,
@@ -1595,7 +1571,7 @@ class _ModifpageState extends State<Modifpage> {
                           )),
                     ],
                   ],
-                )),
+                ])),
     ));
   }
 }

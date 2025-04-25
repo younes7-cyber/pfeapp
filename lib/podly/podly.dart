@@ -738,6 +738,7 @@ class _PodlypageState extends State<Podlypage> {
       final querySnapshot = await FirebaseFirestore.instance
           .collection('users')
           .where('userId', isEqualTo: currentUserId)
+          .limit(1)
           .get();
 
       // Ajout des logs pour déboguer
@@ -2775,8 +2776,8 @@ class _PodlypageState extends State<Podlypage> {
               Positioned(
                 top: x.height * 0.82,
                 left: x.width * 0.04,
-                child: Image.asset(
-                  "images/logout.png",
+                child: Image.network(
+                  s90,
                   width: x.width * 0.06,
                   height: x.width * 0.06,
                 ),
@@ -2786,10 +2787,9 @@ class _PodlypageState extends State<Podlypage> {
                 left: x.width * 0.15,
                 child: GestureDetector(
                   onTap: () async {
-                    /* await logout();
+                    await logout();
                     Navigator.pushNamedAndRemoveUntil(
                         context, '/LogIn', (route) => false);
-                 */
                   },
                   child: Text(
                     "Log Out",

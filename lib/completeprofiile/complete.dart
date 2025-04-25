@@ -186,9 +186,6 @@ class _CompletepageState extends State<Completepage> {
 
   // Supabase client instance
 
-  // Firestore instance
-  final _firestore = FirebaseFirestore.instance;
-
   @override
   void dispose() {
     _firstNameController.dispose();
@@ -326,7 +323,6 @@ class _CompletepageState extends State<Completepage> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       final userId = user?.uid;
-      final email = FirebaseAuth.instance.currentUser?.email;
 
       if (userId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -357,8 +353,6 @@ class _CompletepageState extends State<Completepage> {
 
       // Création des données utilisateur
       final userData = {
-        'userId': userId,
-        'email': email,
         'firstName': _firstNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
         'age': int.parse(_ageController.text.trim()),
@@ -366,10 +360,25 @@ class _CompletepageState extends State<Completepage> {
         'photoUrl': photoUrl, // Utilise l'URL finale
         'createdAt': FieldValue.serverTimestamp(),
       };
+      final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('userId', isEqualTo: userId)
+          .get();
 
-      // Enregistrement dans Firestore
-      await _firestore.collection('users').add(userData);
+      // Mettre à jour chaque document trouvé
+      final batch = FirebaseFirestore.instance.batch();
 
+      if (querySnapshot.docs.isEmpty) {
+        print("Aucun document trouvé pour cet utilisateur");
+        return;
+      }
+
+      for (var doc in querySnapshot.docs) {
+        batch.update(doc.reference, userData);
+      }
+
+      // Exécuter le batch
+      await batch.commit();
       if (context.mounted) {
         Navigator.pushNamedAndRemoveUntil(context, '/podly', (route) => false);
       }

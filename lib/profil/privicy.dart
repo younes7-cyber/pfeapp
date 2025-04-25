@@ -251,21 +251,118 @@ class _PrivipageState extends State<Privipage> {
             Positioned(
               top: e.height * 0.63,
               left: e.width * 0.04,
-              child: Image.asset(
-                "images/delete.png",
-                width: e.width * 0.06,
-                height: e.width * 0.06,
-              ),
-            ),
-            Positioned(
-              top: e.height * 0.63,
-              left: e.width * 0.15,
-              child: Text(
-                "Delete User",
-                style: TextStyle(
-                    fontSize: e.width * 0.045,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red),
+              child: Container(
+                child: GestureDetector(
+                  onTap: () {
+                    // Afficher une boîte de dialogue de confirmation
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: const Text("Supprimer le compte"),
+                          content: const Text(
+                            "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible et toutes vos données seront perdues.",
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context)
+                                    .pop(); // Fermer la boîte de dialogue
+                              },
+                              child: const Text("Annuler"),
+                            ),
+                            TextButton(
+                              onPressed: () async {
+                                Navigator.of(context)
+                                    .pop(); // Fermer la boîte de dialogue
+
+                                // Afficher un indicateur de chargement
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (BuildContext context) {
+                                    return const AlertDialog(
+                                      content: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          CircularProgressIndicator(),
+                                          SizedBox(height: 16),
+                                          Text(
+                                              "Suppression du compte en cours..."),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                );
+
+                                try {
+                                  // Obtenir l'utilisateur actuel
+                                  final currentUser =
+                                      FirebaseAuth.instance.currentUser;
+
+                                  if (currentUser != null) {
+                                    final userId = currentUser.uid;
+
+                                    // 1. Supprimer les données utilisateur de Firestore en utilisant where
+                                    await FirebaseFirestore.instance
+                                        .collection('users')
+                                        .where('userId', isEqualTo: userId)
+                                        .get()
+                                        .then((snapshot) {
+                                      for (DocumentSnapshot ds
+                                          in snapshot.docs) {
+                                        ds.reference.delete();
+                                      }
+                                    });
+
+                                    // 2. Supprimer le compte utilisateur de Firebase Auth
+                                    await currentUser.delete();
+
+                                    // Fermer l'indicateur de chargement
+
+                                    // Afficher un message de confirmation
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content:
+                                            Text('Compte supprimé avec succès'),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+
+                                    // Rediriger vers l'écran de connexion ou d'accueil
+                                    Navigator.of(context).pushReplacementNamed(
+                                        '/login'); // Ou votre route de connexion
+                                  }
+                                } catch (error) {}
+                              },
+                              child: const Text(
+                                "Supprimer",
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      Image.network(
+                        s91,
+                        width: e.width * 0.06,
+                        height: e.width * 0.06,
+                      ),
+                      Text(
+                        "Delete User",
+                        style: TextStyle(
+                          fontSize: e.width * 0.045,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
