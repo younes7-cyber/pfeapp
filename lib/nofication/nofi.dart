@@ -1,233 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:rxdart/rxdart.dart';
 
-class Nofipage extends StatefulWidget {
-  const Nofipage({super.key});
+class NotificationPage extends StatefulWidget {
+  const NotificationPage({super.key});
 
   @override
-  State<Nofipage> createState() => _NofipageState();
+  State<NotificationPage> createState() => _NotificationPageState();
 }
 
-class _NofipageState extends State<Nofipage> {
-  late List<Map<String, String>> notifications;
+class _NotificationPageState extends State<NotificationPage> {
   String _currentFilter = 'all';
+  final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
   @override
   void initState() {
     super.initState();
-    // Initialize notifications with isRead property
-    notifications = [
-      {
-        "title": "YOUNES Benslimane See YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "Younes subscribe You",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-      {
-        "title": "YOUNES Liked YOUR PODCAST",
-        "date": "12/02/2025",
-        "isRead": "false"
-      },
-    ];
-  }
-
-  List<Map<String, String>> get filteredNotifications {
-    switch (_currentFilter) {
-      case 'read':
-        return notifications
-            .where((notif) => notif["isRead"] == "true")
-            .toList();
-      case 'unread':
-        return notifications
-            .where((notif) => notif["isRead"] == "false")
-            .toList();
-      default:
-        return notifications;
-    }
-  }
-
-  void _handleNotificationTap(int index) {
-    setState(() {
-      notifications[index]["isRead"] = "true";
-    });
+    _currentFilter = 'all';
   }
 
   @override
@@ -262,6 +52,20 @@ class _NofipageState extends State<Nofipage> {
                       ),
                     ),
                     Positioned(
+                      top: a.height * 0.03,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Text(
+                          "Notifications & Reports",
+                          style: TextStyle(
+                            fontSize: a.width * 0.05,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
                       top: a.height * 0.02,
                       right: a.width * 0.05,
                       child: PopupMenuButton<String>(
@@ -280,15 +84,15 @@ class _NofipageState extends State<Nofipage> {
                             <PopupMenuEntry<String>>[
                           const PopupMenuItem<String>(
                             value: 'all',
-                            child: Text('all'),
+                            child: Text('All'),
                           ),
                           const PopupMenuItem<String>(
                             value: 'read',
-                            child: Text('read'),
+                            child: Text('Read'),
                           ),
                           const PopupMenuItem<String>(
                             value: 'unread',
-                            child: Text('unread'),
+                            child: Text('Unread'),
                           ),
                         ],
                       ),
@@ -296,44 +100,73 @@ class _NofipageState extends State<Nofipage> {
                   ],
                 ),
               ),
-              // Scrollable content
+              // Combined notifications and reports
               Expanded(
-                child: filteredNotifications.isEmpty
-                    ? Center(
+                child: StreamBuilder<List<dynamic>>(
+                  stream: _getCombinedStream(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(
                         child: Text(
-                          'No ${_currentFilter} notifications',
+                          'Error loading data: ${snapshot.error}',
+                          style: TextStyle(
+                            fontSize: a.width * 0.04,
+                            color: Colors.red,
+                          ),
+                        ),
+                      );
+                    }
+
+                    final combinedItems = snapshot.data ?? [];
+
+                    // Apply filter
+                    final filteredItems = combinedItems.where((item) {
+                      if (_currentFilter == 'read') {
+                        return item['isviewed'] == true;
+                      } else if (_currentFilter == 'unread') {
+                        return item['isviewed'] == false;
+                      }
+                      return true; // 'all' filter
+                    }).toList();
+
+                    if (filteredItems.isEmpty) {
+                      return Center(
+                        child: Text(
+                          'No $_currentFilter items',
                           style: TextStyle(
                             fontSize: a.width * 0.04,
                             color: Colors.grey,
                           ),
                         ),
-                      )
-                    : SingleChildScrollView(
-                        child: Padding(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: a.width * 0.02),
-                          child: Column(
-                            children: filteredNotifications
-                                .asMap()
-                                .entries
-                                .map((entry) {
-                              // Find the original index in the unfiltered list
-                              final int originalIndex =
-                                  notifications.indexOf(entry.value);
-                              final notif = entry.value;
-                              return GestureDetector(
-                                onTap: () =>
-                                    _handleNotificationTap(originalIndex),
-                                child: NotificationCard(
-                                  title: notif["title"]!,
-                                  date: notif["date"]!,
-                                  isRead: notif["isRead"] == "true",
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      padding: EdgeInsets.symmetric(horizontal: a.width * 0.02),
+                      itemCount: filteredItems.length,
+                      itemBuilder: (context, index) {
+                        final item = filteredItems[index];
+
+                        if (item['type'] == 'notification') {
+                          return NotificationItem(
+                            notification: item,
+                            onTap: () => _handleNotificationTap(item['id']),
+                          );
+                        } else {
+                          return ReportItem(
+                            report: item,
+                            onTap: () => _handleReportTap(
+                                context, item['id'], item['message']),
+                          );
+                        }
+                      },
+                    );
+                  },
+                ),
               ),
             ],
           ),
@@ -341,88 +174,365 @@ class _NofipageState extends State<Nofipage> {
       ),
     );
   }
+
+  Stream<List<dynamic>> _getCombinedStream() {
+    // Get notifications
+    final notificationsStream = FirebaseFirestore.instance
+        .collection('nofi')
+        .where('user2', isEqualTo: currentUserId)
+        .snapshots()
+        .asyncMap((snapshot) async {
+      final notifications = <Map<String, dynamic>>[];
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        // Get user details
+        final userQuerySnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .where('userId', isEqualTo: data['user1'])
+            .get();
+
+        // Vérifiez si la requête a retourné des documents
+        if (userQuerySnapshot.docs.isNotEmpty) {
+          // Prenez le premier document correspondant
+          final userData = userQuerySnapshot.docs.first.data();
+          notifications.add({
+            'id': doc.id,
+            'text': data['text'],
+            'date': data['date'],
+            'isviewed': data['isviewed'] ?? false,
+            'photoUrl': userData['photoUrl'] ?? '',
+            'userName':
+                '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}',
+            'userId': data['user1'],
+            'type': 'notification',
+            'timestamp':
+                data['date'] is Timestamp ? data['date'] : Timestamp.now(),
+          });
+        }
+      }
+      return notifications;
+    });
+    // Get reports
+    final reportsStream = FirebaseFirestore.instance
+        .collection('reports')
+        .where('userId', isEqualTo: currentUserId)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'id': doc.id,
+          'message': data['message'] ?? '',
+          'reportedAt': data['reportedAt'],
+          'isviewed': data['isviewed'] ?? false,
+          'type': 'report',
+          'timestamp': data['reportedAt'] is Timestamp
+              ? data['reportedAt']
+              : Timestamp.now(),
+        };
+      }).toList();
+    });
+
+    // Combine and sort both streams using the correct Rx.combineLatest2 method
+    return Rx.combineLatest2(
+      notificationsStream,
+      reportsStream,
+      (List<Map<String, dynamic>> notifications,
+          List<Map<String, dynamic>> reports) {
+        final combined = [...notifications, ...reports];
+        // Sort by timestamp in descending order
+        combined.sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
+        return combined;
+      },
+    );
+  }
+
+  void _handleNotificationTap(String notificationId) async {
+    // Update notification as viewed
+    await FirebaseFirestore.instance
+        .collection('nofi')
+        .doc(notificationId)
+        .update({'isviewed': true});
+  }
+
+  void _handleReportTap(
+      BuildContext context, String reportId, String message) async {
+    // Update report as viewed
+    await FirebaseFirestore.instance
+        .collection('reports')
+        .doc(reportId)
+        .update({'isviewed': true});
+
+    // Show full report message in dialog
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Report Details'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class NotificationCard extends StatelessWidget {
-  final String title;
-  final String date;
-  final bool isRead;
+class NotificationItem extends StatelessWidget {
+  final Map<String, dynamic> notification;
+  final VoidCallback onTap;
 
-  const NotificationCard({
+  const NotificationItem({
     super.key,
-    required this.title,
-    required this.date,
-    required this.isRead,
+    required this.notification,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-        margin: EdgeInsets.all(MediaQuery.of(context).size.width * 0.02),
+    final Size a = MediaQuery.of(context).size;
+    final bool isRead = notification['isviewed'] ?? false;
+    final String date = notification['date'] is Timestamp
+        ? _formatTimestamp(notification['date'])
+        : notification['date'].toString();
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: EdgeInsets.all(a.width * 0.02),
         decoration: BoxDecoration(
-          borderRadius:
-              BorderRadius.circular(MediaQuery.of(context).size.width * 0.05),
+          borderRadius: BorderRadius.circular(a.width * 0.05),
           border: Border.all(color: Colors.black12),
           color: isRead ? Colors.white : const Color(0xFFD9D9D9),
         ),
-        width: MediaQuery.of(context).size.width * 0.95,
-        height: MediaQuery.of(context).size.width * 0.3,
+        width: a.width * 0.95,
+        height: a.width * 0.3,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
               children: [
-                Container(
-                  width: MediaQuery.of(context).size.width * 0.02,
-                  height: MediaQuery.of(context).size.width * 0.02,
-                  margin: EdgeInsets.only(
-                      left: MediaQuery.of(context).size.width * 0.03,
-                      right: MediaQuery.of(context).size.width * 0.03),
-                  decoration: BoxDecoration(
-                    color: Colors.purple,
-                    shape: BoxShape.circle,
+                // Purple dot indicator for unread
+                if (!isRead)
+                  Container(
+                    width: a.width * 0.02,
+                    height: a.width * 0.02,
+                    margin: EdgeInsets.only(
+                      left: a.width * 0.03,
+                      right: a.width * 0.03,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: Colors.purple,
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                ),
+                if (isRead) SizedBox(width: a.width * 0.08),
+
+                // User profile image
                 Container(
-                  width: MediaQuery.of(context).size.width * 0.08,
-                  height: MediaQuery.of(context).size.width * 0.08,
-                  margin: EdgeInsets.only(
-                      right: MediaQuery.of(context).size.width * 0.03),
+                  width: a.width * 0.08,
+                  height: a.width * 0.08,
+                  margin: EdgeInsets.only(right: a.width * 0.03),
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
                   ),
                   child: ClipOval(
-                    child: Image.asset(
-                      "images/person.jpg",
-                      fit: BoxFit.cover,
-                    ),
+                    child: notification['photoUrl'] != null &&
+                            notification['photoUrl'].isNotEmpty
+                        ? Image.network(
+                            notification['photoUrl'],
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Image.asset(
+                              "images/person.jpg",
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Image.asset(
+                            "images/person.jpg",
+                            fit: BoxFit.cover,
+                          ),
                   ),
                 ),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.4,
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
+
+                // Notification content
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: a.width * 0.5,
+                      child: Text(
+                        notification['userName'] ?? 'User',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 2,
-                  ),
+                    SizedBox(height: a.width * 0.01),
+                    SizedBox(
+                      width: a.width * 0.5,
+                      child: Text(
+                        notification['text'] ?? '',
+                        style: TextStyle(
+                          fontSize: a.width * 0.035,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
+
+            // Date
             Padding(
-              padding: EdgeInsets.only(
-                  right: MediaQuery.of(context).size.width * 0.03),
+              padding: EdgeInsets.only(right: a.width * 0.03),
               child: Text(
                 date,
                 style: TextStyle(
                   color: Colors.black,
                   fontWeight: FontWeight.bold,
+                  fontSize: a.width * 0.03,
                 ),
               ),
             ),
           ],
-        ));
+        ),
+      ),
+    );
+  }
+
+  String _formatTimestamp(Timestamp timestamp) {
+    final date = timestamp.toDate();
+    return '${date.day}/${date.month}/${date.year}';
+  }
+}
+
+class ReportItem extends StatelessWidget {
+  final Map<String, dynamic> report;
+  final VoidCallback onTap;
+
+  const ReportItem({
+    super.key,
+    required this.report,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Size a = MediaQuery.of(context).size;
+    final bool isRead = report['isviewed'] ?? false;
+    final String date = report['reportedAt'] is Timestamp
+        ? _formatTimestamp(report['reportedAt'])
+        : report['reportedAt'].toString();
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: EdgeInsets.all(a.width * 0.02),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(a.width * 0.05),
+          border: Border.all(color: Colors.black12),
+          color: isRead ? Colors.white : const Color(0xFFD9D9D9),
+        ),
+        width: a.width * 0.95,
+        height: a.width * 0.3,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                // Purple dot indicator for unread
+                if (!isRead)
+                  Container(
+                    width: a.width * 0.02,
+                    height: a.width * 0.02,
+                    margin: EdgeInsets.only(
+                      left: a.width * 0.03,
+                      right: a.width * 0.03,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: Colors.purple,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                if (isRead) SizedBox(width: a.width * 0.08),
+
+                // Report icon
+                Container(
+                  width: a.width * 0.08,
+                  height: a.width * 0.08,
+                  margin: EdgeInsets.only(right: a.width * 0.03),
+                  decoration: BoxDecoration(
+                    color: Colors.red[100],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.report_problem_outlined,
+                    color: Colors.red,
+                    size: a.width * 0.05,
+                  ),
+                ),
+
+                // Report content
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: a.width * 0.5,
+                      child: Text(
+                        'Report Notice',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red[700],
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    SizedBox(height: a.width * 0.01),
+                    SizedBox(
+                      width: a.width * 0.5,
+                      child: Text(
+                        report['message'] ?? '',
+                        style: TextStyle(
+                          fontSize: a.width * 0.035,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            // Date
+            Padding(
+              padding: EdgeInsets.only(right: a.width * 0.03),
+              child: Text(
+                date,
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                  fontSize: a.width * 0.03,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatTimestamp(Timestamp timestamp) {
+    final date = timestamp.toDate();
+    return '${date.day}/${date.month}/${date.year}';
   }
 }

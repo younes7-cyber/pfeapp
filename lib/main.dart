@@ -93,7 +93,7 @@ class _MyAppState extends State<MyApp> {
         '/complete': (context) => const Completepage(),
         '/pass': (context) => const Passpage(),
         '/podly': (context) => const Podlypage(),
-        '/nofi': (context) => const Nofipage(),
+        '/nofi': (context) => const NotificationPage(),
         '/seeall': (context) => const SeeAllpage(),
         '/channel': (context) => const Channelpage(),
         '/play': (context) => const Playlistpage(),

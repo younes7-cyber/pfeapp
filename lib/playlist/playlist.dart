@@ -415,6 +415,13 @@ class _PlaylistpageState extends State<Playlistpage>
           'idfollowing': playUserId,
           'dateCreation': Timestamp.now(),
         });
+        await FirebaseFirestore.instance.collection('nofi').add({
+          'user1': user,
+          'user2': playUserId,
+          'text': 'Subscribe You',
+          'date': Timestamp.now(),
+          'isviewed': false,
+        });
 
         // Vérification du channel en cherchant où userId == podcastUserId
         final QuerySnapshot channelQuery = await FirebaseFirestore.instance
@@ -569,6 +576,13 @@ class _PlaylistpageState extends State<Playlistpage>
         'iduser': user,
         'idplay': idplay,
         'dateCreation': FieldValue.serverTimestamp(),
+      });
+      await FirebaseFirestore.instance.collection('nofi').add({
+        'user1': FirebaseAuth.instance.currentUser?.uid,
+        'user2': playlist[0]["userId"],
+        'text': ' Save Your Playlist',
+        'date': Timestamp.now(),
+        'isviewed': false,
       });
       await FirebaseFirestore.instance
           .collection('playlist')

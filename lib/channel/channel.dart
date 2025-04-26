@@ -278,7 +278,13 @@ class _ChannelpageState extends State<Channelpage>
           'idfollowing': podcastUserId,
           'dateCreation': Timestamp.now(),
         });
-
+        await FirebaseFirestore.instance.collection('nofi').add({
+          'user1': user,
+          'user2': podcastUserId,
+          'text': 'Subscribe You',
+          'date': Timestamp.now(),
+          'isviewed': false,
+        });
         // Vérification du channel en cherchant où userId == podcastUserId
         final QuerySnapshot channelQuery = await FirebaseFirestore.instance
             .collection('channels')

@@ -895,6 +895,7 @@ class _PodlypageState extends State<Podlypage> {
       await fetchfeuteredppodcast();
       await fetchRecommendedPodcasts();
       await fetchTrendingPodcasts();
+
       // Ajouter un listener pour détecter les changements de scroll
       _pageController.addListener(() {
         int next = _pageController.page!.round();

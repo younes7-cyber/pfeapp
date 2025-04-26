@@ -638,6 +638,13 @@ class _ListenpageState extends State<Listenpage>
     await FirebaseFirestore.instance.collection('podcasts').doc(idpod).update({
       'comments': FieldValue.increment(1),
     });
+    await FirebaseFirestore.instance.collection('nofi').add({
+      'user1': FirebaseAuth.instance.currentUser?.uid,
+      'user2': podcast[0]["idUser"],
+      'text': ' replyed Comment',
+      'date': Timestamp.now(),
+      'isviewed': false,
+    });
     setState(() {});
   }
 
@@ -1119,6 +1126,13 @@ class _ListenpageState extends State<Listenpage>
         'text': _commentController.text,
         'date': Timestamp.now(),
       });
+      await FirebaseFirestore.instance.collection('nofi').add({
+        'user1': FirebaseAuth.instance.currentUser?.uid,
+        'user2': podcast[0]["idUser"],
+        'text': 'Comment For Your Podcast',
+        'date': Timestamp.now(),
+        'isviewed': false,
+      });
       await FirebaseFirestore.instance
           .collection('podcasts')
           .doc(idpod)
@@ -1171,6 +1185,13 @@ class _ListenpageState extends State<Listenpage>
           .doc(idpod)
           .update({
         'comments': FieldValue.increment(1),
+      });
+      await FirebaseFirestore.instance.collection('nofi').add({
+        'user1': FirebaseAuth.instance.currentUser?.uid,
+        'user2': podcast[0]["idUser"],
+        'text': ' replyed Comment',
+        'date': Timestamp.now(),
+        'isviewed': false,
       });
 
       _commentController.clear();
@@ -1331,6 +1352,13 @@ class _ListenpageState extends State<Listenpage>
         'idpod': idpod,
         'dateCreation': FieldValue.serverTimestamp(),
       });
+      await FirebaseFirestore.instance.collection('nofi').add({
+        'user1': currentUser,
+        'user2': podcast[0]["idUser"],
+        'text': 'Liked Your Podcast',
+        'date': Timestamp.now(),
+        'isviewed': false,
+      });
       await FirebaseFirestore.instance
           .collection('podcasts')
           .doc(idpod)
@@ -1394,6 +1422,13 @@ class _ListenpageState extends State<Listenpage>
         'idpod': idpod,
         'dateCreation': FieldValue.serverTimestamp(),
       });
+      await FirebaseFirestore.instance.collection('nofi').add({
+        'user1': FirebaseAuth.instance.currentUser?.uid,
+        'user2': podcast[0]["idUser"],
+        'text': ' Save Your Podcast',
+        'date': Timestamp.now(),
+        'isviewed': false,
+      });
       await FirebaseFirestore.instance
           .collection('podcasts')
           .doc(idpod)
@@ -1436,6 +1471,13 @@ class _ListenpageState extends State<Listenpage>
         'iduser': currentUser,
         'idpod': idpod,
         'dateCreation': FieldValue.serverTimestamp(),
+      });
+      await FirebaseFirestore.instance.collection('nofi').add({
+        'user1': currentUser,
+        'user2': podcast[0]["idUser"],
+        'text': 'inliked Your Podcast',
+        'date': Timestamp.now(),
+        'isviewed': false,
       });
       await FirebaseFirestore.instance
           .collection('podcasts')
@@ -1559,7 +1601,13 @@ class _ListenpageState extends State<Listenpage>
         'timevue': FieldValue.serverTimestamp(),
         'percent': percent, // ✅ Ajout ici
       });
-
+      await FirebaseFirestore.instance.collection('nofi').add({
+        'user1': FirebaseAuth.instance.currentUser?.uid,
+        'user2': podcast[0]["idUser"],
+        'text': ' See Your Podcast',
+        'date': Timestamp.now(),
+        'isviewed': false,
+      });
       await FirebaseFirestore.instance
           .collection('podcasts')
           .doc(idpod)
