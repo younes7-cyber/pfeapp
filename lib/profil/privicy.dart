@@ -265,13 +265,6 @@ class _PrivipageState extends State<Privipage> {
                           ),
                           actions: [
                             TextButton(
-                              onPressed: () {
-                                Navigator.of(context)
-                                    .pop(); // Fermer la boîte de dialogue
-                              },
-                              child: const Text("Annuler"),
-                            ),
-                            TextButton(
                               onPressed: () async {
                                 Navigator.of(context)
                                     .pop(); // Fermer la boîte de dialogue
@@ -296,44 +289,250 @@ class _PrivipageState extends State<Privipage> {
                                 );
 
                                 try {
-                                  // Obtenir l'utilisateur actuel
+                                  // Récupérer l'utilisateur actuel et son ID
                                   final currentUser =
                                       FirebaseAuth.instance.currentUser;
+                                  final currentUserId = currentUser?.uid;
 
-                                  if (currentUser != null) {
-                                    final userId = currentUser.uid;
-
-                                    // 1. Supprimer les données utilisateur de Firestore en utilisant where
-                                    await FirebaseFirestore.instance
-                                        .collection('users')
-                                        .where('userId', isEqualTo: userId)
-                                        .get()
-                                        .then((snapshot) {
-                                      for (DocumentSnapshot ds
-                                          in snapshot.docs) {
-                                        ds.reference.delete();
-                                      }
-                                    });
-
-                                    // 2. Supprimer le compte utilisateur de Firebase Auth
-                                    await currentUser.delete();
-
-                                    // Fermer l'indicateur de chargement
-
-                                    // Afficher un message de confirmation
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content:
-                                            Text('Compte supprimé avec succès'),
-                                        backgroundColor: Colors.green,
-                                      ),
-                                    );
-
-                                    // Rediriger vers l'écran de connexion ou d'accueil
-                                    Navigator.of(context).pushReplacementNamed(
-                                        '/login'); // Ou votre route de connexion
+                                  if (currentUserId == null) {
+                                    throw Exception(
+                                        "Aucun utilisateur connecté");
                                   }
-                                } catch (error) {}
+
+                                  // Firestore instance
+                                  final firestore = FirebaseFirestore.instance;
+
+                                  // 1. Supprimer l'utilisateur de la collection users
+                                  await firestore
+                                      .collection('users')
+                                      .where('userId', isEqualTo: currentUserId)
+                                      .get()
+                                      .then((snapshot) {
+                                    for (DocumentSnapshot ds in snapshot.docs) {
+                                      ds.reference.delete();
+                                    }
+                                  });
+
+                                  // 2. Supprimer les channels créés par l'utilisateur
+                                  final channelsToDelete = await firestore
+                                      .collection('channels')
+                                      .where('userId', isEqualTo: currentUserId)
+                                      .get();
+
+                                  for (var doc in channelsToDelete.docs) {
+                                    await doc.reference.delete();
+                                  }
+
+                                  final followsAsFollower = await firestore
+                                      .collection('follow')
+                                      .where('idfollowers',
+                                          isEqualTo: currentUserId)
+                                      .get();
+
+// Pour chaque personne suivie, décrémenter son compteur de followers dans channels
+                                  for (var doc in followsAsFollower.docs) {
+                                    // Récupérer l'ID de l'utilisateur suivi
+                                    final idFollowing =
+                                        doc.data()['idfollowing'];
+
+                                    // Rechercher le document channel correspondant
+                                    final channelQuery = await firestore
+                                        .collection('channels')
+                                        .where('userId', isEqualTo: idFollowing)
+                                        .get();
+
+                                    // Mettre à jour le compteur de followers pour chaque channel trouvé
+                                    for (var channelDoc in channelQuery.docs) {
+                                      // Récupérer le compteur actuel de followers
+                                      final currentFollowers =
+                                          channelDoc.data()['followers'] ?? 0;
+
+                                      // Décrémenter le compteur (en s'assurant qu'il ne devient pas négatif)
+                                      final newFollowers = currentFollowers > 0
+                                          ? currentFollowers - 1
+                                          : 0;
+
+                                      // Mettre à jour le document
+                                      await channelDoc.reference
+                                          .update({'followers': newFollowers});
+                                    }
+
+                                    // Supprimer la relation follow
+                                    await doc.reference.delete();
+                                  }
+                                  final followsAsAsFollowing = await firestore
+                                      .collection('follow')
+                                      .where('idfollowing',
+                                          isEqualTo: currentUserId)
+                                      .get();
+
+// Pour chaque personne suivie, décrémenter son compteur de followers dans channels
+                                  for (var doc in followsAsAsFollowing.docs) {
+                                    // Récupérer l'ID de l'utilisateur suivi
+                                    final idFollowing =
+                                        doc.data()['idfollowers'];
+
+                                    // Rechercher le document channel correspondant
+                                    final channelQuery = await firestore
+                                        .collection('channels')
+                                        .where('userId', isEqualTo: idFollowing)
+                                        .get();
+
+                                    // Mettre à jour le compteur de followers pour chaque channel trouvé
+                                    for (var channelDoc in channelQuery.docs) {
+                                      // Récupérer le compteur actuel de followers
+                                      final currentFollowers =
+                                          channelDoc.data()['following'] ?? 0;
+
+                                      // Décrémenter le compteur (en s'assurant qu'il ne devient pas négatif)
+                                      final newFollowers = currentFollowers > 0
+                                          ? currentFollowers - 1
+                                          : 0;
+
+                                      // Mettre à jour le document
+                                      await channelDoc.reference
+                                          .update({'following': newFollowers});
+                                    }
+
+                                    // Supprimer la relation follow
+                                    await doc.reference.delete();
+                                  }
+                                  // 3. Gérer les podcasts et références associées
+                                  final podcastsToDelete = await firestore
+                                      .collection('podcasts')
+                                      .where('idUser', isEqualTo: currentUserId)
+                                      .get();
+
+                                  for (var podcastDoc
+                                      in podcastsToDelete.docs) {
+                                    final podcastId = podcastDoc.id;
+
+                                    // Récupérer les références dans playinpod
+                                    final playInPodRefs = await firestore
+                                        .collection('playinpod')
+                                        .where('podcastId',
+                                            isEqualTo: podcastId)
+                                        .get();
+
+                                    // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
+                                    for (var doc in playInPodRefs.docs) {
+                                      // Récupérer l'ID de la playlist
+                                      final playlistId =
+                                          doc.data()['playlistId'];
+
+                                      if (playlistId != null) {
+                                        // Récupérer la playlist
+                                        final playlistDoc = await firestore
+                                            .collection('playlist')
+                                            .doc(playlistId)
+                                            .get();
+
+                                        if (playlistDoc.exists) {
+                                          // Récupérer le compteur actuel de podcasts
+                                          final currentPodcastCount =
+                                              playlistDoc.data()?['podcast'] ??
+                                                  0;
+
+                                          // Décrémenter le compteur (en s'assurant qu'il ne devient pas négatif)
+                                          final newPodcastCount =
+                                              currentPodcastCount > 0
+                                                  ? currentPodcastCount - 1
+                                                  : 0;
+
+                                          // Mettre à jour le document
+                                          await playlistDoc.reference.update(
+                                              {'podcast': newPodcastCount});
+                                        }
+                                      }
+
+                                      // Supprimer la référence dans playinpod
+                                      await doc.reference.delete();
+                                    }
+
+                                    // Supprimer le podcast lui-même
+                                    await podcastDoc.reference.delete();
+                                  }
+                                  // Supprimer les références dans myplaylist pour cet utilisateur
+                                  final myPlaylistRefs = await firestore
+                                      .collection('myplaylist')
+                                      .where('iduser', isEqualTo: currentUserId)
+                                      .get();
+
+                                  for (var doc in myPlaylistRefs.docs) {
+                                    await doc.reference.delete();
+                                  }
+
+                                  // 4. Gérer les playlists et références associées
+                                  // 3. Gérer les podcasts et références associées
+                                  final playlistToDelete = await firestore
+                                      .collection('playlist')
+                                      .where('userId', isEqualTo: currentUserId)
+                                      .get();
+
+                                  for (var podcastDoc
+                                      in playlistToDelete.docs) {
+                                    final podcastId = podcastDoc.id;
+
+                                    // Récupérer les références dans playinpod
+                                    final playInPodRefs = await firestore
+                                        .collection('playinpod')
+                                        .where('playlistId',
+                                            isEqualTo: podcastId)
+                                        .get();
+
+                                    // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
+                                    for (var doc in playInPodRefs.docs) {
+                                      // Supprimer la référence dans playinpod
+                                      await doc.reference.delete();
+                                    }
+
+                                    // Supprimer le podcast lui-même
+                                    await podcastDoc.reference.delete();
+                                  }
+
+                                  // Supprimer les références dans mesplaylist pour cet utilisateur
+                                  final mesPlaylistRefs = await firestore
+                                      .collection('mesplaylist')
+                                      .where('iduser', isEqualTo: currentUserId)
+                                      .get();
+
+                                  for (var doc in mesPlaylistRefs.docs) {
+                                    await doc.reference.delete();
+                                  }
+
+                                  // Enfin, supprimer le compte utilisateur de Firebase Auth
+                                  await currentUser?.delete();
+
+                                  // Fermer la boîte de dialogue de chargement
+                                  Navigator.of(context).pop();
+
+                                  // Rediriger vers l'écran de connexion après la suppression réussie
+                                  Navigator.pushNamedAndRemoveUntil(
+                                      context, '/login', (route) => false);
+
+                                  // Afficher un message de confirmation
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          "Votre compte a été supprimé avec succès"),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                } catch (e) {
+                                  // Fermer la boîte de dialogue de chargement
+                                  Navigator.of(context).pop();
+
+                                  // Afficher un message d'erreur
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          "Erreur lors de la suppression du compte: ${e.toString()}"),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+
+                                  print("Erreur de suppression du compte: $e");
+                                }
                               },
                               child: const Text(
                                 "Supprimer",

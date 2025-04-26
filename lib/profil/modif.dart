@@ -18,7 +18,7 @@ class Modifpage extends StatefulWidget {
 
 class _ModifpageState extends State<Modifpage> {
   late int n = 1;
-  late int? q;
+  late int q = 1;
   final supabase1 = Supabase.instance.client;
   final FirebaseFirestore firestore1 = FirebaseFirestore.instance;
   Future<bool> _requestStoragePermission1() async {
@@ -506,284 +506,288 @@ class _ModifpageState extends State<Modifpage> {
           decoration: BoxDecoration(color: Colors.white),
           child: isLoading
               ? Center(child: Text(""))
-              : Stack(children: [
-                  if (q == 2) ...[
-                    Positioned(
-                      top: e.height * 0.01,
-                      left: e.width * 0.03,
-                      child: IconButton(
-                        onPressed: () {
-                          Navigator.pushNamedAndRemoveUntil(
-                              context, '/podly', (route) => false,
-                              arguments: {'selectedIndex': 4});
-                        },
-                        icon: Image.network(
-                          s18,
-                          width: e.width * 0.07,
-                          height: e.width * 0.07,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                        top: e.height * 0.02,
-                        left: e.width * 0.15,
-                        child: Text(
-                          "Profile",
-                          style: TextStyle(
-                              fontSize: e.width * 0.06,
-                              fontWeight: FontWeight.bold),
-                        )),
-                    Positioned(
-                        top: e.height * 0.08,
-                        left: e.width * 0.38,
-                        child: Container(
-                          width: e.width * 0.25,
-                          height: e.width * 0.25,
-                          decoration: BoxDecoration(
-                              borderRadius:
-                                  BorderRadius.circular(e.width * 0.2)),
-                          child: ClipOval(
-                            child: Image.network(
-                              user[0]["photoUrl"],
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        )),
-                    Positioned(
-                        top: e.height * 0.166,
-                        left: e.width * 0.55,
-                        child: Container(
-                          width: e.width * 0.09,
-                          height: e.width * 0.09,
-                          decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius:
-                                  BorderRadius.circular(e.width * 0.2)),
-                        )),
-                    Positioned(
-                        top: e.height * 0.171,
-                        left: e.width * 0.56,
-                        child: Container(
+              : Stack(
+                  children: [
+                    if (q == 2) ...[
+                      Positioned(
+                        top: e.height * 0.01,
+                        left: e.width * 0.03,
+                        child: IconButton(
+                          onPressed: () {
+                            Navigator.pushNamedAndRemoveUntil(
+                                context, '/podly', (route) => false,
+                                arguments: {'selectedIndex': 4});
+                          },
+                          icon: Image.network(
+                            s18,
                             width: e.width * 0.07,
                             height: e.width * 0.07,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                          top: e.height * 0.02,
+                          left: e.width * 0.15,
+                          child: Text(
+                            "Profile",
+                            style: TextStyle(
+                                fontSize: e.width * 0.06,
+                                fontWeight: FontWeight.bold),
+                          )),
+                      Positioned(
+                          top: e.height * 0.08,
+                          left: e.width * 0.38,
+                          child: Container(
+                            width: e.width * 0.25,
+                            height: e.width * 0.25,
                             decoration: BoxDecoration(
                                 borderRadius:
                                     BorderRadius.circular(e.width * 0.2)),
-                            child: GestureDetector(
-                              onTap: _pickAndUploadImage,
-                              child: Image.network(s26),
-                            ))),
-                    Positioned(
-                        top: e.height * 0.25,
-                        left: e.width * 0.07,
-                        right: e.width * 0.07,
-                        child: Container(
-                          width: e.width * 0.8,
-                          height: e.height * 0.002, // Épaisseur de la ligne
-                          color: Colors.grey[400],
-                        )),
-                    Positioned(
-                        top: e.height * 0.3,
-                        left: e.width * 0.07,
-                        child: Text(
-                          "Profile Information",
-                          style: TextStyle(
-                              fontSize: e.width * 0.05,
-                              fontWeight: FontWeight.bold),
-                        )),
-                    Positioned(
+                            child: ClipOval(
+                              child: Image.network(
+                                user[0]["photoUrl"],
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          )),
+                      Positioned(
+                          top: e.height * 0.166,
+                          left: e.width * 0.55,
+                          child: Container(
+                            width: e.width * 0.09,
+                            height: e.width * 0.09,
+                            decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius:
+                                    BorderRadius.circular(e.width * 0.2)),
+                          )),
+                      Positioned(
+                          top: e.height * 0.171,
+                          left: e.width * 0.56,
+                          child: Container(
+                              width: e.width * 0.07,
+                              height: e.width * 0.07,
+                              decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(e.width * 0.2)),
+                              child: GestureDetector(
+                                onTap: _pickAndUploadImage,
+                                child: Image.network(s26),
+                              ))),
+                      Positioned(
+                          top: e.height * 0.25,
+                          left: e.width * 0.07,
+                          right: e.width * 0.07,
+                          child: Container(
+                            width: e.width * 0.8,
+                            height: e.height * 0.002, // Épaisseur de la ligne
+                            color: Colors.grey[400],
+                          )),
+                      Positioned(
+                          top: e.height * 0.3,
+                          left: e.width * 0.07,
+                          child: Text(
+                            "Profile Information",
+                            style: TextStyle(
+                                fontSize: e.width * 0.05,
+                                fontWeight: FontWeight.bold),
+                          )),
+                      Positioned(
+                          top: e.height * 0.37,
+                          left: e.width * 0.07,
+                          child: Text(
+                            "Username",
+                            style: TextStyle(
+                                fontSize: e.width * 0.04,
+                                color: Colors.grey,
+                                fontWeight: FontWeight.bold),
+                          )),
+                      Positioned(
                         top: e.height * 0.37,
-                        left: e.width * 0.07,
-                        child: Text(
-                          "Username",
-                          style: TextStyle(
+                        left: e.width * 0.3,
+                        child: Container(
+                          width: e.width * 0.55,
+                          height: e.height * 0.1,
+                          child: Text(
+                            "${user[0]["firstName"]} ${user[0]["lastName"]}",
+                            style: TextStyle(
                               fontSize: e.width * 0.04,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold),
-                        )),
-                    Positioned(
-                      top: e.height * 0.37,
-                      left: e.width * 0.3,
-                      child: Container(
-                        width: e.width * 0.55,
-                        height: e.height * 0.1,
-                        child: Text(
-                          "${user[0]["firstName"]} ${user[0]["lastName"]}",
-                          style: TextStyle(
-                            fontSize: e.width * 0.04,
+                            ),
+                            maxLines: 2,
                           ),
-                          maxLines: 2,
                         ),
                       ),
-                    ),
-                    Positioned(
-                      top: e.height * 0.355,
-                      right: e.width * 0.01,
-                      child: TextButton(
-                          onPressed: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/modif1',
-                              arguments: {
-                                'n': 2
-                              }, // Passe la valeur de r comme argument
-                            );
-                          },
+                      Positioned(
+                        top: e.height * 0.355,
+                        right: e.width * 0.01,
+                        child: TextButton(
+                            onPressed: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/modif1',
+                                arguments: {
+                                  'n': 2
+                                }, // Passe la valeur de r comme argument
+                              );
+                            },
+                            child: Text(
+                              ">",
+                              style: TextStyle(
+                                  fontSize: e.width * 0.06,
+                                  color: Colors.black),
+                            )),
+                      ),
+                      Positioned(
+                          top: e.height * 0.45,
+                          left: e.width * 0.07,
+                          right: e.width * 0.07,
+                          child: Container(
+                            width: e.width * 0.8,
+                            height: e.height * 0.002, // Épaisseur de la ligne
+                            color: Colors.grey[400],
+                          )),
+                      Positioned(
+                          top: e.height * 0.47,
+                          left: e.width * 0.07,
                           child: Text(
-                            ">",
+                            "Personal Information",
                             style: TextStyle(
-                                fontSize: e.width * 0.06, color: Colors.black),
+                                fontSize: e.width * 0.05,
+                                fontWeight: FontWeight.bold),
                           )),
-                    ),
-                    Positioned(
-                        top: e.height * 0.45,
-                        left: e.width * 0.07,
-                        right: e.width * 0.07,
-                        child: Container(
-                          width: e.width * 0.8,
-                          height: e.height * 0.002, // Épaisseur de la ligne
-                          color: Colors.grey[400],
-                        )),
-                    Positioned(
-                        top: e.height * 0.47,
-                        left: e.width * 0.07,
-                        child: Text(
-                          "Personal Information",
-                          style: TextStyle(
-                              fontSize: e.width * 0.05,
-                              fontWeight: FontWeight.bold),
-                        )),
-                    Positioned(
-                        top: e.height * 0.54,
-                        left: e.width * 0.07,
-                        child: Text(
-                          "User Id",
-                          style: TextStyle(
-                              fontSize: e.width * 0.04,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold),
-                        )),
-                    Positioned(
-                        top: e.height * 0.54,
-                        left: e.width * 0.3,
-                        child: Container(
-                            width: e.width * 0.55,
-                            height: e.height * 0.1,
-                            child: Text(
-                              user[0]["userId"],
-                              style: TextStyle(
-                                fontSize: e.width * 0.04,
-                              ),
-                              maxLines: 2,
-                            ))),
-                    Positioned(
-                      top: e.height * 0.52,
-                      right: e.width * 0.01,
-                      child: TextButton(
-                          onPressed: () {},
-                          child: Image.asset(
-                            "images/copier.png",
-                            width: e.width * 0.05,
-                            height: e.height * 0.05,
-                          )),
-                    ),
-                    Positioned(
-                        top: e.height * 0.6,
-                        left: e.width * 0.07,
-                        child: Text(
-                          "Email",
-                          style: TextStyle(
-                              fontSize: e.width * 0.04,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold),
-                        )),
-                    Positioned(
-                        top: e.height * 0.6,
-                        left: e.width * 0.3,
-                        child: Container(
-                            width: e.width * 0.55,
-                            height: e.height * 0.1,
-                            child: Text(
-                              user[0]["email"],
-                              style: TextStyle(
-                                fontSize: e.width * 0.04,
-                              ),
-                              maxLines: 2,
-                            ))),
-                    Positioned(
-                      top: e.height * 0.585,
-                      right: e.width * 0.01,
-                      child: TextButton(
-                          onPressed: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/modif1',
-                              arguments: {
-                                'n': 3
-                              }, // Passe la valeur de r comme argument
-                            );
-                          },
+                      Positioned(
+                          top: e.height * 0.54,
+                          left: e.width * 0.07,
                           child: Text(
-                            ">",
+                            "User Id",
                             style: TextStyle(
-                                fontSize: e.width * 0.06, color: Colors.black),
+                                fontSize: e.width * 0.04,
+                                color: Colors.grey,
+                                fontWeight: FontWeight.bold),
                           )),
-                    ),
-                    Positioned(
-                        top: e.height * 0.72,
-                        left: e.width * 0.07,
-                        child: Text(
-                          "Country",
-                          style: TextStyle(
-                              fontSize: e.width * 0.04,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold),
-                        )),
-                    Positioned(
-                        top: e.height * 0.72,
-                        left: e.width * 0.3,
-                        child: Container(
-                            width: e.width * 0.55,
-                            height: e.height * 0.1,
-                            child: Text(
-                              user[0]["country"],
-                              style: TextStyle(
+                      Positioned(
+                          top: e.height * 0.54,
+                          left: e.width * 0.3,
+                          child: Container(
+                              width: e.width * 0.55,
+                              height: e.height * 0.1,
+                              child: Text(
+                                user[0]["userId"],
+                                style: TextStyle(
+                                  fontSize: e.width * 0.04,
+                                ),
+                                maxLines: 2,
+                              ))),
+                      Positioned(
+                        top: e.height * 0.52,
+                        right: e.width * 0.01,
+                        child: TextButton(
+                            onPressed: () {},
+                            child: Image.asset(
+                              "images/copier.png",
+                              width: e.width * 0.05,
+                              height: e.height * 0.05,
+                            )),
+                      ),
+                      Positioned(
+                          top: e.height * 0.6,
+                          left: e.width * 0.07,
+                          child: Text(
+                            "Email",
+                            style: TextStyle(
                                 fontSize: e.width * 0.04,
-                              ),
-                              maxLines: 2,
-                            ))),
-                    Positioned(
-                        top: e.height * 0.78,
-                        left: e.width * 0.07,
-                        child: Text(
-                          "Age",
-                          style: TextStyle(
-                              fontSize: e.width * 0.04,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold),
-                        )),
-                    Positioned(
-                        top: e.height * 0.78,
-                        left: e.width * 0.3,
-                        child: Container(
-                            width: e.width * 0.55,
-                            height: e.height * 0.1,
+                                color: Colors.grey,
+                                fontWeight: FontWeight.bold),
+                          )),
+                      Positioned(
+                          top: e.height * 0.6,
+                          left: e.width * 0.3,
+                          child: Container(
+                              width: e.width * 0.55,
+                              height: e.height * 0.1,
+                              child: Text(
+                                user[0]["email"],
+                                style: TextStyle(
+                                  fontSize: e.width * 0.04,
+                                ),
+                                maxLines: 2,
+                              ))),
+                      Positioned(
+                        top: e.height * 0.585,
+                        right: e.width * 0.01,
+                        child: TextButton(
+                            onPressed: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/modif1',
+                                arguments: {
+                                  'n': 3
+                                }, // Passe la valeur de r comme argument
+                              );
+                            },
                             child: Text(
-                              user[0]["age"].toString(),
+                              ">",
                               style: TextStyle(
+                                  fontSize: e.width * 0.06,
+                                  color: Colors.black),
+                            )),
+                      ),
+                      Positioned(
+                          top: e.height * 0.72,
+                          left: e.width * 0.07,
+                          child: Text(
+                            "Country",
+                            style: TextStyle(
                                 fontSize: e.width * 0.04,
-                              ),
-                              maxLines: 2,
-                            ))),
-                    Positioned(
-                        top: e.height * 0.83,
-                        left: e.width * 0.07,
-                        right: e.width * 0.07,
-                        child: Container(
-                          width: e.width * 0.8,
-                          height: e.height * 0.002, // Épaisseur de la ligne
-                          color: Colors.grey[400],
-                        )),
+                                color: Colors.grey,
+                                fontWeight: FontWeight.bold),
+                          )),
+                      Positioned(
+                          top: e.height * 0.72,
+                          left: e.width * 0.3,
+                          child: Container(
+                              width: e.width * 0.55,
+                              height: e.height * 0.1,
+                              child: Text(
+                                user[0]["country"],
+                                style: TextStyle(
+                                  fontSize: e.width * 0.04,
+                                ),
+                                maxLines: 2,
+                              ))),
+                      Positioned(
+                          top: e.height * 0.78,
+                          left: e.width * 0.07,
+                          child: Text(
+                            "Age",
+                            style: TextStyle(
+                                fontSize: e.width * 0.04,
+                                color: Colors.grey,
+                                fontWeight: FontWeight.bold),
+                          )),
+                      Positioned(
+                          top: e.height * 0.78,
+                          left: e.width * 0.3,
+                          child: Container(
+                              width: e.width * 0.55,
+                              height: e.height * 0.1,
+                              child: Text(
+                                user[0]["age"].toString(),
+                                style: TextStyle(
+                                  fontSize: e.width * 0.04,
+                                ),
+                                maxLines: 2,
+                              ))),
+                      Positioned(
+                          top: e.height * 0.83,
+                          left: e.width * 0.07,
+                          right: e.width * 0.07,
+                          child: Container(
+                            width: e.width * 0.8,
+                            height: e.height * 0.002, // Épaisseur de la ligne
+                            color: Colors.grey[400],
+                          )),
+                    ],
                     if (q == 3) ...[
                       Positioned(
                         top: e.height * 0.01,
@@ -959,22 +963,386 @@ class _ModifpageState extends State<Modifpage> {
                       Positioned(
                         top: e.height * 0.6,
                         left: e.width * 0.04,
-                        child: Image.asset(
-                          "images/delete.png",
-                          width: e.width * 0.06,
-                          height: e.width * 0.06,
-                        ),
-                      ),
-                      Positioned(
-                        top: e.height * 0.6,
-                        left: e.width * 0.15,
-                        child: Text(
-                          "Delete Channel",
-                          style: TextStyle(
-                              fontSize: e.width * 0.045,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red),
-                        ),
+                        child: Container(
+                            child: GestureDetector(
+                                onTap: () {
+                                  // Afficher une boîte de dialogue de confirmation
+                                  showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        title:
+                                            const Text("Supprimer le compte"),
+                                        content: const Text(
+                                          "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible et toutes vos données seront perdues.",
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () async {
+                                              Navigator.of(context)
+                                                  .pop(); // Fermer la boîte de dialogue
+
+                                              // Afficher un indicateur de chargement
+                                              showDialog(
+                                                context: context,
+                                                barrierDismissible: false,
+                                                builder:
+                                                    (BuildContext context) {
+                                                  return const AlertDialog(
+                                                    content: Column(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        CircularProgressIndicator(),
+                                                        SizedBox(height: 16),
+                                                        Text(
+                                                            "Suppression du channel en cours..."),
+                                                      ],
+                                                    ),
+                                                  );
+                                                },
+                                              );
+
+                                              try {
+                                                // Récupérer l'utilisateur actuel et son ID
+                                                final currentUser = FirebaseAuth
+                                                    .instance.currentUser;
+                                                final currentUserId =
+                                                    currentUser?.uid;
+
+                                                if (currentUserId == null) {
+                                                  throw Exception(
+                                                      "Aucun utilisateur connecté");
+                                                }
+
+                                                // Firestore instance
+                                                final firestore =
+                                                    FirebaseFirestore.instance;
+
+                                                // 2. Supprimer les channels créés par l'utilisateur
+                                                final channelsToDelete =
+                                                    await firestore
+                                                        .collection('channels')
+                                                        .where('userId',
+                                                            isEqualTo:
+                                                                currentUserId)
+                                                        .get();
+
+                                                for (var doc
+                                                    in channelsToDelete.docs) {
+                                                  await doc.reference.delete();
+                                                }
+
+                                                final followsAsFollower =
+                                                    await firestore
+                                                        .collection('follow')
+                                                        .where('idfollowers',
+                                                            isEqualTo:
+                                                                currentUserId)
+                                                        .get();
+
+// Pour chaque personne suivie, décrémenter son compteur de followers dans channels
+                                                for (var doc
+                                                    in followsAsFollower.docs) {
+                                                  // Récupérer l'ID de l'utilisateur suivi
+                                                  final idFollowing =
+                                                      doc.data()['idfollowing'];
+
+                                                  // Rechercher le document channel correspondant
+                                                  final channelQuery =
+                                                      await firestore
+                                                          .collection(
+                                                              'channels')
+                                                          .where('userId',
+                                                              isEqualTo:
+                                                                  idFollowing)
+                                                          .get();
+
+                                                  // Mettre à jour le compteur de followers pour chaque channel trouvé
+                                                  for (var channelDoc
+                                                      in channelQuery.docs) {
+                                                    // Récupérer le compteur actuel de followers
+                                                    final currentFollowers =
+                                                        channelDoc.data()[
+                                                                'followers'] ??
+                                                            0;
+
+                                                    // Décrémenter le compteur (en s'assurant qu'il ne devient pas négatif)
+                                                    final newFollowers =
+                                                        currentFollowers > 0
+                                                            ? currentFollowers -
+                                                                1
+                                                            : 0;
+
+                                                    // Mettre à jour le document
+                                                    await channelDoc.reference
+                                                        .update({
+                                                      'followers': newFollowers
+                                                    });
+                                                  }
+
+                                                  // Supprimer la relation follow
+                                                  await doc.reference.delete();
+                                                }
+                                                final followsAsAsFollowing =
+                                                    await firestore
+                                                        .collection('follow')
+                                                        .where('idfollowing',
+                                                            isEqualTo:
+                                                                currentUserId)
+                                                        .get();
+
+// Pour chaque personne suivie, décrémenter son compteur de followers dans channels
+                                                for (var doc
+                                                    in followsAsAsFollowing
+                                                        .docs) {
+                                                  // Récupérer l'ID de l'utilisateur suivi
+                                                  final idFollowing =
+                                                      doc.data()['idfollowers'];
+
+                                                  // Rechercher le document channel correspondant
+                                                  final channelQuery =
+                                                      await firestore
+                                                          .collection(
+                                                              'channels')
+                                                          .where('userId',
+                                                              isEqualTo:
+                                                                  idFollowing)
+                                                          .get();
+
+                                                  // Mettre à jour le compteur de followers pour chaque channel trouvé
+                                                  for (var channelDoc
+                                                      in channelQuery.docs) {
+                                                    // Récupérer le compteur actuel de followers
+                                                    final currentFollowers =
+                                                        channelDoc.data()[
+                                                                'following'] ??
+                                                            0;
+
+                                                    // Décrémenter le compteur (en s'assurant qu'il ne devient pas négatif)
+                                                    final newFollowers =
+                                                        currentFollowers > 0
+                                                            ? currentFollowers -
+                                                                1
+                                                            : 0;
+
+                                                    // Mettre à jour le document
+                                                    await channelDoc.reference
+                                                        .update({
+                                                      'following': newFollowers
+                                                    });
+                                                  }
+
+                                                  // Supprimer la relation follow
+                                                  await doc.reference.delete();
+                                                }
+                                                // 3. Gérer les podcasts et références associées
+                                                final podcastsToDelete =
+                                                    await firestore
+                                                        .collection('podcasts')
+                                                        .where('idUser',
+                                                            isEqualTo:
+                                                                currentUserId)
+                                                        .get();
+
+                                                for (var podcastDoc
+                                                    in podcastsToDelete.docs) {
+                                                  final podcastId =
+                                                      podcastDoc.id;
+
+                                                  // Récupérer les références dans playinpod
+                                                  final playInPodRefs =
+                                                      await firestore
+                                                          .collection(
+                                                              'playinpod')
+                                                          .where('podcastId',
+                                                              isEqualTo:
+                                                                  podcastId)
+                                                          .get();
+
+                                                  // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
+                                                  for (var doc
+                                                      in playInPodRefs.docs) {
+                                                    // Récupérer l'ID de la playlist
+                                                    final playlistId = doc
+                                                        .data()['playlistId'];
+
+                                                    if (playlistId != null) {
+                                                      // Récupérer la playlist
+                                                      final playlistDoc =
+                                                          await firestore
+                                                              .collection(
+                                                                  'playlist')
+                                                              .doc(playlistId)
+                                                              .get();
+
+                                                      if (playlistDoc.exists) {
+                                                        // Récupérer le compteur actuel de podcasts
+                                                        final currentPodcastCount =
+                                                            playlistDoc.data()?[
+                                                                    'podcast'] ??
+                                                                0;
+
+                                                        // Décrémenter le compteur (en s'assurant qu'il ne devient pas négatif)
+                                                        final newPodcastCount =
+                                                            currentPodcastCount >
+                                                                    0
+                                                                ? currentPodcastCount -
+                                                                    1
+                                                                : 0;
+
+                                                        // Mettre à jour le document
+                                                        await playlistDoc
+                                                            .reference
+                                                            .update({
+                                                          'podcast':
+                                                              newPodcastCount
+                                                        });
+                                                      }
+                                                    }
+
+                                                    // Supprimer la référence dans playinpod
+                                                    await doc.reference
+                                                        .delete();
+                                                  }
+
+                                                  // Supprimer le podcast lui-même
+                                                  await podcastDoc.reference
+                                                      .delete();
+                                                }
+                                                // Supprimer les références dans myplaylist pour cet utilisateur
+                                                final myPlaylistRefs =
+                                                    await firestore
+                                                        .collection(
+                                                            'myplaylist')
+                                                        .where('iduser',
+                                                            isEqualTo:
+                                                                currentUserId)
+                                                        .get();
+
+                                                for (var doc
+                                                    in myPlaylistRefs.docs) {
+                                                  await doc.reference.delete();
+                                                }
+
+                                                // 4. Gérer les playlists et références associées
+                                                // 3. Gérer les podcasts et références associées
+                                                final playlistToDelete =
+                                                    await firestore
+                                                        .collection('playlist')
+                                                        .where('userId',
+                                                            isEqualTo:
+                                                                currentUserId)
+                                                        .get();
+
+                                                for (var podcastDoc
+                                                    in playlistToDelete.docs) {
+                                                  final podcastId =
+                                                      podcastDoc.id;
+
+                                                  // Récupérer les références dans playinpod
+                                                  final playInPodRefs =
+                                                      await firestore
+                                                          .collection(
+                                                              'playinpod')
+                                                          .where('playlistId',
+                                                              isEqualTo:
+                                                                  podcastId)
+                                                          .get();
+
+                                                  // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
+                                                  for (var doc
+                                                      in playInPodRefs.docs) {
+                                                    // Supprimer la référence dans playinpod
+                                                    await doc.reference
+                                                        .delete();
+                                                  }
+
+                                                  // Supprimer le podcast lui-même
+                                                  await podcastDoc.reference
+                                                      .delete();
+                                                }
+
+                                                // Supprimer les références dans mesplaylist pour cet utilisateur
+                                                final mesPlaylistRefs =
+                                                    await firestore
+                                                        .collection(
+                                                            'mesplaylist')
+                                                        .where('iduser',
+                                                            isEqualTo:
+                                                                currentUserId)
+                                                        .get();
+
+                                                for (var doc
+                                                    in mesPlaylistRefs.docs) {
+                                                  await doc.reference.delete();
+                                                }
+
+                                                // Enfin, supprimer le compte utilisateur de Firebase Auth
+
+                                                // Fermer la boîte de dialogue de chargement
+                                                Navigator.of(context).pop();
+
+                                                // Rediriger vers l'écran de connexion après la suppression réussie
+                                                Navigator
+                                                    .pushNamedAndRemoveUntil(
+                                                        context,
+                                                        '/podly',
+                                                        (route) => false);
+
+                                                // Afficher un message de confirmation
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                        "Votre compte a été supprimé avec succès"),
+                                                    backgroundColor:
+                                                        Colors.green,
+                                                  ),
+                                                );
+                                              } catch (e) {
+                                                // Fermer la boîte de dialogue de chargement
+                                                Navigator.of(context).pop();
+
+                                                // Afficher un message d'erreur
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                        "Erreur lors de la suppression du compte: ${e.toString()}"),
+                                                    backgroundColor: Colors.red,
+                                                  ),
+                                                );
+
+                                                print(
+                                                    "Erreur de suppression du compte: $e");
+                                              }
+                                            },
+                                            child: const Text(
+                                              "Supprimer",
+                                              style:
+                                                  TextStyle(color: Colors.red),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                                child: Row(children: [
+                                  Image.network(
+                                    s91,
+                                    width: e.width * 0.06,
+                                    height: e.width * 0.06,
+                                  ),
+                                  Text(
+                                    "Delete Channel",
+                                    style: TextStyle(
+                                        fontSize: e.width * 0.045,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red),
+                                  ),
+                                ]))),
                       ),
                     ],
                     if (q == 4) ...[
@@ -1270,21 +1638,205 @@ class _ModifpageState extends State<Modifpage> {
                       Positioned(
                         top: e.height * 0.81,
                         left: e.width * 0.04,
-                        child: Image.asset(
-                          "images/delete.png",
-                          width: e.width * 0.06,
-                          height: e.width * 0.06,
-                        ),
-                      ),
-                      Positioned(
-                        top: e.height * 0.81,
-                        left: e.width * 0.15,
-                        child: Text(
-                          "Delete Podcast",
-                          style: TextStyle(
-                              fontSize: e.width * 0.045,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red),
+                        child: Container(
+                          child: GestureDetector(
+                            onTap: () {
+                              // Afficher une boîte de dialogue de confirmation
+                              showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return AlertDialog(
+                                    title: const Text("Supprimer le compte"),
+                                    content: const Text(
+                                      "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible et toutes vos données seront perdues.",
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () async {
+                                          Navigator.of(context)
+                                              .pop(); // Fermer la boîte de dialogue
+
+                                          // Afficher un indicateur de chargement
+                                          showDialog(
+                                            context: context,
+                                            barrierDismissible: false,
+                                            builder: (BuildContext context) {
+                                              return const AlertDialog(
+                                                content: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    CircularProgressIndicator(),
+                                                    SizedBox(height: 16),
+                                                    Text(
+                                                        "Suppression du compte en cours..."),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          );
+
+                                          try {
+                                            // Récupérer l'utilisateur actuel et son ID
+                                            final currentUser = FirebaseAuth
+                                                .instance.currentUser;
+                                            final currentUserId =
+                                                currentUser?.uid;
+
+                                            if (currentUserId == null) {
+                                              throw Exception(
+                                                  "Aucun utilisateur connecté");
+                                            }
+
+                                            // Firestore instance
+                                            final firestore =
+                                                FirebaseFirestore.instance;
+
+                                            // 3. Gérer les podcasts et références associées
+                                            final podcastsToDelete =
+                                                await firestore
+                                                    .collection('podcasts')
+                                                    .where(
+                                                        'id',
+                                                        isEqualTo: podcast[0]
+                                                            ["id"])
+                                                    .get();
+
+                                            for (var podcastDoc
+                                                in podcastsToDelete.docs) {
+                                              final podcastId = podcastDoc.id;
+
+                                              // Récupérer les références dans playinpod
+                                              final playInPodRefs =
+                                                  await firestore
+                                                      .collection('playinpod')
+                                                      .where('podcastId',
+                                                          isEqualTo: podcastId)
+                                                      .get();
+
+                                              // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
+                                              for (var doc
+                                                  in playInPodRefs.docs) {
+                                                // Récupérer l'ID de la playlist
+                                                final playlistId =
+                                                    doc.data()['playlistId'];
+
+                                                if (playlistId != null) {
+                                                  // Récupérer la playlist
+                                                  final playlistDoc =
+                                                      await firestore
+                                                          .collection(
+                                                              'playlist')
+                                                          .doc(playlistId)
+                                                          .get();
+
+                                                  if (playlistDoc.exists) {
+                                                    // Récupérer le compteur actuel de podcasts
+                                                    final currentPodcastCount =
+                                                        playlistDoc.data()?[
+                                                                'podcast'] ??
+                                                            0;
+
+                                                    // Décrémenter le compteur (en s'assurant qu'il ne devient pas négatif)
+                                                    final newPodcastCount =
+                                                        currentPodcastCount > 0
+                                                            ? currentPodcastCount -
+                                                                1
+                                                            : 0;
+
+                                                    // Mettre à jour le document
+                                                    await playlistDoc.reference
+                                                        .update({
+                                                      'podcast': newPodcastCount
+                                                    });
+                                                  }
+                                                }
+
+                                                // Supprimer la référence dans playinpod
+                                                await doc.reference.delete();
+                                              }
+
+                                              // Supprimer le podcast lui-même
+                                              await podcastDoc.reference
+                                                  .delete();
+                                            }
+                                            // Supprimer les références dans myplaylist pour cet utilisateur
+                                            final myPlaylistRefs =
+                                                await firestore
+                                                    .collection('myplaylist')
+                                                    .where('idpod',
+                                                        isEqualTo: podcast[0]
+                                                            ["id"])
+                                                    .get();
+
+                                            for (var doc
+                                                in myPlaylistRefs.docs) {
+                                              await doc.reference.delete();
+                                            }
+
+                                            // Fermer la boîte de dialogue de chargement
+                                            Navigator.of(context).pop();
+
+                                            // Rediriger vers l'écran de connexion après la suppression réussie
+                                            Navigator.pushNamedAndRemoveUntil(
+                                                context,
+                                                '/your',
+                                                (route) => false);
+
+                                            // Afficher un message de confirmation
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                    "Votre compte a été supprimé avec succès"),
+                                                backgroundColor: Colors.green,
+                                              ),
+                                            );
+                                          } catch (e) {
+                                            // Fermer la boîte de dialogue de chargement
+                                            Navigator.of(context).pop();
+
+                                            // Afficher un message d'erreur
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                    "Erreur lors de la suppression du compte: ${e.toString()}"),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+
+                                            print(
+                                                "Erreur de suppression du compte: $e");
+                                          }
+                                        },
+                                        child: const Text(
+                                          "Supprimer",
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                            child: Row(
+                              children: [
+                                Image.network(
+                                  s91,
+                                  width: e.width * 0.06,
+                                  height: e.width * 0.06,
+                                ),
+                                Text(
+                                  "Delete Podcast",
+                                  style: TextStyle(
+                                      fontSize: e.width * 0.045,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                       Positioned(
@@ -1543,21 +2095,175 @@ class _ModifpageState extends State<Modifpage> {
                       Positioned(
                         top: e.height * 0.77,
                         left: e.width * 0.04,
-                        child: Image.asset(
-                          "images/delete.png",
-                          width: e.width * 0.06,
-                          height: e.width * 0.06,
-                        ),
-                      ),
-                      Positioned(
-                        top: e.height * 0.77,
-                        left: e.width * 0.15,
-                        child: Text(
-                          "Delete Playlist",
-                          style: TextStyle(
-                              fontSize: e.width * 0.045,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red),
+                        child: Container(
+                          child: GestureDetector(
+                            onTap: () {
+                              // Afficher une boîte de dialogue de confirmation
+                              showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return AlertDialog(
+                                    title: const Text("Supprimer le compte"),
+                                    content: const Text(
+                                      "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible et toutes vos données seront perdues.",
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () async {
+                                          Navigator.of(context)
+                                              .pop(); // Fermer la boîte de dialogue
+
+                                          // Afficher un indicateur de chargement
+                                          showDialog(
+                                            context: context,
+                                            barrierDismissible: false,
+                                            builder: (BuildContext context) {
+                                              return const AlertDialog(
+                                                content: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    CircularProgressIndicator(),
+                                                    SizedBox(height: 16),
+                                                    Text(
+                                                        "Suppression du compte en cours..."),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          );
+
+                                          try {
+                                            // Récupérer l'utilisateur actuel et son ID
+                                            final currentUser = FirebaseAuth
+                                                .instance.currentUser;
+                                            final currentUserId =
+                                                currentUser?.uid;
+
+                                            if (currentUserId == null) {
+                                              throw Exception(
+                                                  "Aucun utilisateur connecté");
+                                            }
+
+                                            // Firestore instance
+                                            final firestore =
+                                                FirebaseFirestore.instance;
+
+                                            // 4. Gérer les playlists et références associées
+                                            // 3. Gérer les podcasts et références associées
+                                            final playlistToDelete =
+                                                await firestore
+                                                    .collection('playlist')
+                                                    .where(
+                                                        'id',
+                                                        isEqualTo: playlistt[0]
+                                                            ["id"])
+                                                    .get();
+
+                                            for (var podcastDoc
+                                                in playlistToDelete.docs) {
+                                              final podcastId = podcastDoc.id;
+
+                                              // Récupérer les références dans playinpod
+                                              final playInPodRefs =
+                                                  await firestore
+                                                      .collection('playinpod')
+                                                      .where('playlistId',
+                                                          isEqualTo: podcastId)
+                                                      .get();
+
+                                              // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
+                                              for (var doc
+                                                  in playInPodRefs.docs) {
+                                                // Supprimer la référence dans playinpod
+                                                await doc.reference.delete();
+                                              }
+
+                                              // Supprimer le podcast lui-même
+                                              await podcastDoc.reference
+                                                  .delete();
+                                            }
+
+                                            // Supprimer les références dans mesplaylist pour cet utilisateur
+                                            final mesPlaylistRefs =
+                                                await firestore
+                                                    .collection('mesplaylist')
+                                                    .where('idplay',
+                                                        isEqualTo: playlistt[0]
+                                                            ["id"])
+                                                    .get();
+
+                                            for (var doc
+                                                in mesPlaylistRefs.docs) {
+                                              await doc.reference.delete();
+                                            }
+
+                                            // Enfin, supprimer le compte utilisateur de Firebase Auth
+                                            await currentUser?.delete();
+
+                                            // Fermer la boîte de dialogue de chargement
+                                            Navigator.of(context).pop();
+
+                                            // Rediriger vers l'écran de connexion après la suppression réussie
+                                            Navigator.pushNamedAndRemoveUntil(
+                                                context,
+                                                '/login',
+                                                (route) => false);
+
+                                            // Afficher un message de confirmation
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                    "Votre compte a été supprimé avec succès"),
+                                                backgroundColor: Colors.green,
+                                              ),
+                                            );
+                                          } catch (e) {
+                                            // Fermer la boîte de dialogue de chargement
+                                            Navigator.of(context).pop();
+
+                                            // Afficher un message d'erreur
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                    "Erreur lors de la suppression du compte: ${e.toString()}"),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+
+                                            print(
+                                                "Erreur de suppression du compte: $e");
+                                          }
+                                        },
+                                        child: const Text(
+                                          "Supprimer",
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                            child: Row(
+                              children: [
+                                Image.network(
+                                  s91,
+                                  width: e.width * 0.06,
+                                  height: e.width * 0.06,
+                                ),
+                                Text(
+                                  "Delete Playlist",
+                                  style: TextStyle(
+                                      fontSize: e.width * 0.045,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                       Positioned(
@@ -1571,7 +2277,7 @@ class _ModifpageState extends State<Modifpage> {
                           )),
                     ],
                   ],
-                ])),
+                )),
     ));
   }
 }

@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:drop_down_list/drop_down_list.dart';
 import 'package:drop_down_list/model/selected_list_item.dart';
 import 'package:pfeapp/constants.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class Modif1page extends StatefulWidget {
   const Modif1page({super.key});
@@ -17,44 +16,6 @@ class Modif1page extends StatefulWidget {
 }
 
 class _Modif1pageState extends State<Modif1page> {
-  Future<String?> _getPasswordFromUser(BuildContext context) async {
-    final passwordController = TextEditingController();
-    String? password;
-
-    await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('Verification Required'),
-            content: TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                hintText: 'Enter your current password',
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  password = passwordController.text;
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Confirm'),
-              ),
-            ],
-          );
-        });
-
-    return password;
-  }
-
   final _playlistController = TextEditingController();
   String? _selectedPlaylistId;
   List<SelectedListItem<PlaylistItem>> play = [];

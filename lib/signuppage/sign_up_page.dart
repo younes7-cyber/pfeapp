@@ -69,7 +69,14 @@ class _SignUppageState extends State<SignUppage> {
       await FirebaseFirestore.instance.collection('users').add({
         'email': googleUser.email,
         'userId': currentUserId,
-        'methode': 'google'
+        'methode': 'google',
+        'firstName': '',
+        'lastName': '',
+        'age': 0,
+        'country': '',
+        'photoUrl':
+            'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/ano.jpg', // Utilise l'URL finale
+        'createdAt': FieldValue.serverTimestamp(),
       });
 
       // Send verification email
@@ -470,7 +477,14 @@ class _SignUppageState extends State<SignUppage> {
                                 .add({
                               'email': email.text,
                               'userId': currentUserId,
-                              'methode': 'password'
+                              'methode': 'password',
+                              'firstName': '',
+                              'lastName': '',
+                              'age': 0,
+                              'country': '',
+                              'photoUrl':
+                                  'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/ano.jpg', // Utilise l'URL finale
+                              'createdAt': FieldValue.serverTimestamp(),
                             });
 
                             // Send verification email

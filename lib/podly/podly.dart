@@ -2704,8 +2704,8 @@ class _PodlypageState extends State<Podlypage> {
               Positioned(
                 top: x.height * 0.68,
                 left: x.width * 0.03,
-                child: Image.asset(
-                  "images/dark1.jpg",
+                child: Image.network(
+                  s92,
                   width: x.width * 0.07,
                   height: x.width * 0.07,
                 ),
