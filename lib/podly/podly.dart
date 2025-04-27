@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:pfeapp/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import 'package:pfeapp/theme_provider.dart';
 
 class Podlypage extends StatefulWidget {
   const Podlypage({super.key});
@@ -2747,14 +2749,22 @@ class _PodlypageState extends State<Podlypage> {
                 ),
               ),
               Positioned(
-                  top: x.height * 0.67,
-                  right: x.width * 0.1,
-                  child: Switch(
+                top: x.height * 0.67,
+                right: x.width * 0.1,
+                child: Consumer<ThemeProvider>(
+                  builder: (context, themeProvider, child) {
+                    return Switch(
                       inactiveThumbColor: Colors.white,
                       inactiveTrackColor: Colors.grey[350],
-                      activeTrackColor: Color(0xFF754CEF),
-                      value: val1,
-                      onChanged: (val1) {})),
+                      activeTrackColor: const Color(0xFF754CEF),
+                      value: themeProvider.isDarkMode,
+                      onChanged: (value) {
+                        themeProvider.toggleTheme();
+                      },
+                    );
+                  },
+                ),
+              ),
               Positioned(
                   top: x.height * 0.77,
                   left: x.width * 0.15,

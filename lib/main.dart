@@ -4,6 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:pfeapp/profil/privicy.dart';
 import 'package:pfeapp/profil/your_playlist.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
+import 'theme_provider.dart';
+import 'network_service.dart'; // Nouvelle importation
+import 'network_wrapper.dart'; // Nouvelle importation
 import 'signuppage/sign_up_page.dart';
 import 'signuppage/verif.dart';
 import 'loginpage/log_in_page.dart';
@@ -36,13 +40,21 @@ void main() async {
 
   // Initialisation de Supabase
   await Supabase.initialize(
-    url:
-        'https://migwbqbtfzszopvhdzre.supabase.co', // Remplacez par l'URL de votre projet Supabase
+    url: 'https://migwbqbtfzszopvhdzre.supabase.co',
     anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pZ3dicWJ0Znpzem9wdmhkenJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5MjI3OTgsImV4cCI6MjA1NzQ5ODc5OH0.78NEfAWjrlWsjo_l9ZBLuKzNv13ikUWCBqE0DyCeZSA', // Remplacez par votre clé anonyme
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pZ3dicWJ0Znpzem9wdmhkenJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5MjI3OTgsImV4cCI6MjA1NzQ5ODc5OH0.78NEfAWjrlWsjo_l9ZBLuKzNv13ikUWCBqE0DyCeZSA',
   );
 
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(
+            create: (_) => NetworkService()), // Remplacé par NetworkService
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -54,6 +66,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   Widget _initialScreen = const Homepage();
+
   @override
   void initState() {
     super.initState();
@@ -83,34 +96,87 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: _initialScreen,
-      routes: {
-        '/home': (context) => const Homepage(),
-        '/SignUp': (context) => const SignUppage(),
-        '/LogIn': (context) => const LoginPage(),
-        '/complete': (context) => const Completepage(),
-        '/pass': (context) => const Passpage(),
-        '/podly': (context) => const Podlypage(),
-        '/nofi': (context) => const NotificationPage(),
-        '/seeall': (context) => const SeeAllpage(),
-        '/channel': (context) => const Channelpage(),
-        '/play': (context) => const Playlistpage(),
-        '/podcast': (context) => const Podcastpage(),
-        '/listen': (context) => const Listenpage(),
-        '/ch': (context) => const CreateChannelPage(),
-        '/po': (context) => const Createpodcastpage(),
-        '/pl': (context) => const Createplaylistpage(),
-        '/modif': (context) => const Modifpage(),
-        '/modif1': (context) => const Modif1page(),
-        '/your': (context) => const YourChainepage(),
-        '/stat': (context) => const Statpage(),
-        '/about': (context) => const Aboutpage(),
-        '/verif': (context) => const Verifpage(),
-        '/reset': (context) => const Resetpage(),
-        '/your1': (context) => const Yourplaylistpage(),
-        '/pryv': (context) => const Privipage(),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          builder: (context, child) {
+            // On applique le wrapper de connectivité réseau à tous les écrans
+            return NetworkWrapper(
+                child: child!); // Utilisation de NetworkWrapper
+          },
+          home: _initialScreen,
+          theme: ThemeData(
+            // Thème clair
+            brightness: Brightness.light,
+            primaryColor: const Color(0xFF754CEF),
+            scaffoldBackgroundColor: Colors.white,
+            textTheme: const TextTheme(
+              bodyMedium: TextStyle(color: Colors.black),
+              // Ajoutez d'autres styles de texte selon vos besoins
+            ),
+            // Personnaliser d'autres éléments du thème selon vos besoins
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              elevation: 0,
+            ),
+            bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+              backgroundColor: Colors.white,
+              selectedItemColor: Color(0xFF754CEF),
+              unselectedItemColor: Colors.grey,
+            ),
+          ),
+          darkTheme: ThemeData(
+            // Thème sombre
+            brightness: Brightness.dark,
+            primaryColor: const Color(0xFF754CEF),
+            scaffoldBackgroundColor: Colors.black,
+            textTheme: const TextTheme(
+              bodyMedium: TextStyle(color: Colors.white),
+              // Ajoutez d'autres styles de texte selon vos besoins
+            ),
+            // Personnaliser d'autres éléments du thème sombre
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+              backgroundColor: Colors.black,
+              selectedItemColor: Color(0xFF754CEF),
+              unselectedItemColor: Colors.grey,
+            ),
+          ),
+          themeMode:
+              themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+          routes: {
+            '/home': (context) => const Homepage(),
+            '/SignUp': (context) => const SignUppage(),
+            '/LogIn': (context) => const LoginPage(),
+            '/complete': (context) => const Completepage(),
+            '/pass': (context) => const Passpage(),
+            '/podly': (context) => const Podlypage(),
+            '/nofi': (context) => const NotificationPage(),
+            '/seeall': (context) => const SeeAllpage(),
+            '/channel': (context) => const Channelpage(),
+            '/play': (context) => const Playlistpage(),
+            '/podcast': (context) => const Podcastpage(),
+            '/listen': (context) => const Listenpage(),
+            '/ch': (context) => const CreateChannelPage(),
+            '/po': (context) => const Createpodcastpage(),
+            '/pl': (context) => const Createplaylistpage(),
+            '/modif': (context) => const Modifpage(),
+            '/modif1': (context) => const Modif1page(),
+            '/your': (context) => const YourChainepage(),
+            '/stat': (context) => const Statpage(),
+            '/about': (context) => const Aboutpage(),
+            '/verif': (context) => const Verifpage(),
+            '/reset': (context) => const Resetpage(),
+            '/your1': (context) => const Yourplaylistpage(),
+            '/pryv': (context) => const Privipage(),
+          },
+        );
       },
     );
   }
