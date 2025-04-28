@@ -1,78 +1,79 @@
 import 'package:flutter/material.dart';
-import 'package:audio_waveforms/audio_waveforms.dart';
+import 'dart:math' as math;
 
 class NoConnectionWidget extends StatefulWidget {
-  final VoidCallback onRetry;
-
-  const NoConnectionWidget({Key? key, required this.onRetry}) : super(key: key);
+  const NoConnectionWidget({Key? key}) : super(key: key);
 
   @override
   State<NoConnectionWidget> createState() => _NoConnectionWidgetState();
 }
 
-class _NoConnectionWidgetState extends State<NoConnectionWidget> {
-  late RecorderController recorderController;
+class _NoConnectionWidgetState extends State<NoConnectionWidget>
+    with TickerProviderStateMixin {
+  late List<AnimationController> _controllers;
+  final int barCount = 6; // Réduit à 6 barres
 
   @override
   void initState() {
     super.initState();
-    recorderController = RecorderController();
-    _startWaveSimulation();
-  }
 
-  void _startWaveSimulation() {
-    Future.delayed(Duration.zero, () async {
-      while (mounted) {
-        recorderController.refresh();
-        await Future.delayed(const Duration(milliseconds: 500));
-      }
-    });
+    // Créer 6 contrôleurs pour des animations indépendantes
+    _controllers = List.generate(
+      barCount,
+      (index) => AnimationController(
+        duration: Duration(milliseconds: 500 + math.Random().nextInt(700)),
+        vsync: this,
+      )..repeat(reverse: true),
+    );
   }
 
   @override
   void dispose() {
-    recorderController.dispose();
+    for (var controller in _controllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Container(
-      color: Colors.black.withOpacity(0.8),
+      color: Colors.black.withOpacity(0.01),
       child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.wifi_off,
-              color: Colors.white,
-              size: 50,
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Pas de connexion Internet',
-              style: TextStyle(color: Colors.white, fontSize: 18),
-            ),
-            const SizedBox(height: 30),
-            SizedBox(
-              width: MediaQuery.of(context).size.width * 0.8,
-              child: AudioWaveforms(
-                enableGesture: true,
-                size: Size(MediaQuery.of(context).size.width, 100.0),
-                recorderController: recorderController,
-                waveStyle: const WaveStyle(
-                  waveColor: Colors.greenAccent,
-                  extendWaveform: true,
-                  showMiddleLine: false,
+        child: SizedBox(
+          width: screenWidth * 0.6, // Réduit la largeur pour centrer davantage
+          height: MediaQuery.of(context).size.height * 0.2,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center, // Centre les barres
+            children: List.generate(barCount, (index) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: AnimatedBuilder(
+                  animation: _controllers[index],
+                  builder: (context, child) {
+                    return Container(
+                      width:
+                          screenWidth * 0.03, // Largeur fixe pour chaque barre
+                      height: _controllers[index].value * 120 + 10,
+                      decoration: BoxDecoration(
+                        color: Colors.white, // Toutes les barres en blanc
+                        borderRadius: BorderRadius.circular(5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.white.withOpacity(0.5),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: widget.onRetry,
-              child: const Text('Réessayer'),
-            ),
-          ],
+              );
+            }),
+          ),
         ),
       ),
     );

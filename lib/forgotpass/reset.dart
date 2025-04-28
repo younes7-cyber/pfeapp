@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:pfeapp/annimation.dart';
 import 'package:pfeapp/constants.dart';
 import 'dart:async';
+
+import 'package:pfeapp/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class Resetpage extends StatefulWidget {
   const Resetpage({super.key});
@@ -27,7 +31,7 @@ class _ResetpageState extends State<Resetpage> {
     _countdownSeconds = 30;
     _countdownTimer?.cancel();
 
-    _countdownTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         if (_countdownSeconds > 0) {
           _countdownSeconds--;
@@ -38,6 +42,19 @@ class _ResetpageState extends State<Resetpage> {
       });
     });
   }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      setState(() => isLoading = true);
+
+      await Future.delayed(const Duration(seconds: 3));
+      setState(() => isLoading = false);
+    });
+  }
+
+  bool isLoading = true;
 
   void _resendResetPasswordEmail() async {
     try {
@@ -58,6 +75,7 @@ class _ResetpageState extends State<Resetpage> {
 
       // Send the reset password email
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Password reset email sent. Please check your inbox.'),
@@ -83,133 +101,148 @@ class _ResetpageState extends State<Resetpage> {
     final Size si = MediaQuery.of(context).size;
     return Scaffold(
       body: SafeArea(
-        child: Container(
-          decoration: const BoxDecoration(color: Colors.white),
-          child: Stack(
-            children: [
-              // Back button to return to the password reset page
-              Positioned(
-                top: si.height * 0.05,
-                left: si.width * 0.1,
-                child: IconButton(
-                  onPressed: () {
-                    Navigator.pushNamedAndRemoveUntil(
-                        context, '/pass', (route) => false);
-                  },
-                  icon: Image.network(
-                    s18, // Back icon
-                    width: si.width * 0.09,
-                    height: si.width * 0.09,
-                  ),
-                ),
-              ),
-
-              // Image for password reset
-              Positioned(
-                top: si.height * 0.15,
-                left: si.width * 0.15,
-                child: Container(
-                  width: si.width * 0.7,
-                  height: si.width * 0.7,
-                  child: Image.network(s17, fit: BoxFit.contain),
-                ),
-              ),
-
-              // Message text
-              Positioned(
-                top: si.height * 0.45,
-                left: si.width * 0.1,
-                child: Container(
-                  width: si.width * 0.8,
-                  child: Text(
-                    _message,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: si.width * 0.055,
+          child: isLoading
+              ? const Annimationwidjet()
+              : Consumer<ThemeProvider>(
+                  builder: (context, themeProvider, child) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: themeProvider.isDarkMode
+                          ? Colors.black
+                          : Colors.white,
                     ),
-                  ),
-                ),
-              ),
-
-              // Done button to go back to login
-              Positioned(
-                top: si.height * 0.6,
-                left: si.width * 0.18,
-                child: Container(
-                  height: si.height * 0.075,
-                  width: si.width * 0.65,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF754CEF),
-                    borderRadius: BorderRadius.circular(si.width * 0.05),
-                  ),
-                  child: MaterialButton(
-                    onPressed: () {
-                      Navigator.pushNamedAndRemoveUntil(
-                          context, '/LogIn', (route) => false);
-                    },
-                    child: Text(
-                      "Done",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: si.width * 0.042,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              // Resend email button
-              Positioned(
-                top: si.height * 0.7,
-                left: si.width * 0.18,
-                child: Container(
-                  height: si.height * 0.075,
-                  width: si.width * 0.65,
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(si.width * 0.05),
-                  ),
-                  child: MaterialButton(
-                    onPressed:
-                        _isResendDisabled ? null : _resendResetPasswordEmail,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Stack(
                       children: [
-                        Text(
-                          "Resend Email",
-                          style: TextStyle(
-                            color: Color(0xFF754CEF),
-                            fontSize: si.width * 0.042,
-                            fontWeight: FontWeight.bold,
+                        // Back button to return to the password reset page
+                        Positioned(
+                          top: si.height * 0.05,
+                          left: si.width * 0.1,
+                          child: IconButton(
+                            onPressed: () {
+                              Navigator.pushNamedAndRemoveUntil(
+                                  context, '/pass', (route) => false);
+                            },
+                            icon: Image.network(
+                              themeProvider.isDarkMode ? s97 : s18, // Back icon
+                              width: si.width * 0.09,
+                              height: si.width * 0.09,
+                            ),
                           ),
                         ),
-                        if (_countdownSeconds > 0) ...[
-                          SizedBox(width: 8),
-                          Container(
-                            padding: EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Color(0xFFEAE4F9),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+
+                        // Image for password reset
+                        Positioned(
+                          top: si.height * 0.15,
+                          left: si.width * 0.15,
+                          child: SizedBox(
+                            width: si.width * 0.7,
+                            height: si.width * 0.7,
+                            child: Image.network(
+                                themeProvider.isDarkMode ? s99 : s17,
+                                fit: BoxFit.contain),
+                          ),
+                        ),
+
+                        // Message text
+                        Positioned(
+                          top: si.height * 0.45,
+                          left: si.width * 0.1,
+                          child: SizedBox(
+                            width: si.width * 0.8,
                             child: Text(
-                              "$_countdownSeconds s",
+                              _message,
+                              textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Color(0xFF754CEF),
                                 fontWeight: FontWeight.bold,
+                                fontSize: si.width * 0.055,
                               ),
                             ),
                           ),
-                        ],
+                        ),
+
+                        // Done button to go back to login
+                        Positioned(
+                          top: si.height * 0.6,
+                          left: si.width * 0.18,
+                          child: Container(
+                            height: si.height * 0.075,
+                            width: si.width * 0.65,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF754CEF),
+                              borderRadius:
+                                  BorderRadius.circular(si.width * 0.05),
+                            ),
+                            child: MaterialButton(
+                              onPressed: () {
+                                Navigator.pushNamedAndRemoveUntil(
+                                    context, '/LogIn', (route) => false);
+                              },
+                              child: Text(
+                                "Done",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: si.width * 0.042,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Resend email button
+                        Positioned(
+                          top: si.height * 0.7,
+                          left: si.width * 0.18,
+                          child: Container(
+                            height: si.height * 0.075,
+                            width: si.width * 0.65,
+                            decoration: BoxDecoration(
+                              color: Colors.transparent,
+                              borderRadius:
+                                  BorderRadius.circular(si.width * 0.05),
+                            ),
+                            child: MaterialButton(
+                              onPressed: _isResendDisabled
+                                  ? null
+                                  : _resendResetPasswordEmail,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "Resend Email",
+                                    style: TextStyle(
+                                      color: const Color(0xFF754CEF),
+                                      fontSize: si.width * 0.042,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  if (_countdownSeconds > 0) ...[
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: themeProvider.isDarkMode
+                                            ? Colors.black
+                                            : Colors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        "$_countdownSeconds s",
+                                        style: const TextStyle(
+                                          color: Color(0xFF754CEF),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+                  );
+                })),
     );
   }
 }

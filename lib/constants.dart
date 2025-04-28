@@ -21,7 +21,7 @@ const String s18 =
 const String s19 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/person.jpg";
 const String s20 =
-    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/1.png";
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/output-onlinejpgtools%20(2).jpg";
 const String s21 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/ano.jpg";
 const String s22 =
@@ -166,3 +166,17 @@ const String s91 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/delete.png";
 const String s92 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/dark1.jpg";
+const String s93 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/output-onlinejpgtools%20(1).jpg";
+const String s94 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/output-onlinepngtools%20(2).png";
+const String s95 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/output-onlinepngtools%20(3).png";
+const String s96 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/vertical-shot-happy-smiling-young-woman-points-index-finger-overhead-listens-music-via-headphoes-dressed-knitted-sweater-isolated-purple-background-with-blank-space-place-text.jpg";
+const String s97 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/output-onlinepngtools%20(4).png";
+const String s98 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/output-onlinejpgtools%20(3).jpg";
+const String s99 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/output-onlinejpgtools%20(4).jpg";
