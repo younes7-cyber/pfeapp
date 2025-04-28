@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:pfeapp/profil/privicy.dart';
 import 'package:pfeapp/profil/your_playlist.dart';
+import 'package:pfeapp/succes.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import 'theme_provider.dart';
@@ -175,6 +176,7 @@ class _MyAppState extends State<MyApp> {
             '/reset': (context) => const Resetpage(),
             '/your1': (context) => const Yourplaylistpage(),
             '/pryv': (context) => const Privipage(),
+            '/succes': (context) => const Succespage(),
           },
         );
       },
