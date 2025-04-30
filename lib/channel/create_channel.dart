@@ -3,11 +3,15 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pfeapp/annimation.dart';
+import 'package:pfeapp/theme_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
 import 'package:pfeapp/constants.dart';
 
 class CreateChannelPage extends StatefulWidget {
+  // ignore: use_super_parameters
   const CreateChannelPage({Key? key}) : super(key: key);
 
   @override
@@ -20,6 +24,7 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  // ignore: non_constant_identifier_names
   late int CH;
   @override
   void didChangeDependencies() {
@@ -43,15 +48,8 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
     if (status.isGranted) {
       return true;
     } else {
-      _showSnackBar("Storage permission denied");
       return false;
     }
-  }
-
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
   }
 
   Future<void> _pickImage() async {
@@ -67,9 +65,8 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
             _selectedImageFile = File(result.files.single.path!);
           });
         }
-      } catch (e) {
-        _showSnackBar("Error picking image: $e");
-      }
+        // ignore: empty_catches
+      } catch (e) {}
     }
   }
 
@@ -89,42 +86,35 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
           .from('pfeapp')
           .upload(fileName, _selectedImageFile!);
 
-      // Vérification de la réponse
-      /*  if (response.error != null) {
-      debugPrint('Upload error: ${response.error!.message}');
-      return s21; // En cas d'erreur, retourner l'URL par défaut
-    }*/
-
       // Récupération de l'URL publique
       final publicUrl = Supabase.instance.client.storage
           .from('pfeapp')
           .getPublicUrl(fileName);
 
       if (publicUrl.isNotEmpty) {
-        debugPrint('Image uploaded successfully: $publicUrl');
         return publicUrl; // Retourner l'URL publique
       } else {
-        debugPrint('Failed to get public URL.');
         return s21; // Retourner l'URL par défaut si aucune URL publique
       }
     } catch (e) {
-      debugPrint('Error uploading image to Supabase: $e');
       return s21; // Retourner l'URL par défaut en cas d'erreur
     }
   }
 
+  String? errorMessage;
   Future<void> _saveChannelData() async {
     final channelName = _nameController.text.trim();
 
     if (channelName.isEmpty) {
-      _showSnackBar("Channel name cannot be empty");
+      setState(() {
+        errorMessage = "channel name canot be empty";
+      });
       return;
     }
 
     try {
       final currentUser = _auth.currentUser;
       if (currentUser == null) {
-        _showSnackBar("No user logged in");
         return;
       }
 
@@ -146,183 +136,253 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
           .update({'id': docRef.id}); // Récupérer l'ID généré par Firestore
 
       if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(context, '/podly', (route) => false,
-            arguments: {'selectedIndex': 4});
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/sucess1',
+          (route) => false,
+        );
       }
-    } catch (e) {
-      debugPrint("Channel save error: $e");
-      _showSnackBar("Error saving channel: ${e.toString()}");
-    }
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      setState(() => isLoading = true);
+      await Future.delayed(const Duration(seconds: 3));
+      setState(() => isLoading = false);
+    });
+  }
+
+  bool isLoading = true;
   @override
   Widget build(BuildContext context) {
     final Size screenSize = MediaQuery.of(context).size;
 
     return Scaffold(
       body: SafeArea(
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-          ),
-          child: Stack(
-            children: [
-              // Back Button
-              Positioned(
-                top: screenSize.height * 0.01,
-                left: screenSize.width * 0.03,
-                child: IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Image.network(
-                    s18,
-                    width: screenSize.width * 0.07,
-                    height: screenSize.width * 0.07,
-                  ),
-                ),
-              ),
-
-              // Title
-              Positioned(
-                top: screenSize.height * 0.2,
-                left: screenSize.width * 0.1,
-                child: Text(
-                  "Let's Create Your Channel",
-                  style: TextStyle(
-                      fontSize: screenSize.width * 0.065,
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-
-              // Channel Name Input
-              Positioned(
-                top: screenSize.height * 0.37,
-                left: screenSize.width * 0.1,
-                child: const Text(
-                  "Name Channel",
-                  style: TextStyle(
-                      color: Colors.black, fontWeight: FontWeight.bold),
-                ),
-              ),
-              Positioned(
-                top: screenSize.height * 0.4,
-                left: screenSize.width * 0.07,
-                right: screenSize.width * 0.07,
-                child: TextField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: const Color(0xFFD9D9D9),
-                    hintText: "Enter Channel Name",
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    prefixIcon: Padding(
-                      padding: EdgeInsets.all(screenSize.width * 0.028),
-                      child: Image.network(
-                        s29,
-                        width: screenSize.width * 0.05,
-                        height: screenSize.width * 0.05,
-                      ),
-                    ),
-                    border: _customBorder(screenSize),
-                    enabledBorder: _customBorder(screenSize),
-                    focusedBorder: _customBorder(screenSize),
-                  ),
-                ),
-              ),
-
-              // Photo Selection
-              Positioned(
-                top: screenSize.height * 0.53,
-                left: screenSize.width * 0.1,
-                child: Row(
-                  children: [
-                    Image.network(
-                      s25,
-                      width: screenSize.width * 0.05,
-                      height: screenSize.width * 0.05,
-                    ),
-                    const Text(
-                      "   Photos",
-                      style: TextStyle(
-                          color: Colors.black, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-              Positioned(
-                top: screenSize.height * 0.56,
-                left: screenSize.width * 0.1,
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: _pickImage,
-                      child: Container(
-                        width: screenSize.width * 0.07,
-                        height: screenSize.width * 0.07,
-                        decoration: BoxDecoration(
-                          borderRadius:
-                              BorderRadius.circular(screenSize.width * 0.05),
-                        ),
-                        child: Image.network(s26),
-                      ),
-                    ),
-                    SizedBox(width: screenSize.width * 0.05),
-                    Container(
-                      width: screenSize.width * 0.7,
-                      height: screenSize.width * 0.13,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD9D9D9),
-                        borderRadius:
-                            BorderRadius.circular(screenSize.width * 0.05),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Center(
-                        child: Text(
-                          _selectedImageFile?.path ?? "No image selected",
-                          style: const TextStyle(color: Colors.black),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Done Button
-              Positioned(
-                top: screenSize.height * 0.7,
-                left: screenSize.width * 0.15,
-                child: Container(
-                  height: screenSize.height * 0.075,
-                  width: screenSize.width * 0.65,
+        child: isLoading
+            ? const Annimationwidjet()
+            : Consumer<ThemeProvider>(builder: (context, themeProvider, child) {
+                return Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF754CEF),
-                    borderRadius:
-                        BorderRadius.circular(screenSize.width * 0.05),
+                    color:
+                        themeProvider.isDarkMode ? Colors.black : Colors.white,
                   ),
-                  child: MaterialButton(
-                    onPressed:
-                        _saveChannelData, // Fixed: Added () to call the method
-                    child: Text(
-                      "Done",
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: screenSize.width * 0.042),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+                  child: Stack(
+                    children: [
+                      // Back Button
+                      Positioned(
+                        top: screenSize.height * 0.01,
+                        left: screenSize.width * 0.03,
+                        child: IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: Image.network(
+                            themeProvider.isDarkMode ? s97 : s18,
+                            width: screenSize.width * 0.07,
+                            height: screenSize.width * 0.07,
+                          ),
+                        ),
+                      ),
 
-  // Helper method for consistent border styling
-  OutlineInputBorder _customBorder(Size screenSize) {
-    return OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(screenSize.width * 0.05)),
-      borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
+                      // Title
+                      Positioned(
+                        top: screenSize.height * 0.2,
+                        left: screenSize.width * 0.1,
+                        child: Text(
+                          "Let's Create Your Channel",
+                          style: TextStyle(
+                              fontSize: screenSize.width * 0.065,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+
+                      // Title
+                      Positioned(
+                        top: screenSize.height * 0.37,
+                        left: screenSize.width * 0.1,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "First Name",
+                              style: TextStyle(
+                                  color: themeProvider.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            errorMessage != null
+                                ? Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      errorMessage!,
+                                      style: const TextStyle(
+                                          color: Colors.red, fontSize: 12),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        top: screenSize.height * 0.4,
+                        left: screenSize.width * 0.07,
+                        right: screenSize.width * 0.07,
+                        child: TextFormField(
+                          controller: _nameController,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Name cannot be empty';
+                            }
+                            return null;
+                          },
+                          onChanged: (value) {
+                            setState(() {
+                              errorMessage = null;
+                            });
+                          },
+                          style: const TextStyle(
+                            color: Colors.black,
+                          ),
+                          cursorColor: Colors.black,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: const Color(0xFFD9D9D9),
+                            hintText: "Enter Channel Name",
+                            errorText: errorMessage,
+                            hintStyle: const TextStyle(color: Colors.grey),
+                            prefixIcon: Padding(
+                              padding: EdgeInsets.all(screenSize.width * 0.028),
+                              child: Image.network(
+                                s29,
+                                width: screenSize.width * 0.05,
+                                height: screenSize.width * 0.05,
+                              ),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(screenSize.width * 0.05)),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFD9D9D9)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(screenSize.width * 0.05)),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFD9D9D9)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(screenSize.width * 0.05)),
+                              borderSide: const BorderSide(
+                                color: Colors.lightBlue,
+                              ),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                  Radius.circular(screenSize.width * 0.05)),
+                              borderSide: const BorderSide(
+                                color: Colors.red,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Photo Selection
+                      Positioned(
+                        top: screenSize.height * 0.53,
+                        left: screenSize.width * 0.1,
+                        child: Row(
+                          children: [
+                            Image.network(
+                              s25,
+                              width: screenSize.width * 0.05,
+                              height: screenSize.width * 0.05,
+                            ),
+                            Text(
+                              "   Photos (Optionnel)",
+                              style: TextStyle(
+                                  color: themeProvider.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        top: screenSize.height * 0.56,
+                        left: screenSize.width * 0.1,
+                        child: Row(
+                          children: [
+                            GestureDetector(
+                              onTap: _pickImage,
+                              child: Container(
+                                width: screenSize.width * 0.07,
+                                height: screenSize.width * 0.07,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(
+                                      screenSize.width * 0.05),
+                                ),
+                                child: Image.network(s26),
+                              ),
+                            ),
+                            SizedBox(width: screenSize.width * 0.05),
+                            Container(
+                              width: screenSize.width * 0.7,
+                              height: screenSize.width * 0.13,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFD9D9D9),
+                                borderRadius: BorderRadius.circular(
+                                    screenSize.width * 0.05),
+                              ),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 10),
+                              child: Center(
+                                child: Text(
+                                  _selectedImageFile?.path ?? "",
+                                  style: const TextStyle(color: Colors.black),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Done Button
+                      Positioned(
+                        top: screenSize.height * 0.7,
+                        left: screenSize.width * 0.15,
+                        child: Container(
+                          height: screenSize.height * 0.075,
+                          width: screenSize.width * 0.65,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF754CEF),
+                            borderRadius:
+                                BorderRadius.circular(screenSize.width * 0.05),
+                          ),
+                          child: MaterialButton(
+                            onPressed:
+                                _saveChannelData, // Fixed: Added () to call the method
+                            child: Text(
+                              "Done",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: screenSize.width * 0.042),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+      ),
     );
   }
 }

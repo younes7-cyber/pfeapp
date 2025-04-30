@@ -184,3 +184,7 @@ const String s100 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/moderYn-microphone.jpg";
 const String s101 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/photo_5800774498197293417_x.jpg";
+const String s102 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/Wavy_Tech-16_Single-11.jpg";
+const String s103 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/output-onlinejpgtools%20(1)%20(1).jpg";
