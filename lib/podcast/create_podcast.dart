@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pfeapp/annimation.dart';
+import 'package:pfeapp/theme_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
 import 'package:drop_down_list/drop_down_list.dart';
@@ -43,6 +46,10 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
   final _descriptionController = TextEditingController();
   final _categoryController = TextEditingController();
   final _playlistController = TextEditingController();
+  String? nameError;
+  String? descError;
+  String? categoryError;
+  String? fileError;
   String?
       _selectedPlaylistId; // Variable pour stocker l'ID de la playlist sélectionnée
 
@@ -51,9 +58,15 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
   @override
   void initState() {
     super.initState();
-    _loadPlaylists();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      setState(() => isLoading = true);
+      _loadPlaylists();
+      await Future.delayed(const Duration(seconds: 3));
+      setState(() => isLoading = false);
+    });
   }
 
+  bool isLoading = true;
 // Fonction pour obtenir la durée d’un fichier audio
   Future<Duration> _getAudioDuration(String filePath) async {
     try {
@@ -63,7 +76,6 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
       await player.dispose();
       return duration ?? Duration.zero;
     } catch (e) {
-      debugPrint('❌ Failed to get audio duration: $e');
       return Duration.zero;
     }
   }
@@ -91,9 +103,8 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
       setState(() {
         play.addAll(fetchedPlaylists);
       });
-    } catch (e) {
-      print('Error loading playlists: $e');
-    }
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   @override
@@ -147,7 +158,6 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
   Future<String> _uploadFileToSupabase(String path, String folder,
       {bool isAudio = false}) async {
     if (path.isEmpty) {
-      debugPrint("No file selected for upload.");
       return '';
     }
 
@@ -162,8 +172,6 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
       // For audio files, check and convert to MP3 if needed
       if (isAudio) {
         if (fileExtension != 'mp3') {
-          debugPrint("Converting audio file to MP3 format: $filePath");
-
           try {
             // Create a sanitized filename without special characters
             final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -188,16 +196,11 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
             );
 
             if (conversionResult) {
-              debugPrint("✅ Conversion successful: $outputPath");
               filePath = outputPath;
               fileName = sanitizedFileName;
               fileExtension = 'mp3';
-            } else {
-              debugPrint(
-                  "❌ Conversion failed. Will try to upload original file.");
-            }
+            } else {}
           } catch (e) {
-            debugPrint("❌ Error during audio conversion: $e");
             // Continue with original file if conversion fails but sanitize the filename
           }
         }
@@ -211,8 +214,6 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
         final file = File(filePath);
 
         if (await file.exists()) {
-          debugPrint("✅ File exists and ready for upload: $filePath");
-
           // Read file as bytes
           final fileBytes = await file.readAsBytes();
 
@@ -227,14 +228,11 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
               .getPublicUrl(finalFileName);
 
           if (publicUrl.isNotEmpty) {
-            debugPrint('✅ File uploaded successfully: $publicUrl');
             return publicUrl;
           } else {
-            debugPrint('⚠️ Failed to get public URL.');
             return '';
           }
         } else {
-          debugPrint('❌ File does not exist: $filePath');
           return '';
         }
       } else {
@@ -256,125 +254,172 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
               .getPublicUrl(finalFileName);
 
           if (publicUrl.isNotEmpty) {
-            debugPrint('✅ File uploaded successfully: $publicUrl');
             return publicUrl;
           } else {
-            debugPrint('⚠️ Failed to get public URL.');
             return '';
           }
         } else {
-          debugPrint('❌ File does not exist: $filePath');
           return '';
         }
       }
     } catch (e) {
-      debugPrint('❌ Error during Supabase upload: $e');
       return '';
     }
   }
 
-  Future<void> _createPodcast() async {
-    // Récupération des valeurs saisies par l'utilisateur
-    final name = _nameController.text.trim();
-    final description = _descriptionController.text.trim();
-    final category = _categoryController.text.trim();
+  bool _validateFields() {
+    bool isValid = true;
 
+    // Reset all errors first
+    setState(() {
+      nameError = null;
+      descError = null;
+      categoryError = null;
+      fileError = null;
+    });
+
+    // Check each field
+    if (_nameController.text.trim().isEmpty) {
+      setState(() {
+        nameError = "Name must not be empty";
+      });
+      isValid = false;
+    }
+
+    if (_descriptionController.text.trim().isEmpty) {
+      setState(() {
+        descError = "Description must not be empty";
+      });
+      isValid = false;
+    }
+
+    if (_categoryController.text.trim().isEmpty) {
+      setState(() {
+        categoryError = "Category must not be empty";
+      });
+      isValid = false;
+    }
+
+    if (_selectedAudioPath == null) {
+      setState(() {
+        fileError = "Audio file must not be empty";
+      });
+      isValid = false;
+    }
+
+    return isValid;
+  }
+
+  Future<void> _createPodcast() async {
     // Validation des champs obligatoires
-    if (name.isEmpty ||
-        description.isEmpty ||
-        category.isEmpty ||
-        _selectedAudioPath == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields.')),
-      );
+    if (!_validateFields()) {
+      // If validation fails, just return - errors are already displayed
       return;
     }
 
     try {
       // Récupérer l'utilisateur actuel
-      final currentUser = FirebaseAuth.instance.currentUser;
-      final userId = currentUser?.uid ?? '';
+      final currentUser = FirebaseAuth.instance.currentUser?.uid;
+      //final userId = currentUser?.uid ??
+      // Show loading indicator
+      setState(() {
+        isLoading = true;
+      });
 
       // Téléverser la photo (ou utiliser l'URL par défaut)
       final photoUrl = _selectedImagePath != null
           ? await _uploadFileToSupabase(_selectedImagePath!, 'podcast/photo')
-          : 'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/ano.jpg';
-// Téléverser le fichier audio (converti en MP3 si nécessaire)
+          : 'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/podcast/photo/11583113_4788501.jpg';
+
+      // Téléverser le fichier audio (converti en MP3 si nécessaire)
       final audioUrl = await _uploadFileToSupabase(
         _selectedAudioPath!,
         'podcast/audio',
-        isAudio: true, // 🔥 Indique que c'est un fichier audio
+        isAudio: true,
       );
-
-      debugPrint('Audio file path: $_selectedAudioPath');
-      debugPrint(
-          'Audio file extension: ${_selectedAudioPath!.split('.').last}');
 
       // Vérifier si le téléversement audio a échoué
       if (audioUrl.isEmpty) {
+        setState(() {
+          isLoading = false;
+        });
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text('Audio upload failed. Please try again.')),
         );
         return;
       }
-      // 🔥 Obtenir la durée de l’audio
+
+      // 🔥 Obtenir la durée de l'audio
       final duration = await _getAudioDuration(_selectedAudioPath!);
       final formattedDuration =
           "${duration.inMinutes}:${(duration.inSeconds % 60).toString().padLeft(2, '0')}";
 
+      // Récupération des valeurs saisies par l'utilisateur
+      final name = _nameController.text.trim();
+      final description = _descriptionController.text.trim();
+      final category = _categoryController.text.trim();
+
       // Préparer les données à enregistrer dans Firestore
       final podcastData = {
-        'idUser': userId, // Enregistrement de l'ID utilisateur
+        'idUser': currentUser,
         'name': name,
         'description': description,
         'category': category,
-        'urlFile': audioUrl, // URL du fichier audio
-        'urlPhoto': photoUrl, // URL de la photo
-        'dateCreation': FieldValue.serverTimestamp(), // Timestamp de création
+        'urlFile': audioUrl,
+        'urlPhoto': photoUrl,
+        'dateCreation': FieldValue.serverTimestamp(),
         'vue': 0,
         'likes': 0,
         'unlikes': 0,
         'comments': 0,
-        'shares': 0,
         'save': 0,
         'report': 0,
         'duration': formattedDuration,
       };
 
       // Ajouter les données dans Firestore
-      //  await _firestore.collection('podcast').add(podcastData);
       DocumentReference docRef = await FirebaseFirestore.instance
           .collection('podcasts')
           .add(podcastData);
 
       await docRef
           .update({'id': docRef.id}); // Ajoute l'ID au document lui-même
+
+      // Add to playlist if selected
       if (_selectedPlaylistId != null && _selectedPlaylistId!.isNotEmpty) {
         await FirebaseFirestore.instance.collection('playinpod').add({
           'podcastId': docRef.id,
-          'playlistId':
-              _selectedPlaylistId, // Utilisation directe de la variable
+          'playlistId': _selectedPlaylistId,
           'date': FieldValue.serverTimestamp(),
         });
+
         await FirebaseFirestore.instance
             .collection('playlist')
             .doc(_selectedPlaylistId)
             .update({
           'podcast': FieldValue.increment(1),
-          'date': FieldValue.serverTimestamp(),
         });
       }
-      // Afficher un message de succès
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Podcast created successfully!')),
-      );
 
-      // Retourner à l'écran précédent
-      Navigator.pop(context);
+      // Hide loading indicator
+      setState(() {
+        isLoading = false;
+      });
+
+      // Navigate to success page
+      // ignore: use_build_context_synchronously
+      Navigator.pushNamed(context, '/succes2');
     } catch (e) {
+      // Hide loading indicator
+      setState(() {
+        isLoading = false;
+      });
+
       // Gestion des erreurs
-      debugPrint('Error creating podcast: $e');
+
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text('Error creating podcast. Please try again.')),
@@ -387,647 +432,471 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
     final Size c = MediaQuery.of(context).size;
     return Scaffold(
       body: SafeArea(
-          child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-        ),
-        child: Stack(children: [
-          if (y == 2) ...[
-            Positioned(
-              top: c.height * 0.01,
-              left: c.width * 0.03,
-              child: IconButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                icon: Image.network(
-                  s18,
-                  width: c.width * 0.07,
-                  height: c.width * 0.07,
-                ),
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.07,
-              left: c.width * 0.1,
-              child: Text(
-                "Let's Upload Your Podcast",
-                style: TextStyle(
-                    fontSize: c.width * 0.065, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.15,
-              left: c.width * 0.1,
-              child: const Text(
-                "Name Podcast",
-                style:
-                    TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.18,
-              left: c.width * 0.07,
-              right: c.width * 0.07,
-              child: SizedBox(
-                width: c.width - 60,
-                child: TextField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: const Color(0xFFD9D9D9),
-
-                    hintText: "Enter Name Podcast",
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    // Utilisation d'une image depuis les assets comme prefixIcon
-                    prefixIcon: Padding(
-                      padding: EdgeInsets.all(c.width *
-                          0.028), // Ajustez le padding selon vos besoins
-                      child: Image.network(
-                        s30, // Remplacez par le chemin de votre icône
-                        width: c.width *
-                            0.05, // Ajustez la taille selon vos besoins
-                        height: c.width * 0.05,
-                      ),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.all(Radius.circular(c.width * 0.05)),
-                      borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.all(Radius.circular(c.width * 0.05)),
-                      borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.all(Radius.circular(c.width * 0.05)),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFD9D9D9),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.28,
-              left: c.width * 0.1,
-              child: const Text(
-                "Descreption",
-                style:
-                    TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.31,
-              left: c.width * 0.07,
-              right: c.width * 0.07,
-              child: SizedBox(
-                width: c.width - 60,
-                child: TextField(
-                  controller: _descriptionController,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: const Color(0xFFD9D9D9),
-
-                    hintText: "Enter Decreption",
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    // Utilisation d'une image depuis les assets comme prefixIcon
-                    prefixIcon: Padding(
-                      padding: EdgeInsets.all(c.width *
-                          0.028), // Ajustez le padding selon vos besoins
-                      child: Image.network(
-                        s31, // Remplacez par le chemin de votre icône
-                        width: c.width *
-                            0.05, // Ajustez la taille selon vos besoins
-                        height: c.width * 0.05,
-                      ),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.all(Radius.circular(c.width * 0.05)),
-                      borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.all(Radius.circular(c.width * 0.05)),
-                      borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.all(Radius.circular(c.width * 0.05)),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFD9D9D9),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.41,
-              left: c.width * 0.1,
-              child: const Text(
-                "Catigory Of Podcast",
-                style:
-                    TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.44,
-              left: c.width * 0.07,
-              right: c.width * 0.07,
-              child: Row(children: [
-                _buildDropDownField(
-                  controller: _categoryController,
-                  hint: "Select Category",
-                  items: _listOfCat,
-                  title: "Category",
-                ),
-              ]),
-            ),
-            Positioned(
-              top: c.height * 0.54,
-              left: c.width * 0.1,
-              child: const Text(
-                "Add Podcast To A Playlist ",
-                style:
-                    TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.57,
-              left: c.width * 0.07,
-              right: c.width * 0.07,
-              child: _buildDropDownField1(
-                controller: _playlistController,
-                hint: "Select Playlist",
-                items: play,
-                title: "Playlist",
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.67,
-              right: c.width * 0.2,
-              child: Row(
-                children: [
-                  Image.network(
-                    s25,
-                    width: c.width * 0.05,
-                    height: c.width * 0.05,
-                  ),
-                  const Text(
-                    "   Photos",
-                    style: TextStyle(
-                        color: Colors.black, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.7,
-              right: c.width * 0.02,
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap:
-                        _pickImage, // Appelle la fonction pour ouvrir le gestionnaire de fichiers
-                    child: Container(
-                      width: c.width * 0.07,
-                      height: c.width * 0.07,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(c.width * 0.05),
-                      ),
-                      child: Image.network(s26),
-                    ),
-                  ),
-                  Container(
-                      width:
-                          c.width * 0.01), // Espace entre l'image et le texte
-                  Container(
-                    width: c.width * 0.35,
-                    height: c.width *
-                        0.13, // Largeur ajustable pour afficher le chemin
-
+          child: isLoading
+              ? const Annimationwidjet()
+              : Consumer<ThemeProvider>(
+                  builder: (context, themeProvider, child) {
+                  return Container(
                     decoration: BoxDecoration(
-                        color: const Color(0xFFD9D9D9),
-                        borderRadius: BorderRadius.circular(c.width * 0.05)),
-                    child: Text(
-                      _selectedImagePath ?? "",
-                      style: const TextStyle(
-                          color: Colors.black,
-                          backgroundColor: Color(0xFFD9D9D9)),
-                      overflow:
-                          TextOverflow.ellipsis, // Coupe le texte si trop long
+                      color: themeProvider.isDarkMode
+                          ? Colors.black
+                          : Colors.white,
                     ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.67,
-              left: c.width * 0.1,
-              child: Row(
-                children: [
-                  Image.network(
-                    s30,
-                    width: c.width * 0.05,
-                    height: c.width * 0.05,
-                  ),
-                  const Text(
-                    "   File Podcast",
-                    style: TextStyle(
-                        color: Colors.black, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.7,
-              left: c.width * 0.1,
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap:
-                        _pickAudio, // Appelle la fonction pour ouvrir le gestionnaire de fichiers
-                    child: Container(
-                      width: c.width * 0.07,
-                      height: c.width * 0.07,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(c.width * 0.05),
+                    child: Stack(children: [
+                      Positioned(
+                        top: c.height * 0.01,
+                        left: c.width * 0.03,
+                        child: IconButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          icon: Image.network(
+                            themeProvider.isDarkMode ? s97 : s18,
+                            width: c.width * 0.07,
+                            height: c.width * 0.07,
+                          ),
+                        ),
                       ),
-                      child: Image.network(s26),
-                    ),
-                  ),
-                  Container(
-                      width:
-                          c.width * 0.01), // Espace entre l'image et le texte
-                  Container(
-                    width: c.width * 0.35,
-                    height: c.width *
-                        0.13, // Largeur ajustable pour afficher le chemin
+                      Positioned(
+                        top: c.height * 0.07,
+                        left: c.width * 0.1,
+                        child: Text(
+                          "Let's Upload Your Podcast",
+                          style: TextStyle(
+                              fontSize: c.width * 0.065,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Positioned(
+                        top: c.height * 0.15,
+                        left: c.width * 0.1,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Name Podcast",
+                              style: TextStyle(
+                                  color: themeProvider.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            nameError != null
+                                ? Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      nameError!,
+                                      style: const TextStyle(
+                                          color: Colors.red, fontSize: 12),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        top: c.height * 0.18,
+                        left: c.width * 0.07,
+                        right: c.width * 0.07,
+                        child: SizedBox(
+                          width: c.width - 60,
+                          child: TextFormField(
+                            controller: _nameController,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return "name must not be empty";
+                              }
+                              return null;
+                            },
+                            onChanged: (value) {
+                              setState(() {
+                                nameError = null;
+                              });
+                            },
+                            style: const TextStyle(
+                              color: Colors.black,
+                            ),
+                            cursorColor: Colors.black,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: const Color(0xFFD9D9D9),
+                              errorText: nameError,
+                              hintText: "Enter Name Podcast",
+                              hintStyle: const TextStyle(color: Colors.grey),
+                              errorStyle: const TextStyle(
+                                color: Colors.red,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              // Utilisation d'une image depuis les assets comme prefixIcon
+                              prefixIcon: Padding(
+                                padding: EdgeInsets.all(c.width *
+                                    0.028), // Ajustez le padding selon vos besoins
+                                child: Image.network(
+                                  s30, // Remplacez par le chemin de votre icône
+                                  width: c.width *
+                                      0.05, // Ajustez la taille selon vos besoins
+                                  height: c.width * 0.05,
+                                ),
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                    Radius.circular(c.width * 0.05)),
+                                borderSide:
+                                    const BorderSide(color: Color(0xFFD9D9D9)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                    Radius.circular(c.width * 0.05)),
+                                borderSide:
+                                    const BorderSide(color: Color(0xFFD9D9D9)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                    Radius.circular(c.width * 0.05)),
+                                borderSide: const BorderSide(
+                                  color: Colors.lightBlue,
+                                ),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                    Radius.circular(c.width * 0.05)),
+                                borderSide: const BorderSide(
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: c.height * 0.28,
+                        left: c.width * 0.1,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Descreption",
+                              style: TextStyle(
+                                  color: themeProvider.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            descError != null
+                                ? Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      descError!,
+                                      style: const TextStyle(
+                                          color: Colors.red, fontSize: 12),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        top: c.height * 0.31,
+                        left: c.width * 0.07,
+                        right: c.width * 0.07,
+                        child: SizedBox(
+                          width: c.width - 60,
+                          child: TextFormField(
+                            controller: _descriptionController,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return "description must not be empty";
+                              }
+                              return null;
+                            },
+                            onChanged: (value) {
+                              setState(() {
+                                descError = null;
+                              });
+                            },
+                            style: const TextStyle(
+                              color: Colors.black,
+                            ),
+                            cursorColor: Colors.black,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: const Color(0xFFD9D9D9),
+                              errorText: descError,
+                              hintText: "Enter Description",
+                              hintStyle: const TextStyle(color: Colors.grey),
+                              errorStyle: const TextStyle(
+                                color: Colors.red,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              // Utilisation d'une image depuis les assets comme prefixIcon
+                              prefixIcon: Padding(
+                                padding: EdgeInsets.all(c.width *
+                                    0.028), // Ajustez le padding selon vos besoins
+                                child: Image.network(
+                                  s31, // Remplacez par le chemin de votre icône
+                                  width: c.width *
+                                      0.05, // Ajustez la taille selon vos besoins
+                                  height: c.width * 0.05,
+                                ),
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                    Radius.circular(c.width * 0.05)),
+                                borderSide:
+                                    const BorderSide(color: Color(0xFFD9D9D9)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                    Radius.circular(c.width * 0.05)),
+                                borderSide:
+                                    const BorderSide(color: Color(0xFFD9D9D9)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                    Radius.circular(c.width * 0.05)),
+                                borderSide: const BorderSide(
+                                  color: Colors.lightBlue,
+                                ),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                    Radius.circular(c.width * 0.05)),
+                                borderSide: const BorderSide(
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: c.height * 0.41,
+                        left: c.width * 0.1,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Category Of Podcast",
+                              style: TextStyle(
+                                  color: themeProvider.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            categoryError != null
+                                ? Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      categoryError!,
+                                      style: const TextStyle(
+                                          color: Colors.red, fontSize: 12),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        top: c.height * 0.44,
+                        left: c.width * 0.07,
+                        right: c.width * 0.07,
+                        child: Row(children: [
+                          _buildDropDownField(
+                            controller: _categoryController,
+                            hint: "Select Category",
+                            items: _listOfCat,
+                            title: "Category",
+                            errorText: categoryError,
+                          ),
+                        ]),
+                      ),
+                      Positioned(
+                        top: c.height * 0.54,
+                        left: c.width * 0.1,
+                        child: Text(
+                          "Add Podcast To A Playlist (Optionnel)",
+                          style: TextStyle(
+                              color: themeProvider.isDarkMode
+                                  ? Colors.white
+                                  : Colors.black,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Positioned(
+                        top: c.height * 0.57,
+                        left: c.width * 0.07,
+                        right: c.width * 0.07,
+                        child: _buildDropDownField1(
+                          controller: _playlistController,
+                          hint: "Select Playlist",
+                          items: play,
+                          title: "Playlist",
+                        ),
+                      ),
+                      Positioned(
+                        top: c.height * 0.67,
+                        right: c.width * 0.05,
+                        child: Row(
+                          children: [
+                            Image.network(
+                              s25,
+                              width: c.width * 0.05,
+                              height: c.width * 0.05,
+                            ),
+                            Text(
+                              "   Photos (Optionnel)",
+                              style: TextStyle(
+                                  color: themeProvider.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        top: c.height * 0.7,
+                        right: c.width * 0.02,
+                        child: Row(
+                          children: [
+                            GestureDetector(
+                              onTap:
+                                  _pickImage, // Appelle la fonction pour ouvrir le gestionnaire de fichiers
+                              child: Container(
+                                width: c.width * 0.07,
+                                height: c.width * 0.07,
+                                decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(c.width * 0.05),
+                                ),
+                                child: Image.network(s26),
+                              ),
+                            ),
+                            Container(
+                                width: c.width *
+                                    0.01), // Espace entre l'image et le texte
+                            Container(
+                              width: c.width * 0.35,
+                              height: c.width *
+                                  0.13, // Largeur ajustable pour afficher le chemin
 
-                    decoration: BoxDecoration(
-                        color: const Color(0xFFD9D9D9),
-                        borderRadius: BorderRadius.circular(c.width * 0.05)),
-                    child: Text(
-                      _selectedAudioPath ?? "",
-                      style: const TextStyle(
-                          color: Colors.black,
-                          backgroundColor: Color(0xFFD9D9D9)),
-                      overflow:
-                          TextOverflow.ellipsis, // Coupe le texte si trop long
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.82,
-              left: c.width * 0.15,
-              child: Container(
-                height: c.height * 0.075,
-                width: c.width * 0.65,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF754CEF),
-                  borderRadius: BorderRadius.circular(c.width * 0.05),
-                ),
-                child: MaterialButton(
-                  onPressed: () async {
-                    await _createPodcast(); // Assurez-vous que la fonction est exécutée
-                    Navigator.pushNamedAndRemoveUntil(
-                        context, '/podly', (route) => false);
-                  },
-                  child: Text(
-                    "Done",
-                    style: TextStyle(
-                        color: Colors.white, fontSize: c.width * 0.042),
-                  ),
-                ),
-              ),
-            ),
-          ],
-          if (y == 3) ...[
-            Positioned(
-              top: c.height * 0.01,
-              left: c.width * 0.03,
-              child: IconButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                icon: Image.network(
-                  s18,
-                  width: c.width * 0.07,
-                  height: c.width * 0.07,
-                ),
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.07,
-              left: c.width * 0.1,
-              child: Text(
-                "Let's Upload Your Podcast",
-                style: TextStyle(
-                    fontSize: c.width * 0.065, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.15,
-              left: c.width * 0.1,
-              child: const Text(
-                "Name Podcast",
-                style:
-                    TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.18,
-              left: c.width * 0.07,
-              right: c.width * 0.07,
-              child: SizedBox(
-                width: c.width - 60,
-                child: TextField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: const Color(0xFFD9D9D9),
+                              decoration: BoxDecoration(
+                                  color: const Color(0xFFD9D9D9),
+                                  borderRadius:
+                                      BorderRadius.circular(c.width * 0.05)),
+                              child: Text(
+                                _selectedImagePath ?? "",
+                                style: const TextStyle(
+                                    color: Colors.black,
+                                    backgroundColor: Color(0xFFD9D9D9)),
+                                overflow: TextOverflow
+                                    .ellipsis, // Coupe le texte si trop long
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        top: c.height * 0.67,
+                        left: c.width * 0.1,
+                        child: Row(
+                          children: [
+                            Image.network(
+                              s30,
+                              width: c.width * 0.05,
+                              height: c.width * 0.05,
+                            ),
+                            Text(
+                              "   File Podcast",
+                              style: TextStyle(
+                                  color: themeProvider.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        top: c.height * 0.7,
+                        left: c.width * 0.1,
+                        child: Row(
+                          children: [
+                            GestureDetector(
+                              onTap:
+                                  _pickAudio, // Appelle la fonction pour ouvrir le gestionnaire de fichiers
+                              child: Container(
+                                width: c.width * 0.07,
+                                height: c.width * 0.07,
+                                decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(c.width * 0.05),
+                                ),
+                                child: Image.network(s26),
+                              ),
+                            ),
+                            Container(
+                                width: c.width *
+                                    0.01), // Espace entre l'image et le texte
+                            Container(
+                              width: c.width * 0.35,
+                              height: c.width *
+                                  0.13, // Largeur ajustable pour afficher le chemin
 
-                    hintText: "Enter Name Podcast",
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    // Utilisation d'une image depuis les assets comme prefixIcon
-                    prefixIcon: Padding(
-                      padding: EdgeInsets.all(c.width *
-                          0.028), // Ajustez le padding selon vos besoins
-                      child: Image.network(
-                        s30, // Remplacez par le chemin de votre icône
-                        width: c.width *
-                            0.05, // Ajustez la taille selon vos besoins
-                        height: c.width * 0.05,
+                              decoration: BoxDecoration(
+                                  color: const Color(0xFFD9D9D9),
+                                  borderRadius:
+                                      BorderRadius.circular(c.width * 0.05)),
+                              child: Text(
+                                _selectedAudioPath ?? "",
+                                style: const TextStyle(
+                                    color: Colors.black,
+                                    backgroundColor: Color(0xFFD9D9D9)),
+                                overflow: TextOverflow
+                                    .ellipsis, // Coupe le texte si trop long
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.all(Radius.circular(c.width * 0.05)),
-                      borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.all(Radius.circular(c.width * 0.05)),
-                      borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.all(Radius.circular(c.width * 0.05)),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFD9D9D9),
+                      Positioned(
+                        top: c.height * 0.76,
+                        left: c.width * 0.1,
+                        child: fileError != null
+                            ? Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  fileError!,
+                                  style: const TextStyle(
+                                      color: Colors.red, fontSize: 12),
+                                ),
+                              )
+                            : const SizedBox(),
                       ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.28,
-              left: c.width * 0.1,
-              child: const Text(
-                "Descreption",
-                style:
-                    TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.31,
-              left: c.width * 0.07,
-              right: c.width * 0.07,
-              child: SizedBox(
-                width: c.width - 60,
-                child: TextField(
-                  controller: _descriptionController,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: const Color(0xFFD9D9D9),
-
-                    hintText: "Enter Decreption",
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    // Utilisation d'une image depuis les assets comme prefixIcon
-                    prefixIcon: Padding(
-                      padding: EdgeInsets.all(c.width *
-                          0.028), // Ajustez le padding selon vos besoins
-                      child: Image.network(
-                        s31, // Remplacez par le chemin de votre icône
-                        width: c.width *
-                            0.05, // Ajustez la taille selon vos besoins
-                        height: c.width * 0.05,
+                      Positioned(
+                        top: c.height * 0.82,
+                        left: c.width * 0.15,
+                        child: Container(
+                          height: c.height * 0.075,
+                          width: c.width * 0.65,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF754CEF),
+                            borderRadius: BorderRadius.circular(c.width * 0.05),
+                          ),
+                          child: MaterialButton(
+                            onPressed: _createPodcast,
+                            child: Text(
+                              "Done",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: c.width * 0.042),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.all(Radius.circular(c.width * 0.05)),
-                      borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.all(Radius.circular(c.width * 0.05)),
-                      borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.all(Radius.circular(c.width * 0.05)),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFD9D9D9),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.41,
-              left: c.width * 0.1,
-              child: const Text(
-                "Catigory Of Podcast",
-                style:
-                    TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.44,
-              left: c.width * 0.07,
-              right: c.width * 0.07,
-              child: Row(children: [
-                _buildDropDownField(
-                  controller: _categoryController,
-                  hint: "Select Category",
-                  items: _listOfCat,
-                  title: "Category",
-                ),
-              ]),
-            ),
-            Positioned(
-              top: c.height * 0.54,
-              left: c.width * 0.1,
-              child: const Text(
-                "Add Podcast To A Playlist ",
-                style:
-                    TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.57,
-              left: c.width * 0.07,
-              right: c.width * 0.07,
-              child: _buildDropDownField1(
-                controller: _playlistController,
-                hint: "Select Playlist",
-                items: play,
-                title: "Playlist",
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.67,
-              right: c.width * 0.2,
-              child: Row(
-                children: [
-                  Image.network(
-                    s25,
-                    width: c.width * 0.05,
-                    height: c.width * 0.05,
-                  ),
-                  const Text(
-                    "   Photos",
-                    style: TextStyle(
-                        color: Colors.black, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.7,
-              right: c.width * 0.02,
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap:
-                        _pickImage, // Appelle la fonction pour ouvrir le gestionnaire de fichiers
-                    child: Container(
-                      width: c.width * 0.07,
-                      height: c.width * 0.07,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(c.width * 0.05),
-                      ),
-                      child: Image.network(s26),
-                    ),
-                  ),
-                  Container(
-                      width:
-                          c.width * 0.01), // Espace entre l'image et le texte
-                  Container(
-                    width: c.width * 0.35,
-                    height: c.width *
-                        0.13, // Largeur ajustable pour afficher le chemin
-
-                    decoration: BoxDecoration(
-                        color: const Color(0xFFD9D9D9),
-                        borderRadius: BorderRadius.circular(c.width * 0.05)),
-                    child: Text(
-                      _selectedImagePath ?? "",
-                      style: const TextStyle(
-                          color: Colors.black,
-                          backgroundColor: Color(0xFFD9D9D9)),
-                      overflow:
-                          TextOverflow.ellipsis, // Coupe le texte si trop long
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.67,
-              left: c.width * 0.1,
-              child: Row(
-                children: [
-                  Image.network(
-                    s30,
-                    width: c.width * 0.05,
-                    height: c.width * 0.05,
-                  ),
-                  const Text(
-                    "   File Podcast",
-                    style: TextStyle(
-                        color: Colors.black, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.7,
-              left: c.width * 0.1,
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap:
-                        _pickAudio, // Appelle la fonction pour ouvrir le gestionnaire de fichiers
-                    child: Container(
-                      width: c.width * 0.07,
-                      height: c.width * 0.07,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(c.width * 0.05),
-                      ),
-                      child: Image.network(s26),
-                    ),
-                  ),
-                  Container(
-                      width:
-                          c.width * 0.01), // Espace entre l'image et le texte
-                  Container(
-                    width: c.width * 0.35,
-                    height: c.width *
-                        0.13, // Largeur ajustable pour afficher le chemin
-
-                    decoration: BoxDecoration(
-                        color: const Color(0xFFD9D9D9),
-                        borderRadius: BorderRadius.circular(c.width * 0.05)),
-                    child: Text(
-                      _selectedAudioPath ?? "",
-                      style: const TextStyle(
-                          color: Colors.black,
-                          backgroundColor: Color(0xFFD9D9D9)),
-                      overflow:
-                          TextOverflow.ellipsis, // Coupe le texte si trop long
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: c.height * 0.82,
-              left: c.width * 0.15,
-              child: Container(
-                height: c.height * 0.075,
-                width: c.width * 0.65,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF754CEF),
-                  borderRadius: BorderRadius.circular(c.width * 0.05),
-                ),
-                child: MaterialButton(
-                  onPressed: () async {
-                    await _createPodcast(); // Assurez-vous que la fonction est exécutée
-                    Navigator.pushNamedAndRemoveUntil(
-                        context, '/podly', (route) => false);
-                  },
-                  child: Text(
-                    "Done",
-                    style: TextStyle(
-                        color: Colors.white, fontSize: c.width * 0.042),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ]),
-      )),
+                    ]),
+                  );
+                })),
     );
   }
 
@@ -1036,65 +905,92 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
     required String hint,
     required List<SelectedListItem<String>> items,
     required String title,
+    String? errorText,
   }) {
-    return SizedBox(
-      width: MediaQuery.of(context).size.width - 60,
-      child: TextField(
-        controller: controller,
-        readOnly: true,
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: const Color(0xFFD9D9D9),
-          hintText: hint,
-          hintStyle: const TextStyle(color: Colors.grey),
-          prefixIcon: Padding(
-            padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.028),
-            child: Image.network(s32,
-                width: MediaQuery.of(context).size.width * 0.05,
-                height: MediaQuery.of(context).size.width * 0.05),
+    final Size c = MediaQuery.of(context).size;
+    return Consumer<ThemeProvider>(builder: (context, themeProvider, child) {
+      return SizedBox(
+        width: MediaQuery.of(context).size.width - 60,
+        child: TextFormField(
+          controller: controller,
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return "category must not be empty";
+            }
+            return null;
+          },
+          onChanged: (value) {
+            setState(() {
+              categoryError = null;
+            });
+          },
+          style: const TextStyle(
+            color: Colors.black,
           ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.all(
-                Radius.circular(MediaQuery.of(context).size.width * 0.05)),
-            borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(
-                Radius.circular(MediaQuery.of(context).size.width * 0.05)),
-            borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(
-                Radius.circular(MediaQuery.of(context).size.width * 0.05)),
-            borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-          ),
-        ),
-        onTap: () {
-          DropDownState(
-            dropDown: DropDown(
-              dropDownBackgroundColor: Colors.white,
-              isDismissible: true,
-              bottomSheetTitle: Text(
-                title,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 20.0),
-              ),
-              data: items,
-              onSelected: (List<dynamic> selectedItems) {
-                if (selectedItems.isNotEmpty) {
-                  final selectedItem =
-                      selectedItems.first as SelectedListItem<String>;
-                  setState(() {
-                    controller.text = selectedItem.data;
-                  });
-                }
-              },
-              enableMultipleSelection: false,
+          cursorColor: Colors.black,
+          readOnly: true,
+          decoration: InputDecoration(
+            errorText: categoryError,
+            filled: true,
+            fillColor: const Color(0xFFD9D9D9),
+            hintText: hint,
+            hintStyle: const TextStyle(color: Colors.grey),
+            prefixIcon: Padding(
+              padding:
+                  EdgeInsets.all(MediaQuery.of(context).size.width * 0.028),
+              child: Image.network(s32,
+                  width: MediaQuery.of(context).size.width * 0.05,
+                  height: MediaQuery.of(context).size.width * 0.05),
             ),
-          ).showModal(context);
-        },
-      ),
-    );
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(c.width * 0.05)),
+              borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(c.width * 0.05)),
+              borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(c.width * 0.05)),
+              borderSide: const BorderSide(
+                color: Colors.lightBlue,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(c.width * 0.05)),
+              borderSide: const BorderSide(
+                color: Colors.red,
+              ),
+            ),
+          ),
+          onTap: () {
+            DropDownState(
+              dropDown: DropDown(
+                dropDownBackgroundColor:
+                    themeProvider.isDarkMode ? Colors.black : Colors.white,
+                isDismissible: true,
+                bottomSheetTitle: Text(
+                  title,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 20.0),
+                ),
+                data: items,
+                onSelected: (List<dynamic> selectedItems) {
+                  if (selectedItems.isNotEmpty) {
+                    final selectedItem =
+                        selectedItems.first as SelectedListItem<String>;
+                    setState(() {
+                      controller.text = selectedItem.data;
+                    });
+                  }
+                },
+                enableMultipleSelection: false,
+              ),
+            ).showModal(context);
+          },
+        ),
+      );
+    });
   }
 
   Widget _buildDropDownField1({
@@ -1103,71 +999,82 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
     required List<SelectedListItem<PlaylistItem>> items,
     required String title,
   }) {
-    return SizedBox(
-      width: MediaQuery.of(context).size.width - 60,
-      child: TextField(
-        controller: controller,
-        readOnly: true,
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: const Color(0xFFD9D9D9),
-          hintText: hint,
-          hintStyle: const TextStyle(color: Colors.grey),
-          prefixIcon: Padding(
-            padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.028),
-            child: Image.network(s33,
-                width: MediaQuery.of(context).size.width * 0.05,
-                height: MediaQuery.of(context).size.width * 0.05),
+    final Size c = MediaQuery.of(context).size;
+    return Consumer<ThemeProvider>(builder: (context, themeProvider, child) {
+      return SizedBox(
+        width: MediaQuery.of(context).size.width - 60,
+        child: TextField(
+          controller: controller,
+          style: const TextStyle(
+            color: Colors.black,
           ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.all(
-                Radius.circular(MediaQuery.of(context).size.width * 0.05)),
-            borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(
-                Radius.circular(MediaQuery.of(context).size.width * 0.05)),
-            borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(
-                Radius.circular(MediaQuery.of(context).size.width * 0.05)),
-            borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-          ),
-        ),
-        onTap: () {
-          DropDownState(
-            dropDown: DropDown(
-              dropDownBackgroundColor: Colors.white,
-              isDismissible: true,
-              bottomSheetTitle: Text(
-                title,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 20.0),
-              ),
-              data: items,
-              onSelected: (List<dynamic> selectedItems) {
-                if (selectedItems.isNotEmpty) {
-                  final selectedItem =
-                      selectedItems.first as SelectedListItem<PlaylistItem>;
-                  final playlistItem = selectedItem.data;
-
-                  setState(() {
-                    _selectedPlaylistId = playlistItem.id; // Stocke l'ID
-                    _playlistController.text =
-                        playlistItem.name; // Affiche le nom
-                  });
-
-                  print('Selected Playlist ID: ${playlistItem.id}');
-                  print('Selected Playlist Name: ${playlistItem.name}');
-                }
-              },
-              enableMultipleSelection: false,
+          cursorColor: Colors.black,
+          readOnly: true,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: const Color(0xFFD9D9D9),
+            hintText: hint,
+            hintStyle: const TextStyle(color: Colors.grey),
+            prefixIcon: Padding(
+              padding:
+                  EdgeInsets.all(MediaQuery.of(context).size.width * 0.028),
+              child: Image.network(s33,
+                  width: MediaQuery.of(context).size.width * 0.05,
+                  height: MediaQuery.of(context).size.width * 0.05),
             ),
-          ).showModal(context);
-        },
-      ),
-    );
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(c.width * 0.05)),
+              borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(c.width * 0.05)),
+              borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(c.width * 0.05)),
+              borderSide: const BorderSide(
+                color: Colors.lightBlue,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(c.width * 0.05)),
+              borderSide: const BorderSide(
+                color: Colors.red,
+              ),
+            ),
+          ),
+          onTap: () {
+            DropDownState(
+              dropDown: DropDown(
+                dropDownBackgroundColor:
+                    themeProvider.isDarkMode ? Colors.black : Colors.white,
+                isDismissible: true,
+                bottomSheetTitle: Text(
+                  title,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 20.0),
+                ),
+                data: items,
+                onSelected: (List<dynamic> selectedItems) {
+                  if (selectedItems.isNotEmpty) {
+                    final selectedItem =
+                        selectedItems.first as SelectedListItem<PlaylistItem>;
+                    final playlistItem = selectedItem.data;
+
+                    setState(() {
+                      _selectedPlaylistId = playlistItem.id; // Stocke l'ID
+                      _playlistController.text =
+                          playlistItem.name; // Affiche le nom
+                    });
+                  }
+                },
+                enableMultipleSelection: false,
+              ),
+            ).showModal(context);
+          },
+        ),
+      );
+    });
   }
 }
 

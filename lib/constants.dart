@@ -23,7 +23,7 @@ const String s19 =
 const String s20 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/output-onlinejpgtools%20(2).jpg";
 const String s21 =
-    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/ano.jpg";
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/output-onlinejpgtools%20(2).jpg";
 const String s22 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/person.png";
 const String s23 =
@@ -188,3 +188,5 @@ const String s102 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/Wavy_Tech-16_Single-11.jpg";
 const String s103 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/output-onlinejpgtools%20(1)%20(1).jpg";
+const String s104 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/podcast/photo/11583113_4788501.jpg";

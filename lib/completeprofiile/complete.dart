@@ -332,7 +332,7 @@ class _CompletepageState extends State<Completepage> {
       }
 
       String photoUrl =
-          "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/ano.jpg";
+          "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/output-onlinejpgtools%20(2).jpg";
 
       if (_selectedImageFile != null) {
         final uploadedUrl = await _uploadImageToSupabase();

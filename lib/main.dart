@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:pfeapp/profil/privicy.dart';
 import 'package:pfeapp/profil/your_playlist.dart';
 import 'package:pfeapp/succes.dart';
+import 'package:pfeapp/succes2.dart';
+import 'package:pfeapp/succes3.dart';
 import 'package:pfeapp/sucess1.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
@@ -179,6 +181,8 @@ class _MyAppState extends State<MyApp> {
             '/pryv': (context) => const Privipage(),
             '/succes': (context) => const Succespage(),
             '/sucess1': (context) => const Succes1page(),
+            '/succes2': (context) => const Succes2page(),
+            '/succes3': (context) => const Succes3page(),
           },
         );
       },
