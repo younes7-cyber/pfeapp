@@ -3,7 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:pfeapp/annimation.dart';
 import 'package:pfeapp/constants.dart';
+import 'dart:async';
+
+import 'package:pfeapp/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class Statpage extends StatefulWidget {
   const Statpage({super.key});
@@ -25,6 +30,9 @@ class _StatpageState extends State<Statpage> {
   bool isLoading = true;
   String currentUserID = '';
 
+  // Stream subscription to manage the Firestore listener
+  StreamSubscription<QuerySnapshot>? _subscription;
+
   // Current week offset (0 = current week, -1 = previous week, 1 = next week)
   int weekOffset = 0;
 
@@ -35,56 +43,96 @@ class _StatpageState extends State<Statpage> {
   void initState() {
     super.initState();
     referenceDate = DateTime.now();
-    _getCurrentUserAndFetchStats();
+
+    // Delay initialization to ensure the widget is properly mounted
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _getCurrentUserAndFetchStats();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    // Cancel the subscription when the widget is disposed
+    _subscription?.cancel();
+    _subscription = null; // Set to null to be extra safe
+    super.dispose();
   }
 
   Future<void> _getCurrentUserAndFetchStats() async {
+    if (!mounted) return;
+
     try {
+      setState(() => isLoading = true);
+
       final user = FirebaseAuth.instance.currentUser;
 
       if (user == null) {
-        setState(() {
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
         return;
       }
 
       currentUserID = user.uid;
-      _fetchWeeklyStats();
+      await _fetchWeeklyStats();
+
+      // Set loading to false after all data is fetched
+      if (mounted) {
+        // Add a small delay to allow animation to complete
+        await Future.delayed(const Duration(seconds: 1));
+        setState(() => isLoading = false);
+      }
     } catch (e) {
-      print('Error getting current user: $e');
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
   // Navigate to previous week
   void _previousWeek() {
+    if (!mounted) return;
+
     setState(() {
       weekOffset -= 1;
       isLoading = true;
     });
+    // Cancel existing subscription before creating a new one
+    _subscription?.cancel();
     _fetchWeeklyStats();
   }
 
   // Navigate to next week (limited to current week)
   void _nextWeek() {
+    if (!mounted) return;
+
     if (weekOffset < 0) {
       setState(() {
         weekOffset += 1;
         isLoading = true;
       });
+      // Cancel existing subscription before creating a new one
+      _subscription?.cancel();
       _fetchWeeklyStats();
     }
   }
 
   // Reset to current week
   void _currentWeek() {
+    if (!mounted) return;
+
     setState(() {
       weekOffset = 0;
       isLoading = true;
     });
+    // Cancel existing subscription before creating a new one
+    _subscription?.cancel();
     _fetchWeeklyStats();
   }
 
@@ -102,82 +150,98 @@ class _StatpageState extends State<Statpage> {
   }
 
   Future<void> _fetchWeeklyStats() async {
+    if (!mounted) return;
+
     try {
       if (currentUserID.isEmpty) {
-        setState(() {
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
         return;
       }
 
-      // Reset weekly views
-      final List<double> newWeeklyViews = [0, 0, 0, 0, 0, 0, 0];
-
-      // Get all views for the current user
-      final QuerySnapshot allUserViews = await FirebaseFirestore.instance
-          .collection('vues')
-          .where('userId', isEqualTo: currentUserID)
-          .get();
-
-      // Create a map to count views for each day
-      final Map<int, int> dayViewCounts = {
-        0: 0,
-        1: 0,
-        2: 0,
-        3: 0,
-        4: 0,
-        5: 0,
-        6: 0
-      };
+      // Cancel previous subscription if any
+      _subscription?.cancel();
 
       // Calculate start and end of the selected week
       final DateTime startOfWeek = _getStartOfWeek();
       final DateTime endOfWeek = startOfWeek.add(const Duration(days: 7));
 
-      print(
-          'Fetching stats for week: ${DateFormat('dd/MM/yyyy').format(startOfWeek)} - ${DateFormat('dd/MM/yyyy').format(endOfWeek.subtract(const Duration(days: 1)))}');
-
-      // For each document, check if it falls within the selected week
-      for (final doc in allUserViews.docs) {
-        try {
-          // Get the timestamp from Firestore
-          final Timestamp timestamp = doc['timevue'] as Timestamp;
-          final DateTime viewDate = timestamp.toDate();
-
-          // Check if the date is within the selected week
-          if (viewDate
-                  .isAfter(startOfWeek.subtract(const Duration(seconds: 1))) &&
-              viewDate.isBefore(endOfWeek)) {
-            // Calculate the day index (0-6, where 0 is Sunday)
-            final int dayIndex = viewDate.weekday % 7;
-            // Increment the count for this day
-            dayViewCounts[dayIndex] = (dayViewCounts[dayIndex] ?? 0) + 1;
-
-            print(
-                'Found view on ${DateFormat('EEEE, MMM dd').format(viewDate)} (day index: $dayIndex)');
-          }
-        } catch (e) {
-          print('Error processing document: $e');
+      // Create a subscription to views for the current user
+      _subscription = FirebaseFirestore.instance
+          .collection('vues')
+          .where('userId', isEqualTo: currentUserID)
+          .snapshots()
+          .listen((QuerySnapshot snapshot) {
+        // Only process data if the widget is still mounted
+        if (mounted) {
+          _processViewsData(snapshot, startOfWeek, endOfWeek);
         }
-      }
-
-      // Update our weekly views data
-      for (int i = 0; i < 7; i++) {
-        newWeeklyViews[i] = dayViewCounts[i]!.toDouble();
-      }
-
-      setState(() {
-        weeklyViews = newWeeklyViews;
-        isLoading = false;
       });
-
-      print('Weekly views data: $weeklyViews');
     } catch (e) {
-      print('Error fetching stats: $e');
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
+  }
+
+  // Process the snapshot data from Firestore
+  void _processViewsData(
+      QuerySnapshot snapshot, DateTime startOfWeek, DateTime endOfWeek) {
+    // Check if the widget is still mounted before doing any processing
+    if (!mounted) return;
+
+    // Reset weekly views
+    final List<double> newWeeklyViews = [0, 0, 0, 0, 0, 0, 0];
+
+    // Create a map to count views for each day
+    final Map<int, int> dayViewCounts = {
+      0: 0,
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+      6: 0
+    };
+
+    // For each document, check if it falls within the selected week
+    for (final doc in snapshot.docs) {
+      try {
+        // Get the timestamp from Firestore
+        final Timestamp timestamp = doc['timevue'] as Timestamp;
+        final DateTime viewDate = timestamp.toDate();
+
+        // Check if the date is within the selected week
+        if (viewDate
+                .isAfter(startOfWeek.subtract(const Duration(seconds: 1))) &&
+            viewDate.isBefore(endOfWeek)) {
+          // Calculate the day index (0-6, where 0 is Sunday)
+          final int dayIndex = viewDate.weekday % 7;
+          // Increment the count for this day
+          dayViewCounts[dayIndex] = (dayViewCounts[dayIndex] ?? 0) + 1;
+        }
+        // ignore: empty_catches
+      } catch (e) {}
+    }
+
+    // Update our weekly views data
+    for (int i = 0; i < 7; i++) {
+      newWeeklyViews[i] = dayViewCounts[i]!.toDouble();
+    }
+
+    // Check if the widget is still mounted before calling setState
+    if (!mounted) return;
+
+    // Update the UI with the new data
+    setState(() {
+      weeklyViews = newWeeklyViews;
+      isLoading = false;
+    });
   }
 
   // Get the title for the current week view
@@ -191,112 +255,124 @@ class _StatpageState extends State<Statpage> {
   @override
   Widget build(BuildContext context) {
     final Size c = MediaQuery.of(context).size;
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: Image.network(
-            s18,
-            width: c.width * 0.07,
-            height: c.width * 0.07,
-          ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        title: const Text(
-          "Statistics",
-          style: TextStyle(fontWeight: FontWeight.w500),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: SafeArea(
-        child: Container(
-          width: c.width,
-          height: c.height,
-          color: Colors.white,
-          child: Padding(
-            padding: EdgeInsets.all(c.width * 0.04),
-            child: Column(
-              children: [
-                SizedBox(height: c.height * 0.03),
-                Text(
-                  "Weekly Podcast Views",
-                  style: TextStyle(
-                    fontSize: c.width * 0.05,
-                    fontWeight: FontWeight.bold,
+    return isLoading
+        ? const Annimationwidjet()
+        : Consumer<ThemeProvider>(builder: (context, themeProvider, child) {
+            return Scaffold(
+              appBar: AppBar(
+                leading: IconButton(
+                  icon: Image.network(
+                    themeProvider.isDarkMode ? s97 : s18,
+                    width: c.width * 0.07,
+                    height: c.width * 0.07,
                   ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
                 ),
-                SizedBox(height: c.height * 0.02),
-                // Week navigation controls
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios),
-                      onPressed: _previousWeek,
-                      tooltip: 'Previous Week',
-                    ),
-                    TextButton(
-                      onPressed: _currentWeek,
-                      child: Text(
-                        weekOffset == 0
-                            ? "Current Week"
-                            : "Return to Current Week",
-                        style: TextStyle(
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
+                title: const Text(
+                  "Statistics",
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                backgroundColor:
+                    themeProvider.isDarkMode ? Colors.black : Colors.white,
+                elevation: 0,
+              ),
+              body: SafeArea(
+                child: Container(
+                  width: c.width,
+                  height: c.height,
+                  color: themeProvider.isDarkMode ? Colors.black : Colors.white,
+                  child: Padding(
+                    padding: EdgeInsets.all(c.width * 0.04),
+                    child: Column(
+                      children: [
+                        SizedBox(height: c.height * 0.03),
+                        Text(
+                          "Weekly Podcast Views",
+                          style: TextStyle(
+                            fontSize: c.width * 0.05,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.arrow_forward_ios),
-                      onPressed: weekOffset < 0 ? _nextWeek : null,
-                      tooltip: weekOffset < 0
-                          ? 'Next Week'
-                          : 'Cannot view future weeks',
-                      color: weekOffset < 0 ? Colors.blue : Colors.grey,
-                    ),
-                  ],
-                ),
-                SizedBox(height: c.height * 0.02),
-                isLoading
-                    ? const Center(
-                        child: Column(
+                        SizedBox(height: c.height * 0.02),
+                        // Week navigation controls
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            CircularProgressIndicator(),
-                            SizedBox(height: 16),
-                            Text("Loading statistics..."),
+                            IconButton(
+                              icon: Icon(
+                                Icons.arrow_back_ios,
+                                color: themeProvider.isDarkMode
+                                    ? Colors.white
+                                    : Colors.black,
+                              ),
+                              onPressed: _previousWeek,
+                              tooltip: 'Previous Week',
+                            ),
+                            TextButton(
+                              onPressed: _currentWeek,
+                              child: Text(
+                                weekOffset == 0
+                                    ? "Current Week"
+                                    : "Return to Current Week",
+                                style: const TextStyle(
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.arrow_forward_ios,
+                              ),
+                              onPressed: weekOffset < 0 ? _nextWeek : null,
+                              tooltip: weekOffset < 0
+                                  ? 'Next Week'
+                                  : 'Cannot view future weeks',
+                              color: weekOffset < 0 ? Colors.blue : Colors.grey,
+                            ),
                           ],
                         ),
-                      )
-                    : BarChartWidget(
-                        weeklyViews: weeklyViews,
-                        startOfWeek: _getStartOfWeek(),
-                      ),
-                SizedBox(height: c.height * 0.02),
-                Text(
-                  _getWeekTitle(),
-                  style: TextStyle(
-                    fontSize: c.width * 0.04,
-                    color: Colors.grey[700],
-                  ),
-                ),
-                if (weekOffset < 0)
-                  Text(
-                    "(Historical Data)",
-                    style: TextStyle(
-                      fontSize: c.width * 0.035,
-                      fontStyle: FontStyle.italic,
-                      color: Colors.grey[600],
+                        SizedBox(height: c.height * 0.02),
+                        isLoading
+                            ? const Center(
+                                child: Column(
+                                  children: [
+                                    Annimationwidjet(),
+                                    SizedBox(height: 16),
+                                    Text("Loading statistics..."),
+                                  ],
+                                ),
+                              )
+                            : BarChartWidget(
+                                weeklyViews: weeklyViews,
+                                startOfWeek: _getStartOfWeek(),
+                              ),
+                        SizedBox(height: c.height * 0.02),
+                        Text(
+                          _getWeekTitle(),
+                          style: TextStyle(
+                            fontSize: c.width * 0.04,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        if (weekOffset < 0)
+                          Text(
+                            "(Historical Data)",
+                            style: TextStyle(
+                              fontSize: c.width * 0.035,
+                              fontStyle: FontStyle.italic,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+                ),
+              ),
+            );
+          });
   }
 }
 
@@ -314,24 +390,18 @@ class BarChartWidget extends StatelessWidget {
     if (number == number.roundToDouble()) {
       return number.toInt().toString();
     }
-
     final formatter = NumberFormat('#,##0.00', 'fr');
     // Pour les nombres importants, appliquer une logique de compactage manuel
     if (number >= 1000000000000000) {
-      return formatter
-              .format(number / 1000000000000000)
-              .replaceAll('\u202f', '') +
-          'P';
+      return '${formatter.format(number / 1000000000000000).replaceAll('\u202f', '')}P';
     } else if (number >= 1000000000000) {
-      return formatter.format(number / 1000000000000).replaceAll('\u202f', '') +
-          'T';
+      return '${formatter.format(number / 1000000000000).replaceAll('\u202f', '')}T';
     } else if (number >= 1000000000) {
-      return formatter.format(number / 1000000000).replaceAll('\u202f', '') +
-          'G';
+      return '${formatter.format(number / 1000000000).replaceAll('\u202f', '')}G';
     } else if (number >= 1000000) {
-      return formatter.format(number / 1000000).replaceAll('\u202f', '') + 'M';
+      return '${formatter.format(number / 1000000).replaceAll('\u202f', '')}M';
     } else if (number >= 1000) {
-      return formatter.format(number / 1000).replaceAll('\u202f', '') + 'k';
+      return '${formatter.format(number / 1000).replaceAll('\u202f', '')}k';
     } else if (number <= 999) {
       final formatter1 = NumberFormat('#0', 'fr');
       return formatter1.format(number);
@@ -351,85 +421,92 @@ class BarChartWidget extends StatelessWidget {
       return '${DateFormat('EEE').format(date)}\n${DateFormat('dd/MM').format(date)}';
     });
 
-    return Container(
-      height: c.height * 0.5,
-      width: c.width * 0.9,
-      child: BarChart(
-        BarChartData(
-          alignment: BarChartAlignment.spaceAround,
-          maxY: _getMaxYValue(),
-          barGroups: _chartGroups(),
-          titlesData: FlTitlesData(
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: c.width * 0.15,
-                getTitlesWidget: (double value, TitleMeta meta) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: Text(
-                      formatNumber(value),
-                      style: TextStyle(
-                        fontSize: c.width * 0.035,
-                        color: Colors.grey[700],
+    return Consumer<ThemeProvider>(builder: (context, themeProvider, child) {
+      return SizedBox(
+        height: c.height * 0.5,
+        width: c.width * 0.9,
+        child: BarChart(
+          BarChartData(
+            alignment: BarChartAlignment.spaceAround,
+            maxY: _getMaxYValue(),
+            barGroups: _chartGroups(),
+            titlesData: FlTitlesData(
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: c.width * 0.15,
+                  getTitlesWidget: (double value, TitleMeta meta) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: Text(
+                        formatNumber(value),
+                        style: TextStyle(
+                          fontSize: c.width * 0.035,
+                          color: Colors.grey[700],
+                        ),
                       ),
-                    ),
+                    );
+                  },
+                ),
+              ),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (double value, TitleMeta meta) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        dateLabels[value.toInt()],
+                        style: TextStyle(
+                          fontSize: c.width * 0.03,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  },
+                  interval: 1,
+                  reservedSize: 40,
+                ),
+              ),
+              topTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles:
+                  const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            ),
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              getDrawingHorizontalLine: (value) => FlLine(
+                color: Colors.grey.withOpacity(0.2),
+                strokeWidth: 1,
+              ),
+            ),
+            borderData: FlBorderData(show: false),
+            barTouchData: BarTouchData(
+              enabled: true,
+              touchTooltipData: BarTouchTooltipData(
+                tooltipBgColor: Colors.blueGrey.withOpacity(0.8),
+                tooltipPadding: const EdgeInsets.all(8),
+                tooltipMargin: 8,
+                getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                  final DateTime date =
+                      startOfWeek.add(Duration(days: groupIndex));
+                  return BarTooltipItem(
+                    '${DateFormat('EEE, MMM dd').format(date)}\n${rod.toY.toInt()} views',
+                    TextStyle(
+                        color: themeProvider.isDarkMode
+                            ? Colors.black
+                            : Colors.white,
+                        fontWeight: FontWeight.bold),
                   );
                 },
               ),
-            ),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (double value, TitleMeta meta) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      dateLabels[value.toInt()],
-                      style: TextStyle(
-                        fontSize: c.width * 0.03,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-                },
-                interval: 1,
-                reservedSize: 40,
-              ),
-            ),
-            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          ),
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            getDrawingHorizontalLine: (value) => FlLine(
-              color: Colors.grey.withOpacity(0.2),
-              strokeWidth: 1,
-            ),
-          ),
-          borderData: FlBorderData(show: false),
-          barTouchData: BarTouchData(
-            enabled: true,
-            touchTooltipData: BarTouchTooltipData(
-              tooltipBgColor: Colors.blueGrey.withOpacity(0.8),
-              tooltipPadding: const EdgeInsets.all(8),
-              tooltipMargin: 8,
-              getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                final DateTime date =
-                    startOfWeek.add(Duration(days: groupIndex));
-                return BarTooltipItem(
-                  '${DateFormat('EEE, MMM dd').format(date)}\n${rod.toY.toInt()} views',
-                  const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
-                );
-              },
             ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   double _getMaxYValue() {

@@ -190,3 +190,11 @@ const String s103 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/output-onlinejpgtools%20(1)%20(1).jpg";
 const String s104 =
     "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/podcast/photo/11583113_4788501.jpg";
+const String s105 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/output-onlinepngtools.png";
+const String s106 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/output-onlinepngtools%20(1).png";
+const String s108 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/output-onlinepngtools%20(3)%20(1).png";
+const String s107 =
+    "https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/asset/output-onlinepngtools%20(2)%20(1).png";
