@@ -6,7 +6,10 @@ import 'package:flutter/material.dart';
 
 import 'package:drop_down_list/drop_down_list.dart';
 import 'package:drop_down_list/model/selected_list_item.dart';
+import 'package:pfeapp/annimation.dart';
 import 'package:pfeapp/constants.dart';
+import 'package:pfeapp/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class Modif1page extends StatefulWidget {
   const Modif1page({super.key});
@@ -256,1025 +259,1139 @@ class _Modif1pageState extends State<Modif1page> {
     final Size i = MediaQuery.of(context).size;
     return Scaffold(
       body: SafeArea(
-          child: Container(
-        decoration: BoxDecoration(color: Colors.white),
-        child: isLoading
-            ? Center(child: Text(""))
-            : Stack(
-                children: [
-                  if (n == 2) ...[
-                    Positioned(
-                      top: i.height * 0.01,
-                      left: i.width * 0.03,
-                      child: IconButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        icon: Image.network(
-                          s18,
-                          width: i.width * 0.07,
-                          height: i.width * 0.07,
-                        ),
-                      ),
+          child: isLoading
+              ? const Center(child: Annimationwidjet())
+              : Consumer<ThemeProvider>(
+                  builder: (context, themeProvider, child) {
+                  return Container(
+                    width: double.infinity, // Prend toute la largeur disponible
+                    height:
+                        double.infinity, // Prend toute la hauteur disponible
+                    decoration: BoxDecoration(
+                      color: themeProvider.isDarkMode
+                          ? Colors.black
+                          : Colors.white,
                     ),
-                    Positioned(
-                        top: i.height * 0.02,
-                        left: i.width * 0.15,
-                        child: Text(
-                          "Change Name",
-                          style: TextStyle(
-                              fontSize: i.width * 0.06,
-                              fontWeight: FontWeight.bold),
-                        )),
-                    Positioned(
-                        top: i.height * 0.1,
-                        left: i.width * 0.05,
-                        child: Container(
-                          width: i.width,
-                          child: Text(
-                            "You Can Change Your Username And Use The Real Name For Esasy Utilisation ",
-                            style: TextStyle(color: Colors.grey),
-                            maxLines: 2,
-                          ),
-                        )),
-                    Positioned(
-                      top: i.height * 0.22,
-                      left: i.width * 0.1,
-                      child: const Text(
-                        "FirstName",
-                        style: TextStyle(
-                            color: Colors.black, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.2525,
-                      left: i.width * 0.07,
-                      right: i.width * 0.07,
-                      child: SizedBox(
-                        width: i.width - 60,
-                        child: TextField(
-                          controller: firstNameController,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: const Color(0xFFD9D9D9),
-
-                            hintText: "Enter New FirstName",
-                            hintStyle: const TextStyle(color: Colors.grey),
-                            // Utilisation d'une image depuis les assets comme prefixIcon
-                            prefixIcon: Padding(
-                              padding: EdgeInsets.all(i.width *
-                                  0.028), // Ajustez le padding selon vos besoins
-                              child: Image.network(
-                                s22, // Remplacez par le chemin de votre icône
-                                width: i.width *
-                                    0.05, // Ajustez la taille selon vos besoins
-                                height: i.width * 0.05,
-                              ),
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(
-                                  Radius.circular(i.width * 0.05)),
-                              borderSide:
-                                  const BorderSide(color: Color(0xFFD9D9D9)),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(
-                                  Radius.circular(i.width * 0.05)),
-                              borderSide:
-                                  const BorderSide(color: Color(0xFFD9D9D9)),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(
-                                  Radius.circular(i.width * 0.05)),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFD9D9D9),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.36,
-                      left: i.width * 0.1,
-                      child: const Text(
-                        "LastName",
-                        style: TextStyle(
-                            color: Colors.black, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.3925,
-                      left: i.width * 0.07,
-                      right: i.width * 0.07,
-                      child: SizedBox(
-                        width: i.width - 60,
-                        child: TextField(
-                          controller: lastNameController,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: const Color(0xFFD9D9D9),
-
-                            hintText: "Enter New LastName",
-                            hintStyle: const TextStyle(color: Colors.grey),
-                            // Utilisation d'une image depuis les assets comme prefixIcon
-                            prefixIcon: Padding(
-                              padding: EdgeInsets.all(i.width *
-                                  0.028), // Ajustez le padding selon vos besoins
-                              child: Image.network(
-                                s22, // Remplacez par le chemin de votre icône
-                                width: i.width *
-                                    0.05, // Ajustez la taille selon vos besoins
-                                height: i.width * 0.05,
-                              ),
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(
-                                  Radius.circular(i.width * 0.05)),
-                              borderSide:
-                                  const BorderSide(color: Color(0xFFD9D9D9)),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(
-                                  Radius.circular(i.width * 0.05)),
-                              borderSide:
-                                  const BorderSide(color: Color(0xFFD9D9D9)),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(
-                                  Radius.circular(i.width * 0.05)),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFD9D9D9),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.52,
-                      left: i.width * 0.18,
-                      child: Container(
-                        height: i.height * 0.075,
-                        width: i.width * 0.65,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF754CEF),
-                          borderRadius: BorderRadius.circular(i.width * 0.05),
-                        ),
-                        child: MaterialButton(
-                          onPressed: () async {
-                            String firstName = firstNameController.text.trim();
-                            String lastName = lastNameController.text.trim();
-                            final uid = FirebaseAuth.instance.currentUser?.uid;
-
-                            if (firstName.isEmpty || lastName.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text('Fields must not be empty')),
-                              );
-                              return;
-                            }
-
-                            if (uid == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('User not logged in')),
-                              );
-                              return;
-                            }
-
-                            try {
-                              final querySnapshot = await FirebaseFirestore
-                                  .instance
-                                  .collection('users')
-                                  .where('userId', isEqualTo: uid)
-                                  .limit(
-                                      1) // On suppose qu’il y a un seul document par user
-                                  .get();
-
-                              if (querySnapshot.docs.isNotEmpty) {
-                                final docRef =
-                                    querySnapshot.docs.first.reference;
-
-                                await docRef.update({
-                                  'firstName': firstName,
-                                  'lastName': lastName,
-                                });
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content:
-                                          Text('Profile updated successfully')),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text('User document not found')),
-                                );
-                              }
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Failed to update: $e')),
-                              );
-                            }
-                          },
-                          child: Text(
-                            "Save",
-                            style: TextStyle(
-                                color: Colors.white, fontSize: i.width * 0.042),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (n == 4) ...[
-                    Positioned(
-                      top: i.height * 0.01,
-                      left: i.width * 0.03,
-                      child: IconButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        icon: Image.network(
-                          s18,
-                          width: i.width * 0.07,
-                          height: i.width * 0.07,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                        top: i.height * 0.02,
-                        left: i.width * 0.15,
-                        child: Text(
-                          "Change Motpass",
-                          style: TextStyle(
-                              fontSize: i.width * 0.06,
-                              fontWeight: FontWeight.bold),
-                        )),
-                    Positioned(
-                        top: i.height * 0.1,
-                        left: i.width * 0.05,
-                        child: Container(
-                          width: i.width,
-                          child: Text(
-                            "You Can Change Your Motpass If You Don't Remeber Or Your Corrently Motpass Is Easy To Know ",
-                            style: TextStyle(color: Colors.grey),
-                            maxLines: 2,
-                          ),
-                        )),
-                    Positioned(
-                      top: i.height * 0.22,
-                      left: i.width * 0.1,
-                      child: const Text(
-                        "Motpass",
-                        style: TextStyle(
-                            color: Colors.black, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.2525,
-                      left: i.width * 0.07,
-                      right: i.width * 0.07,
-                      child: SizedBox(
-                        width: i.width - 60,
-                        child: TextField(
-                          controller: pass,
-                          obscureText: _obscureText2,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: const Color(0xFFD9D9D9),
-                            hintText: "Enter New Password",
-                            hintStyle: const TextStyle(color: Colors.grey),
-                            prefixIcon: Padding(
-                              padding: EdgeInsets.all(i.width * 0.028),
-                              child: Image.network(
-                                s13,
-                                width: i.width * 0.05,
-                                height: 0.05,
-                              ),
-                            ),
-                            // Correction de la syntaxe du suffixIcon
-                            suffixIcon: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _obscureText2 = !_obscureText2;
-                                });
+                    child: Stack(
+                      children: [
+                        if (n == 2) ...[
+                          Positioned(
+                            top: i.height * 0.01,
+                            left: i.width * 0.03,
+                            child: IconButton(
+                              onPressed: () {
+                                Navigator.pop(context);
                               },
-                              child: Padding(
-                                padding: EdgeInsets.all(i.width * 0.028),
-                                child: Image.network(
-                                  s14,
-                                  width: i.width * 0.05,
-                                  height: i.width * 0.05,
-                                ),
-                              ),
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(
-                                  Radius.circular(i.width * 0.05)),
-                              borderSide:
-                                  const BorderSide(color: Color(0xFFD9D9D9)),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(
-                                  Radius.circular(i.width * 0.05)),
-                              borderSide:
-                                  const BorderSide(color: Color(0xFFD9D9D9)),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(
-                                  Radius.circular(i.width * 0.05)),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFD9D9D9),
+                              icon: Image.network(
+                                themeProvider.isDarkMode ? s97 : s18,
+                                width: i.width * 0.07,
+                                height: i.width * 0.07,
                               ),
                             ),
                           ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.36,
-                      left: i.width * 0.18,
-                      child: Container(
-                        height: i.height * 0.075,
-                        width: i.width * 0.65,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF754CEF),
-                          borderRadius: BorderRadius.circular(i.width * 0.05),
-                        ),
-                        child: MaterialButton(
-                          onPressed: () async {
-                            final user = FirebaseAuth.instance.currentUser
-                                ?.uid; // Vérifier d'abord dans Firestore si l'utilisateur utilise la méthode Google
-                            final userDoc = await FirebaseFirestore.instance
-                                .collection('users')
-                                .where('userId', isEqualTo: user)
-                                .where('methode', isEqualTo: 'google')
-                                .get();
-
-                            // Si l'utilisateur utilise la méthode Google, bloquer la modification de l'email
-                            if (userDoc.docs.isNotEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      "Impossible de modifier l'email pour un compte Google."),
+                          Positioned(
+                              top: i.height * 0.02,
+                              left: i.width * 0.15,
+                              child: Text(
+                                "Change Name",
+                                style: TextStyle(
+                                    fontSize: i.width * 0.06,
+                                    fontWeight: FontWeight.bold),
+                              )),
+                          Positioned(
+                              top: i.height * 0.1,
+                              left: i.width * 0.05,
+                              child: Container(
+                                width: i.width,
+                                child: Text(
+                                  "You Can Change Your Username And Use The Real Name For Esasy Utilisation ",
+                                  style: TextStyle(color: Colors.grey),
+                                  maxLines: 2,
                                 ),
-                              );
-                              return;
-                            }
-                            if (pass.text.length < 6) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'Le mot de passe doit contenir au moins 6 caractères'),
-                                ),
-                              );
-                              return;
-                            }
-
-                            // Afficher un indicateur de chargement
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    'Mise à jour du mot de passe en cours...'),
-                                duration: Duration(seconds: 1),
-                              ),
-                            );
-
-                            try {
-                              // Mettre à jour le mot de passe
-                              await FirebaseAuth.instance.currentUser
-                                  ?.updatePassword(pass.text);
-
-                              // Effacer les champs après mise à jour réussie
-                              pass.clear();
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'Mot de passe mis à jour avec succès'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            } catch (error) {
-                              // Gérer les erreurs potentielles
-                              String errorMessage =
-                                  'Erreur lors de la mise à jour du mot de passe';
-
-                              // Traiter les erreurs spécifiques de Firebase Auth
-                              if (error is FirebaseAuthException) {
-                                if (error.code == 'requires-recent-login') {
-                                  errorMessage =
-                                      'Veuillez vous reconnecter avant de modifier votre mot de passe';
-                                } else {
-                                  errorMessage = error.message ?? errorMessage;
-                                }
-                              }
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(errorMessage),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                          child: Text(
-                            "Save",
-                            style: TextStyle(
-                                color: Colors.white, fontSize: i.width * 0.042),
+                              )),
+                          Positioned(
+                            top: i.height * 0.22,
+                            left: i.width * 0.1,
+                            child: Text(
+                              "FirstName",
+                              style: TextStyle(
+                                  color: themeProvider.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold),
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (n == 5) ...[
-                    Positioned(
-                      top: i.height * 0.01,
-                      left: i.width * 0.03,
-                      child: IconButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        icon: Image.network(
-                          s18,
-                          width: i.width * 0.07,
-                          height: i.width * 0.07,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                        top: i.height * 0.02,
-                        left: i.width * 0.15,
-                        child: Text(
-                          "Change Name Channel",
-                          style: TextStyle(
-                              fontSize: i.width * 0.06,
-                              fontWeight: FontWeight.bold),
-                        )),
-                    Positioned(
-                        top: i.height * 0.1,
-                        left: i.width * 0.05,
-                        child: Container(
-                          width: i.width,
-                          child: Text(
-                            "You Can Change Your Name Channel And Use The Real Name For Esasy Utilisation ",
-                            style: TextStyle(color: Colors.grey),
-                            maxLines: 2,
-                          ),
-                        )),
-                    Positioned(
-                      top: i.height * 0.22,
-                      left: i.width * 0.1,
-                      child: const Text(
-                        "Name Channel",
-                        style: TextStyle(
-                            color: Colors.black, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.2525,
-                      left: i.width * 0.07,
-                      right: i.width * 0.07,
-                      child: SizedBox(
-                        width: i.width - 60,
-                        child: TextField(
-                          controller: channel,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: const Color(0xFFD9D9D9),
+                          Positioned(
+                            top: i.height * 0.2525,
+                            left: i.width * 0.07,
+                            right: i.width * 0.07,
+                            child: SizedBox(
+                              width: i.width - 60,
+                              child: TextField(
+                                controller: firstNameController,
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                ),
+                                cursorColor: Colors.black,
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: const Color(0xFFD9D9D9),
 
-                            hintText: "Enter New Nam Channel",
-                            hintStyle: const TextStyle(color: Colors.grey),
-                            // Utilisation d'une image depuis les assets comme prefixIcon
-                            prefixIcon: Padding(
-                              padding: EdgeInsets.all(i.width *
-                                  0.028), // Ajustez le padding selon vos besoins
-                              child: Image.network(
-                                s29, // Remplacez par le chemin de votre icône
-                                width: i.width *
-                                    0.05, // Ajustez la taille selon vos besoins
-                                height: i.width * 0.05,
-                              ),
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(
-                                  Radius.circular(i.width * 0.05)),
-                              borderSide:
-                                  const BorderSide(color: Color(0xFFD9D9D9)),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(
-                                  Radius.circular(i.width * 0.05)),
-                              borderSide:
-                                  const BorderSide(color: Color(0xFFD9D9D9)),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(
-                                  Radius.circular(i.width * 0.05)),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFD9D9D9),
+                                  hintText: "Enter New FirstName",
+                                  hintStyle:
+                                      const TextStyle(color: Colors.grey),
+                                  // Utilisation d'une image depuis les assets comme prefixIcon
+                                  prefixIcon: Padding(
+                                    padding: EdgeInsets.all(i.width *
+                                        0.028), // Ajustez le padding selon vos besoins
+                                    child: Image.network(
+                                      s22, // Remplacez par le chemin de votre icône
+                                      width: i.width *
+                                          0.05, // Ajustez la taille selon vos besoins
+                                      height: i.width * 0.05,
+                                    ),
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(i.width * 0.05)),
+                                    borderSide: const BorderSide(
+                                        color: Color(0xFFD9D9D9)),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(i.width * 0.05)),
+                                    borderSide: const BorderSide(
+                                        color: Color(0xFFD9D9D9)),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(i.width * 0.05)),
+                                    borderSide: const BorderSide(
+                                      color: Colors.lightBlue,
+                                    ),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(i.width * 0.05)),
+                                    borderSide: const BorderSide(
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.36,
-                      left: i.width * 0.18,
-                      child: Container(
-                        height: i.height * 0.075,
-                        width: i.width * 0.65,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF754CEF),
-                          borderRadius: BorderRadius.circular(i.width * 0.05),
-                        ),
-                        child: MaterialButton(
-                          onPressed: () async {
-                            String cha = channel.text.trim();
-                            final uid = FirebaseAuth.instance.currentUser?.uid;
-
-                            if (cha.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text('Field must not be empty')),
-                              );
-                              return;
-                            }
-
-                            if (uid == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('User not logged in')),
-                              );
-                              return;
-                            }
-
-                            try {
-                              final querySnapshot = await FirebaseFirestore
-                                  .instance
-                                  .collection('channels')
-                                  .where('userId', isEqualTo: uid)
-                                  .limit(
-                                      1) // On suppose qu’il y a un seul document par user
-                                  .get();
-
-                              if (querySnapshot.docs.isNotEmpty) {
-                                final docRef =
-                                    querySnapshot.docs.first.reference;
-
-                                await docRef.update({
-                                  'name': cha,
-                                });
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content:
-                                          Text('Profile updated successfully')),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text('User document not found')),
-                                );
-                              }
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Failed to update: $e')),
-                              );
-                            }
-                          }, // Implement login logic
-
-                          child: Text(
-                            "Save",
-                            style: TextStyle(
-                                color: Colors.white, fontSize: i.width * 0.042),
+                          Positioned(
+                            top: i.height * 0.36,
+                            left: i.width * 0.1,
+                            child: Text(
+                              "LastName",
+                              style: TextStyle(
+                                  color: themeProvider.isDarkMode
+                                      ? Colors.black
+                                      : Colors.white,
+                                  fontWeight: FontWeight.bold),
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (n == 6) ...[
-                    Positioned(
-                      top: i.height * 0.01,
-                      left: i.width * 0.03,
-                      child: IconButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        icon: Image.network(
-                          s18,
-                          width: i.width * 0.07,
-                          height: i.width * 0.07,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                        top: i.height * 0.02,
-                        left: i.width * 0.15,
-                        child: Text(
-                          "Add To A playlist",
-                          style: TextStyle(
-                              fontSize: i.width * 0.06,
-                              fontWeight: FontWeight.bold),
-                        )),
-                    Positioned(
-                        top: i.height * 0.1,
-                        left: i.width * 0.05,
-                        child: Container(
-                          width: i.width,
-                          child: Text(
-                            "You Can  Add More Podcast To A Playlist For The Esealy Receivit ",
-                            style: TextStyle(color: Colors.grey),
-                            maxLines: 2,
-                          ),
-                        )),
-                    Positioned(
-                      top: i.height * 0.22,
-                      left: i.width * 0.1,
-                      child: const Text(
-                        "",
-                        style: TextStyle(
-                            color: Colors.black, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.22,
-                      left: i.width * 0.1,
-                      child: const Text(
-                        "Name Playlist ",
-                        style: TextStyle(
-                            color: Colors.black, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.2525,
-                      left: i.width * 0.07,
-                      right: i.width * 0.07,
-                      child: _buildDropDownField1(
-                        controller: _playlistController,
-                        hint: "Select Playlist",
-                        items: play,
-                        title: "Playlist",
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.36,
-                      left: i.width * 0.18,
-                      child: Container(
-                        height: i.height * 0.075,
-                        width: i.width * 0.65,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF754CEF),
-                          borderRadius: BorderRadius.circular(i.width * 0.05),
-                        ),
-                        child: MaterialButton(
-                          onPressed: () async {
-                            if (_selectedPlaylistId != null &&
-                                _selectedPlaylistId!.isNotEmpty) {
-                              await FirebaseFirestore.instance
-                                  .collection('playinpod')
-                                  .add({
-                                'podcastId': idp,
-                                'playlistId':
-                                    _selectedPlaylistId, // Utilisation directe de la variable
-                                'date': FieldValue.serverTimestamp(),
-                              });
-                              await FirebaseFirestore.instance
-                                  .collection('playlist')
-                                  .doc(_selectedPlaylistId)
-                                  .update({
-                                'podcast': FieldValue.increment(1),
-                              });
-                            }
-                          },
-                          child: Text(
-                            "Save",
-                            style: TextStyle(
-                                color: Colors.white, fontSize: i.width * 0.042),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (n == 7) ...[
-                    Positioned(
-                      top: i.height * 0.01,
-                      left: i.width * 0.03,
-                      child: IconButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        icon: Image.network(
-                          s18,
-                          width: i.width * 0.07,
-                          height: i.width * 0.07,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                        top: i.height * 0.02,
-                        left: i.width * 0.15,
-                        child: Text(
-                          "Add To A playlist",
-                          style: TextStyle(
-                              fontSize: i.width * 0.06,
-                              fontWeight: FontWeight.bold),
-                        )),
-                    Positioned(
-                        top: i.height * 0.1,
-                        left: i.width * 0.05,
-                        child: Container(
-                          width: i.width,
-                          child: Text(
-                            "You Can  Add More Podcast To A Playlist For The Esealy Receivit ",
-                            style: TextStyle(color: Colors.grey),
-                            maxLines: 2,
-                          ),
-                        )),
-                    Positioned(
-                      top: i.height * 0.22,
-                      left: i.width * 0.1,
-                      child: const Text(
-                        "Name Podcast ",
-                        style: TextStyle(
-                            color: Colors.black, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.2525,
-                      left: i.width * 0.07,
-                      right: i.width * 0.07,
-                      child: _buildDropDownField1(
-                        controller: _playlistController,
-                        hint: "Select Podcast",
-                        items: play2,
-                        title: "Podcast",
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.36,
-                      left: i.width * 0.18,
-                      child: Container(
-                        height: i.height * 0.075,
-                        width: i.width * 0.65,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF754CEF),
-                          borderRadius: BorderRadius.circular(i.width * 0.05),
-                        ),
-                        child: MaterialButton(
-                          onPressed: () async {
-                            if (_selectedPlaylistId != null &&
-                                _selectedPlaylistId!.isNotEmpty) {
-                              await FirebaseFirestore.instance
-                                  .collection('playinpod')
-                                  .add({
-                                'playlistId': idpp,
-                                'podcastId':
-                                    _selectedPlaylistId, // Utilisation directe de la variable
-                                'date': FieldValue.serverTimestamp(),
-                              });
-                              await FirebaseFirestore.instance
-                                  .collection('playlist')
-                                  .doc(idpp)
-                                  .update({
-                                'podcast': FieldValue.increment(1),
-                              });
-                            }
-                          }, // Implement login logic
+                          Positioned(
+                            top: i.height * 0.3925,
+                            left: i.width * 0.07,
+                            right: i.width * 0.07,
+                            child: SizedBox(
+                              width: i.width - 60,
+                              child: TextField(
+                                controller: lastNameController,
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                ),
+                                cursorColor: Colors.black,
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: const Color(0xFFD9D9D9),
 
-                          child: Text(
-                            "Save",
-                            style: TextStyle(
-                                color: Colors.white, fontSize: i.width * 0.042),
+                                  hintText: "Enter New LastName",
+                                  hintStyle:
+                                      const TextStyle(color: Colors.grey),
+                                  // Utilisation d'une image depuis les assets comme prefixIcon
+                                  prefixIcon: Padding(
+                                    padding: EdgeInsets.all(i.width *
+                                        0.028), // Ajustez le padding selon vos besoins
+                                    child: Image.network(
+                                      s22, // Remplacez par le chemin de votre icône
+                                      width: i.width *
+                                          0.05, // Ajustez la taille selon vos besoins
+                                      height: i.width * 0.05,
+                                    ),
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(i.width * 0.05)),
+                                    borderSide: const BorderSide(
+                                        color: Color(0xFFD9D9D9)),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(i.width * 0.05)),
+                                    borderSide: const BorderSide(
+                                        color: Color(0xFFD9D9D9)),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(i.width * 0.05)),
+                                    borderSide: const BorderSide(
+                                      color: Colors.lightBlue,
+                                    ),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(i.width * 0.05)),
+                                    borderSide: const BorderSide(
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (n == 8) ...[
-                    Positioned(
-                      top: i.height * 0.01,
-                      left: i.width * 0.03,
-                      child: IconButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        icon: Image.network(
-                          s18,
-                          width: i.width * 0.07,
-                          height: i.width * 0.07,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                        top: i.height * 0.02,
-                        left: i.width * 0.15,
-                        child: Text(
-                          "Delete From playlist",
-                          style: TextStyle(
-                              fontSize: i.width * 0.06,
-                              fontWeight: FontWeight.bold),
-                        )),
-                    Positioned(
-                        top: i.height * 0.1,
-                        left: i.width * 0.05,
-                        child: Container(
-                          width: i.width,
-                          child: Text(
-                            "You Can  Delete More Podcast From Playlist For The Esealy Receivit ",
-                            style: TextStyle(color: Colors.grey),
-                            maxLines: 2,
-                          ),
-                        )),
-                    Positioned(
-                      top: i.height * 0.22,
-                      left: i.width * 0.1,
-                      child: const Text(
-                        "Name Podcast ",
-                        style: TextStyle(
-                            color: Colors.black, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.2525,
-                      left: i.width * 0.07,
-                      right: i.width * 0.07,
-                      child: _buildDropDownField1(
-                        controller: _playlistController,
-                        hint: "Select Podcast",
-                        items: play3,
-                        title: "Podcast",
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.36,
-                      left: i.width * 0.18,
-                      child: Container(
-                        height: i.height * 0.075,
-                        width: i.width * 0.65,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF754CEF),
-                          borderRadius: BorderRadius.circular(i.width * 0.05),
-                        ),
-                        child: MaterialButton(
-                          onPressed: () async {
-                            if (_selectedPlaylistId != null &&
-                                _selectedPlaylistId!.isNotEmpty) {
-                              try {
-                                // 1. Rechercher les documents à supprimer dans playinpod
-                                final snapshot = await FirebaseFirestore
-                                    .instance
-                                    .collection('playinpod')
-                                    .where('podcastId',
-                                        isEqualTo: _selectedPlaylistId)
-                                    .where('playlistId', isEqualTo: idpp)
-                                    .get();
+                          Positioned(
+                            top: i.height * 0.52,
+                            left: i.width * 0.18,
+                            child: Container(
+                              height: i.height * 0.075,
+                              width: i.width * 0.65,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF754CEF),
+                                borderRadius:
+                                    BorderRadius.circular(i.width * 0.05),
+                              ),
+                              child: MaterialButton(
+                                onPressed: () async {
+                                  String firstName =
+                                      firstNameController.text.trim();
+                                  String lastName =
+                                      lastNameController.text.trim();
+                                  final uid =
+                                      FirebaseAuth.instance.currentUser?.uid;
 
-                                // 2. Supprimer chaque document trouvé
-                                for (var doc in snapshot.docs) {
-                                  await doc.reference.delete();
-                                }
+                                  if (firstName.isEmpty || lastName.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content:
+                                              Text('Fields must not be empty')),
+                                    );
+                                    return;
+                                  }
 
-                                // 3. Décrémenter le champ 'podcast' de la playlist
-                                await FirebaseFirestore.instance
-                                    .collection('playlist')
-                                    .doc(idpp)
-                                    .update({
-                                  'podcast': FieldValue.increment(-1),
-                                });
-                              } catch (e) {
-                                print(
-                                    'Error deleting from playinpod or updating playlist: $e');
-                              }
-                            }
-                          },
-                          child: Text(
-                            "Delete",
-                            style: TextStyle(
-                                color: Colors.white, fontSize: i.width * 0.042),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (n == 9) ...[
-                    Positioned(
-                      top: i.height * 0.01,
-                      left: i.width * 0.03,
-                      child: IconButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        icon: Image.network(
-                          s18,
-                          width: i.width * 0.07,
-                          height: i.width * 0.07,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                        top: i.height * 0.02,
-                        left: i.width * 0.15,
-                        child: Text(
-                          "Delete From A playlist",
-                          style: TextStyle(
-                              fontSize: i.width * 0.06,
-                              fontWeight: FontWeight.bold),
-                        )),
-                    Positioned(
-                        top: i.height * 0.1,
-                        left: i.width * 0.05,
-                        child: Container(
-                          width: i.width,
-                          child: Text(
-                            "You Can  Delete More Podcast From A Playlist For The Esealy Receivit ",
-                            style: TextStyle(color: Colors.grey),
-                            maxLines: 2,
-                          ),
-                        )),
-                    Positioned(
-                      top: i.height * 0.22,
-                      left: i.width * 0.1,
-                      child: const Text(
-                        "",
-                        style: TextStyle(
-                            color: Colors.black, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.22,
-                      left: i.width * 0.1,
-                      child: const Text(
-                        "Name Playlist ",
-                        style: TextStyle(
-                            color: Colors.black, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.2525,
-                      left: i.width * 0.07,
-                      right: i.width * 0.07,
-                      child: _buildDropDownField1(
-                        controller: _playlistController,
-                        hint: "Select Playlist",
-                        items: play1,
-                        title: "Playlist",
-                      ),
-                    ),
-                    Positioned(
-                      top: i.height * 0.36,
-                      left: i.width * 0.18,
-                      child: Container(
-                        height: i.height * 0.075,
-                        width: i.width * 0.65,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF754CEF),
-                          borderRadius: BorderRadius.circular(i.width * 0.05),
-                        ),
-                        child: MaterialButton(
-                          onPressed: () async {
-                            if (_selectedPlaylistId != null &&
-                                _selectedPlaylistId!.isNotEmpty) {
-                              try {
-                                // 1. Rechercher les documents à supprimer dans playinpod
-                                final snapshot = await FirebaseFirestore
-                                    .instance
-                                    .collection('playinpod')
-                                    .where('playlistId',
-                                        isEqualTo: _selectedPlaylistId)
-                                    .where('podcastId', isEqualTo: idp)
-                                    .get();
+                                  if (uid == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text('User not logged in')),
+                                    );
+                                    return;
+                                  }
 
-                                // 2. Supprimer chaque document trouvé
-                                for (var doc in snapshot.docs) {
-                                  await doc.reference.delete();
-                                }
+                                  try {
+                                    final querySnapshot = await FirebaseFirestore
+                                        .instance
+                                        .collection('users')
+                                        .where('userId', isEqualTo: uid)
+                                        .limit(
+                                            1) // On suppose qu’il y a un seul document par user
+                                        .get();
 
-                                // 3. Décrémenter le champ 'podcast' de la playlist
-                                await FirebaseFirestore.instance
-                                    .collection('playlist')
-                                    .doc(_selectedPlaylistId)
-                                    .update({
-                                  'podcast': FieldValue.increment(-1),
-                                });
-                              } catch (e) {
-                                print(
-                                    'Error deleting from playinpod or updating playlist: $e');
-                              }
-                            }
-                          },
-                          child: Text(
-                            "Delete",
-                            style: TextStyle(
-                                color: Colors.white, fontSize: i.width * 0.042),
+                                    if (querySnapshot.docs.isNotEmpty) {
+                                      final docRef =
+                                          querySnapshot.docs.first.reference;
+
+                                      await docRef.update({
+                                        'firstName': firstName,
+                                        'lastName': lastName,
+                                      });
+
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                            content: Text(
+                                                'Profile updated successfully')),
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                            content: Text(
+                                                'User document not found')),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content:
+                                              Text('Failed to update: $e')),
+                                    );
+                                  }
+                                },
+                                child: Text(
+                                  "Save",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: i.width * 0.042),
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
+                        ],
+                        if (n == 4) ...[
+                          Positioned(
+                            top: i.height * 0.01,
+                            left: i.width * 0.03,
+                            child: IconButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              icon: Image.network(
+                                themeProvider.isDarkMode ? s97 : s18,
+                                width: i.width * 0.07,
+                                height: i.width * 0.07,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                              top: i.height * 0.02,
+                              left: i.width * 0.15,
+                              child: Text(
+                                "Change Motpass",
+                                style: TextStyle(
+                                    fontSize: i.width * 0.06,
+                                    fontWeight: FontWeight.bold),
+                              )),
+                          Positioned(
+                              top: i.height * 0.1,
+                              left: i.width * 0.05,
+                              child: Container(
+                                width: i.width,
+                                child: Text(
+                                  "You Can Change Your Motpass If You Don't Remeber Or Your Corrently Motpass Is Easy To Know ",
+                                  style: TextStyle(color: Colors.grey),
+                                  maxLines: 2,
+                                ),
+                              )),
+                          Positioned(
+                            top: i.height * 0.22,
+                            left: i.width * 0.1,
+                            child: Text(
+                              "Motpass",
+                              style: TextStyle(
+                                  color: themeProvider.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Positioned(
+                            top: i.height * 0.2525,
+                            left: i.width * 0.07,
+                            right: i.width * 0.07,
+                            child: SizedBox(
+                              width: i.width - 60,
+                              child: TextField(
+                                controller: pass,
+                                obscureText: _obscureText2,
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                ),
+                                cursorColor: Colors.black,
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: const Color(0xFFD9D9D9),
+                                  hintText: "Enter New Password",
+                                  hintStyle:
+                                      const TextStyle(color: Colors.grey),
+                                  prefixIcon: Padding(
+                                    padding: EdgeInsets.all(i.width * 0.028),
+                                    child: Image.network(
+                                      s13,
+                                      width: i.width * 0.05,
+                                      height: 0.05,
+                                    ),
+                                  ),
+                                  // Correction de la syntaxe du suffixIcon
+                                  suffixIcon: GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _obscureText2 = !_obscureText2;
+                                      });
+                                    },
+                                    child: Padding(
+                                      padding: EdgeInsets.all(i.width * 0.028),
+                                      child: Image.network(
+                                        s14,
+                                        width: i.width * 0.05,
+                                        height: i.width * 0.05,
+                                      ),
+                                    ),
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(i.width * 0.05)),
+                                    borderSide: const BorderSide(
+                                        color: Color(0xFFD9D9D9)),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(i.width * 0.05)),
+                                    borderSide: const BorderSide(
+                                        color: Color(0xFFD9D9D9)),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(i.width * 0.05)),
+                                    borderSide: const BorderSide(
+                                      color: Colors.lightBlue,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: i.height * 0.36,
+                            left: i.width * 0.18,
+                            child: Container(
+                              height: i.height * 0.075,
+                              width: i.width * 0.65,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF754CEF),
+                                borderRadius:
+                                    BorderRadius.circular(i.width * 0.05),
+                              ),
+                              child: MaterialButton(
+                                onPressed: () async {
+                                  final user = FirebaseAuth.instance.currentUser
+                                      ?.uid; // Vérifier d'abord dans Firestore si l'utilisateur utilise la méthode Google
+                                  final userDoc = await FirebaseFirestore
+                                      .instance
+                                      .collection('users')
+                                      .where('userId', isEqualTo: user)
+                                      .where('methode', isEqualTo: 'google')
+                                      .get();
+
+                                  // Si l'utilisateur utilise la méthode Google, bloquer la modification de l'email
+                                  if (userDoc.docs.isNotEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            "Impossible de modifier l'email pour un compte Google."),
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  if (pass.text.length < 6) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            'Le mot de passe doit contenir au moins 6 caractères'),
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  // Afficher un indicateur de chargement
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          'Mise à jour du mot de passe en cours...'),
+                                      duration: Duration(seconds: 1),
+                                    ),
+                                  );
+
+                                  try {
+                                    // Mettre à jour le mot de passe
+                                    await FirebaseAuth.instance.currentUser
+                                        ?.updatePassword(pass.text);
+
+                                    // Effacer les champs après mise à jour réussie
+                                    pass.clear();
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            'Mot de passe mis à jour avec succès'),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  } catch (error) {
+                                    // Gérer les erreurs potentielles
+                                    String errorMessage =
+                                        'Erreur lors de la mise à jour du mot de passe';
+
+                                    // Traiter les erreurs spécifiques de Firebase Auth
+                                    if (error is FirebaseAuthException) {
+                                      if (error.code ==
+                                          'requires-recent-login') {
+                                        errorMessage =
+                                            'Veuillez vous reconnecter avant de modifier votre mot de passe';
+                                      } else {
+                                        errorMessage =
+                                            error.message ?? errorMessage;
+                                      }
+                                    }
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(errorMessage),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: Text(
+                                  "Save",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: i.width * 0.042),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (n == 5) ...[
+                          Positioned(
+                            top: i.height * 0.01,
+                            left: i.width * 0.03,
+                            child: IconButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              icon: Image.network(
+                                themeProvider.isDarkMode ? s97 : s18,
+                                width: i.width * 0.07,
+                                height: i.width * 0.07,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                              top: i.height * 0.02,
+                              left: i.width * 0.15,
+                              child: Text(
+                                "Change Name Channel",
+                                style: TextStyle(
+                                    fontSize: i.width * 0.06,
+                                    fontWeight: FontWeight.bold),
+                              )),
+                          Positioned(
+                              top: i.height * 0.1,
+                              left: i.width * 0.05,
+                              child: Container(
+                                width: i.width,
+                                child: Text(
+                                  "You Can Change Your Name Channel And Use The Real Name For Esasy Utilisation ",
+                                  style: TextStyle(color: Colors.grey),
+                                  maxLines: 2,
+                                ),
+                              )),
+                          Positioned(
+                            top: i.height * 0.22,
+                            left: i.width * 0.1,
+                            child: Text(
+                              "Name Channel",
+                              style: TextStyle(
+                                  color: themeProvider.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Positioned(
+                            top: i.height * 0.2525,
+                            left: i.width * 0.07,
+                            right: i.width * 0.07,
+                            child: SizedBox(
+                              width: i.width - 60,
+                              child: TextField(
+                                controller: channel,
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                ),
+                                cursorColor: Colors.black,
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: const Color(0xFFD9D9D9),
+
+                                  hintText: "Enter New Nam Channel",
+                                  hintStyle:
+                                      const TextStyle(color: Colors.grey),
+                                  // Utilisation d'une image depuis les assets comme prefixIcon
+                                  prefixIcon: Padding(
+                                    padding: EdgeInsets.all(i.width *
+                                        0.028), // Ajustez le padding selon vos besoins
+                                    child: Image.network(
+                                      s29, // Remplacez par le chemin de votre icône
+                                      width: i.width *
+                                          0.05, // Ajustez la taille selon vos besoins
+                                      height: i.width * 0.05,
+                                    ),
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(i.width * 0.05)),
+                                    borderSide: const BorderSide(
+                                        color: Color(0xFFD9D9D9)),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(i.width * 0.05)),
+                                    borderSide: const BorderSide(
+                                        color: Color(0xFFD9D9D9)),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(i.width * 0.05)),
+                                    borderSide: const BorderSide(
+                                      color: Colors.lightBlue,
+                                    ),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(i.width * 0.05)),
+                                    borderSide: const BorderSide(
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: i.height * 0.36,
+                            left: i.width * 0.18,
+                            child: Container(
+                              height: i.height * 0.075,
+                              width: i.width * 0.65,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF754CEF),
+                                borderRadius:
+                                    BorderRadius.circular(i.width * 0.05),
+                              ),
+                              child: MaterialButton(
+                                onPressed: () async {
+                                  String cha = channel.text.trim();
+                                  final uid =
+                                      FirebaseAuth.instance.currentUser?.uid;
+
+                                  if (cha.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content:
+                                              Text('Field must not be empty')),
+                                    );
+                                    return;
+                                  }
+
+                                  if (uid == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text('User not logged in')),
+                                    );
+                                    return;
+                                  }
+
+                                  try {
+                                    final querySnapshot = await FirebaseFirestore
+                                        .instance
+                                        .collection('channels')
+                                        .where('userId', isEqualTo: uid)
+                                        .limit(
+                                            1) // On suppose qu’il y a un seul document par user
+                                        .get();
+
+                                    if (querySnapshot.docs.isNotEmpty) {
+                                      final docRef =
+                                          querySnapshot.docs.first.reference;
+
+                                      await docRef.update({
+                                        'name': cha,
+                                      });
+
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                            content: Text(
+                                                'Profile updated successfully')),
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                            content: Text(
+                                                'User document not found')),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content:
+                                              Text('Failed to update: $e')),
+                                    );
+                                  }
+                                }, // Implement login logic
+
+                                child: Text(
+                                  "Save",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: i.width * 0.042),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (n == 6) ...[
+                          Positioned(
+                            top: i.height * 0.01,
+                            left: i.width * 0.03,
+                            child: IconButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              icon: Image.network(
+                                themeProvider.isDarkMode ? s97 : s18,
+                                width: i.width * 0.07,
+                                height: i.width * 0.07,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                              top: i.height * 0.02,
+                              left: i.width * 0.15,
+                              child: Text(
+                                "Add To A playlist",
+                                style: TextStyle(
+                                    fontSize: i.width * 0.06,
+                                    fontWeight: FontWeight.bold),
+                              )),
+                          Positioned(
+                              top: i.height * 0.1,
+                              left: i.width * 0.05,
+                              child: Container(
+                                width: i.width,
+                                child: Text(
+                                  "You Can  Add More Podcast To A Playlist For The Esealy Receivit ",
+                                  style: TextStyle(color: Colors.grey),
+                                  maxLines: 2,
+                                ),
+                              )),
+                          Positioned(
+                            top: i.height * 0.22,
+                            left: i.width * 0.1,
+                            child: Text(
+                              "",
+                              style: TextStyle(
+                                  color: themeProvider.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Positioned(
+                            top: i.height * 0.22,
+                            left: i.width * 0.1,
+                            child: Text(
+                              "Name Playlist ",
+                              style: TextStyle(
+                                  color: themeProvider.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Positioned(
+                            top: i.height * 0.2525,
+                            left: i.width * 0.07,
+                            right: i.width * 0.07,
+                            child: _buildDropDownField1(
+                              controller: _playlistController,
+                              hint: "Select Playlist",
+                              items: play,
+                              title: "Playlist",
+                            ),
+                          ),
+                          Positioned(
+                            top: i.height * 0.36,
+                            left: i.width * 0.18,
+                            child: Container(
+                              height: i.height * 0.075,
+                              width: i.width * 0.65,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF754CEF),
+                                borderRadius:
+                                    BorderRadius.circular(i.width * 0.05),
+                              ),
+                              child: MaterialButton(
+                                onPressed: () async {
+                                  if (_selectedPlaylistId != null &&
+                                      _selectedPlaylistId!.isNotEmpty) {
+                                    await FirebaseFirestore.instance
+                                        .collection('playinpod')
+                                        .add({
+                                      'podcastId': idp,
+                                      'playlistId':
+                                          _selectedPlaylistId, // Utilisation directe de la variable
+                                      'date': FieldValue.serverTimestamp(),
+                                    });
+                                    await FirebaseFirestore.instance
+                                        .collection('playlist')
+                                        .doc(_selectedPlaylistId)
+                                        .update({
+                                      'podcast': FieldValue.increment(1),
+                                    });
+                                  }
+                                },
+                                child: Text(
+                                  "Save",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: i.width * 0.042),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (n == 7) ...[
+                          Positioned(
+                            top: i.height * 0.01,
+                            left: i.width * 0.03,
+                            child: IconButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              icon: Image.network(
+                                themeProvider.isDarkMode ? s97 : s18,
+                                width: i.width * 0.07,
+                                height: i.width * 0.07,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                              top: i.height * 0.02,
+                              left: i.width * 0.15,
+                              child: Text(
+                                "Add To A playlist",
+                                style: TextStyle(
+                                    fontSize: i.width * 0.06,
+                                    fontWeight: FontWeight.bold),
+                              )),
+                          Positioned(
+                              top: i.height * 0.1,
+                              left: i.width * 0.05,
+                              child: Container(
+                                width: i.width,
+                                child: Text(
+                                  "You Can  Add More Podcast To A Playlist For The Esealy Receivit ",
+                                  style: TextStyle(color: Colors.grey),
+                                  maxLines: 2,
+                                ),
+                              )),
+                          Positioned(
+                            top: i.height * 0.22,
+                            left: i.width * 0.1,
+                            child: Text(
+                              "Name Podcast ",
+                              style: TextStyle(
+                                  color: themeProvider.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Positioned(
+                            top: i.height * 0.2525,
+                            left: i.width * 0.07,
+                            right: i.width * 0.07,
+                            child: _buildDropDownField1(
+                              controller: _playlistController,
+                              hint: "Select Podcast",
+                              items: play2,
+                              title: "Podcast",
+                            ),
+                          ),
+                          Positioned(
+                            top: i.height * 0.36,
+                            left: i.width * 0.18,
+                            child: Container(
+                              height: i.height * 0.075,
+                              width: i.width * 0.65,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF754CEF),
+                                borderRadius:
+                                    BorderRadius.circular(i.width * 0.05),
+                              ),
+                              child: MaterialButton(
+                                onPressed: () async {
+                                  if (_selectedPlaylistId != null &&
+                                      _selectedPlaylistId!.isNotEmpty) {
+                                    await FirebaseFirestore.instance
+                                        .collection('playinpod')
+                                        .add({
+                                      'playlistId': idpp,
+                                      'podcastId':
+                                          _selectedPlaylistId, // Utilisation directe de la variable
+                                      'date': FieldValue.serverTimestamp(),
+                                    });
+                                    await FirebaseFirestore.instance
+                                        .collection('playlist')
+                                        .doc(idpp)
+                                        .update({
+                                      'podcast': FieldValue.increment(1),
+                                    });
+                                  }
+                                }, // Implement login logic
+
+                                child: Text(
+                                  "Save",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: i.width * 0.042),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (n == 8) ...[
+                          Positioned(
+                            top: i.height * 0.01,
+                            left: i.width * 0.03,
+                            child: IconButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              icon: Image.network(
+                                themeProvider.isDarkMode ? s97 : s18,
+                                width: i.width * 0.07,
+                                height: i.width * 0.07,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                              top: i.height * 0.02,
+                              left: i.width * 0.15,
+                              child: Text(
+                                "Delete From playlist",
+                                style: TextStyle(
+                                    fontSize: i.width * 0.06,
+                                    fontWeight: FontWeight.bold),
+                              )),
+                          Positioned(
+                              top: i.height * 0.1,
+                              left: i.width * 0.05,
+                              child: Container(
+                                width: i.width,
+                                child: Text(
+                                  "You Can  Delete More Podcast From Playlist For The Esealy Receivit ",
+                                  style: TextStyle(color: Colors.grey),
+                                  maxLines: 2,
+                                ),
+                              )),
+                          Positioned(
+                            top: i.height * 0.22,
+                            left: i.width * 0.1,
+                            child: Text(
+                              "Name Podcast ",
+                              style: TextStyle(
+                                  color: themeProvider.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Positioned(
+                            top: i.height * 0.2525,
+                            left: i.width * 0.07,
+                            right: i.width * 0.07,
+                            child: _buildDropDownField1(
+                              controller: _playlistController,
+                              hint: "Select Podcast",
+                              items: play3,
+                              title: "Podcast",
+                            ),
+                          ),
+                          Positioned(
+                            top: i.height * 0.36,
+                            left: i.width * 0.18,
+                            child: Container(
+                              height: i.height * 0.075,
+                              width: i.width * 0.65,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF754CEF),
+                                borderRadius:
+                                    BorderRadius.circular(i.width * 0.05),
+                              ),
+                              child: MaterialButton(
+                                onPressed: () async {
+                                  if (_selectedPlaylistId != null &&
+                                      _selectedPlaylistId!.isNotEmpty) {
+                                    try {
+                                      // 1. Rechercher les documents à supprimer dans playinpod
+                                      final snapshot = await FirebaseFirestore
+                                          .instance
+                                          .collection('playinpod')
+                                          .where('podcastId',
+                                              isEqualTo: _selectedPlaylistId)
+                                          .where('playlistId', isEqualTo: idpp)
+                                          .get();
+
+                                      // 2. Supprimer chaque document trouvé
+                                      for (var doc in snapshot.docs) {
+                                        await doc.reference.delete();
+                                      }
+
+                                      // 3. Décrémenter le champ 'podcast' de la playlist
+                                      await FirebaseFirestore.instance
+                                          .collection('playlist')
+                                          .doc(idpp)
+                                          .update({
+                                        'podcast': FieldValue.increment(-1),
+                                      });
+                                    } catch (e) {
+                                      print(
+                                          'Error deleting from playinpod or updating playlist: $e');
+                                    }
+                                  }
+                                },
+                                child: Text(
+                                  "Delete",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: i.width * 0.042),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (n == 9) ...[
+                          Positioned(
+                            top: i.height * 0.01,
+                            left: i.width * 0.03,
+                            child: IconButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              icon: Image.network(
+                                themeProvider.isDarkMode ? s97 : s18,
+                                width: i.width * 0.07,
+                                height: i.width * 0.07,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                              top: i.height * 0.02,
+                              left: i.width * 0.15,
+                              child: Text(
+                                "Delete From A playlist",
+                                style: TextStyle(
+                                    fontSize: i.width * 0.06,
+                                    fontWeight: FontWeight.bold),
+                              )),
+                          Positioned(
+                              top: i.height * 0.1,
+                              left: i.width * 0.05,
+                              child: Container(
+                                width: i.width,
+                                child: Text(
+                                  "You Can  Delete More Podcast From A Playlist For The Esealy Receivit ",
+                                  style: TextStyle(color: Colors.grey),
+                                  maxLines: 2,
+                                ),
+                              )),
+                          Positioned(
+                            top: i.height * 0.22,
+                            left: i.width * 0.1,
+                            child: const Text(
+                              "",
+                              style: TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Positioned(
+                            top: i.height * 0.22,
+                            left: i.width * 0.1,
+                            child: Text(
+                              "Name Playlist ",
+                              style: TextStyle(
+                                  color: themeProvider.isDarkMode
+                                      ? Colors.white
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Positioned(
+                            top: i.height * 0.2525,
+                            left: i.width * 0.07,
+                            right: i.width * 0.07,
+                            child: _buildDropDownField1(
+                              controller: _playlistController,
+                              hint: "Select Playlist",
+                              items: play1,
+                              title: "Playlist",
+                            ),
+                          ),
+                          Positioned(
+                            top: i.height * 0.36,
+                            left: i.width * 0.18,
+                            child: Container(
+                              height: i.height * 0.075,
+                              width: i.width * 0.65,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF754CEF),
+                                borderRadius:
+                                    BorderRadius.circular(i.width * 0.05),
+                              ),
+                              child: MaterialButton(
+                                onPressed: () async {
+                                  if (_selectedPlaylistId != null &&
+                                      _selectedPlaylistId!.isNotEmpty) {
+                                    try {
+                                      // 1. Rechercher les documents à supprimer dans playinpod
+                                      final snapshot = await FirebaseFirestore
+                                          .instance
+                                          .collection('playinpod')
+                                          .where('playlistId',
+                                              isEqualTo: _selectedPlaylistId)
+                                          .where('podcastId', isEqualTo: idp)
+                                          .get();
+
+                                      // 2. Supprimer chaque document trouvé
+                                      for (var doc in snapshot.docs) {
+                                        await doc.reference.delete();
+                                      }
+
+                                      // 3. Décrémenter le champ 'podcast' de la playlist
+                                      await FirebaseFirestore.instance
+                                          .collection('playlist')
+                                          .doc(_selectedPlaylistId)
+                                          .update({
+                                        'podcast': FieldValue.increment(-1),
+                                      });
+                                    } catch (e) {
+                                      print(
+                                          'Error deleting from playinpod or updating playlist: $e');
+                                    }
+                                  }
+                                },
+                                child: Text(
+                                  "Delete",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: i.width * 0.042),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                  ],
-                ],
-              ),
-      )),
+                  );
+                })),
     );
   }
 
@@ -1284,71 +1401,85 @@ class _Modif1pageState extends State<Modif1page> {
     required List<SelectedListItem<PlaylistItem>> items,
     required String title,
   }) {
-    return SizedBox(
-      width: MediaQuery.of(context).size.width - 60,
-      child: TextField(
-        controller: controller,
-        readOnly: true,
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: const Color(0xFFD9D9D9),
-          hintText: hint,
-          hintStyle: const TextStyle(color: Colors.grey),
-          prefixIcon: Padding(
-            padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.028),
-            child: Image.network(s33,
-                width: MediaQuery.of(context).size.width * 0.05,
-                height: MediaQuery.of(context).size.width * 0.05),
+    final Size i = MediaQuery.of(context).size;
+    return Consumer<ThemeProvider>(builder: (context, themeProvider, child) {
+      return SizedBox(
+        width: MediaQuery.of(context).size.width - 60,
+        child: TextField(
+          controller: controller,
+          readOnly: true,
+          style: const TextStyle(
+            color: Colors.black,
           ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.all(
-                Radius.circular(MediaQuery.of(context).size.width * 0.05)),
-            borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(
-                Radius.circular(MediaQuery.of(context).size.width * 0.05)),
-            borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.all(
-                Radius.circular(MediaQuery.of(context).size.width * 0.05)),
-            borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
-          ),
-        ),
-        onTap: () {
-          DropDownState(
-            dropDown: DropDown(
-              dropDownBackgroundColor: Colors.white,
-              isDismissible: true,
-              bottomSheetTitle: Text(
-                title,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 20.0),
-              ),
-              data: items,
-              onSelected: (List<dynamic> selectedItems) {
-                if (selectedItems.isNotEmpty) {
-                  final selectedItem =
-                      selectedItems.first as SelectedListItem<PlaylistItem>;
-                  final playlistItem = selectedItem.data;
-
-                  setState(() {
-                    _selectedPlaylistId = playlistItem.id; // Stocke l'ID
-                    _playlistController.text =
-                        playlistItem.name; // Affiche le nom
-                  });
-
-                  print('Selected Playlist ID: ${playlistItem.id}');
-                  print('Selected Playlist Name: ${playlistItem.name}');
-                }
-              },
-              enableMultipleSelection: false,
+          cursorColor: Colors.black,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: const Color(0xFFD9D9D9),
+            hintText: hint,
+            hintStyle: const TextStyle(color: Colors.grey),
+            prefixIcon: Padding(
+              padding:
+                  EdgeInsets.all(MediaQuery.of(context).size.width * 0.028),
+              child: Image.network(s33,
+                  width: MediaQuery.of(context).size.width * 0.05,
+                  height: MediaQuery.of(context).size.width * 0.05),
             ),
-          ).showModal(context);
-        },
-      ),
-    );
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(i.width * 0.05)),
+              borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(i.width * 0.05)),
+              borderSide: const BorderSide(color: Color(0xFFD9D9D9)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(i.width * 0.05)),
+              borderSide: const BorderSide(
+                color: Colors.lightBlue,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(i.width * 0.05)),
+              borderSide: const BorderSide(
+                color: Colors.red,
+              ),
+            ),
+          ),
+          onTap: () {
+            DropDownState(
+              dropDown: DropDown(
+                dropDownBackgroundColor:
+                    themeProvider.isDarkMode ? Colors.black : Colors.white,
+                isDismissible: true,
+                bottomSheetTitle: Text(
+                  title,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 20.0),
+                ),
+                data: items,
+                onSelected: (List<dynamic> selectedItems) {
+                  if (selectedItems.isNotEmpty) {
+                    final selectedItem =
+                        selectedItems.first as SelectedListItem<PlaylistItem>;
+                    final playlistItem = selectedItem.data;
+
+                    setState(() {
+                      _selectedPlaylistId = playlistItem.id; // Stocke l'ID
+                      _playlistController.text =
+                          playlistItem.name; // Affiche le nom
+                    });
+
+                    print('Selected Playlist ID: ${playlistItem.id}');
+                    print('Selected Playlist Name: ${playlistItem.name}');
+                  }
+                },
+                enableMultipleSelection: false,
+              ),
+            ).showModal(context);
+          },
+        ),
+      );
+    });
   }
 }
 
