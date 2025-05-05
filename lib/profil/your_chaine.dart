@@ -416,6 +416,9 @@ class _YourChainepageState extends State<YourChainepage>
                                       if (your == 5) {
                                         Navigator.pop(context);
                                       }
+                                      if (your == 6) {
+                                        Navigator.pop(context);
+                                      }
                                     },
                                     icon: Image.network(
                                       themeProvider.isDarkMode ? s97 : s18,

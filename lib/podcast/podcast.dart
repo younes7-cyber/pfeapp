@@ -1,3 +1,5 @@
+// ignore_for_file: empty_catches
+
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -58,15 +60,11 @@ class _PodcastpageState extends State<Podcastpage>
               .update({
             'report': FieldValue.increment(1),
           }); // Add
-
-          print("Report ajouté !");
-        } else {
-          print("Report existe déjà.");
-        }
+        } else {}
       });
-    } catch (e) {
-      print("Erreur lors de la vérification/ajout du report : $e");
-    }
+      // ignore: duplicate_ignore
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   String? idpod;
@@ -107,6 +105,7 @@ class _PodcastpageState extends State<Podcastpage>
 
         final relatedSubscription = relatedStream.listen((relatedSnapshot) {
           final related = relatedSnapshot.docs
+              // ignore: unnecessary_cast
               .map((doc) => doc.data() as Map<String, dynamic>)
               .toList();
 
@@ -132,7 +131,7 @@ class _PodcastpageState extends State<Podcastpage>
 
   Future<void> fetchfeuteredppodcast(String idpod) async {
     try {
-      final sevenDaysAgo = DateTime.now().subtract(Duration(days: 7));
+      final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
 
       final recentPodcastsStream = FirebaseFirestore.instance
           .collection('podcasts')
@@ -146,6 +145,7 @@ class _PodcastpageState extends State<Podcastpage>
       final featuredSubscription = recentPodcastsStream.listen((snapshot) {
         final allPodcasts = snapshot.docs
             .where((doc) => doc.id != idToExclude) // on filtre ici par doc ID
+            // ignore: unnecessary_cast
             .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
 
@@ -162,7 +162,8 @@ class _PodcastpageState extends State<Podcastpage>
   }
 
   Future<void> fetchTrendingPodcasts(String idpod) async {
-    final DateTime sevenDaysAgo = DateTime.now().subtract(Duration(days: 7));
+    final DateTime sevenDaysAgo =
+        DateTime.now().subtract(const Duration(days: 7));
     final Timestamp timestampSevenDaysAgo = Timestamp.fromDate(sevenDaysAgo);
 
     try {
@@ -484,6 +485,7 @@ class _PodcastpageState extends State<Podcastpage>
             final playlistSubscription =
                 playlistsStream.listen((playlistsSnapshot) {
               for (var doc in playlistsSnapshot.docs) {
+                // ignore: unnecessary_cast
                 final data = doc.data() as Map<String, dynamic>;
                 allPlaylists.add(data);
               }
@@ -597,6 +599,7 @@ class _PodcastpageState extends State<Podcastpage>
 
             final podSubscription = podStream.listen((podSnapshot) {
               for (var doc in podSnapshot.docs) {
+                // ignore: unnecessary_cast
                 final podcastData = doc.data() as Map<String, dynamic>;
                 final match = myPlayInfos.firstWhere(
                     (e) => e['idpod'] == podcastData['id'],
@@ -654,20 +657,15 @@ class _PodcastpageState extends State<Podcastpage>
     final formatter = NumberFormat('#,##0.00', 'fr');
     // Pour les nombres importants, appliquer une logique de compactage manuel
     if (likes >= 1000000000000000) {
-      return formatter
-              .format(likes / 1000000000000000)
-              .replaceAll('\u202f', '') +
-          'P';
+      return '${formatter.format(likes / 1000000000000000).replaceAll('\u202f', '')}P';
     } else if (likes >= 1000000000000) {
-      return formatter.format(likes / 1000000000000).replaceAll('\u202f', '') +
-          'T';
+      return '${formatter.format(likes / 1000000000000).replaceAll('\u202f', '')}T';
     } else if (likes >= 1000000000) {
-      return formatter.format(likes / 1000000000).replaceAll('\u202f', '') +
-          'G';
+      return '${formatter.format(likes / 1000000000).replaceAll('\u202f', '')}G';
     } else if (likes >= 1000000) {
-      return formatter.format(likes / 1000000).replaceAll('\u202f', '') + 'M';
+      return '${formatter.format(likes / 1000000).replaceAll('\u202f', '')}M';
     } else if (likes >= 1000) {
-      return formatter.format(likes / 1000).replaceAll('\u202f', '') + 'k';
+      return '${formatter.format(likes / 1000).replaceAll('\u202f', '')}k';
     } else if (likes <= 999) {
       final formatter1 = NumberFormat('#0', 'fr');
       return formatter1.format(likes);
@@ -698,6 +696,7 @@ class _PodcastpageState extends State<Podcastpage>
       podcastSubscription = queryStream.listen((snapshot) {
         setState(() {
           podcast = snapshot.docs
+              // ignore: unnecessary_cast
               .map((doc) => doc.data() as Map<String, dynamic>)
               .toList();
         });
@@ -719,6 +718,7 @@ class _PodcastpageState extends State<Podcastpage>
       podvueSubscription = queryStream.listen((snapshot) {
         setState(() {
           podvue = snapshot.docs
+              // ignore: unnecessary_cast
               .map((doc) => doc.data() as Map<String, dynamic>)
               .toList();
         });
@@ -777,6 +777,7 @@ class _PodcastpageState extends State<Podcastpage>
           channelSubscription = channelStream.listen((channelSnapshot) {
             setState(() {
               channel = channelSnapshot.docs
+                  // ignore: unnecessary_cast
                   .map((doc) => doc.data() as Map<String, dynamic>)
                   .toList();
             });
@@ -811,6 +812,7 @@ class _PodcastpageState extends State<Podcastpage>
           userPodcastsSubscription =
               userPodcastsStream.listen((podcastsSnapshot) {
             final podcasts = podcastsSnapshot.docs
+                // ignore: unnecessary_cast
                 .map((doc) => doc.data() as Map<String, dynamic>)
                 .toList();
 
@@ -871,6 +873,7 @@ class _PodcastpageState extends State<Podcastpage>
             final playlistSubscription =
                 playlistsStream.listen((playlistsSnapshot) {
               for (var doc in playlistsSnapshot.docs) {
+                // ignore: unnecessary_cast
                 final playlist = doc.data() as Map<String, dynamic>;
 
                 // Vérifier si le playlist existe déjà dans notre liste
@@ -944,6 +947,7 @@ class _PodcastpageState extends State<Podcastpage>
       final topPodcastSubscription = podcastStream.listen((snapshot) async {
         // Étape 1 : Extraire les données des podcasts
         final allPlaylists = snapshot.docs
+            // ignore: unnecessary_cast
             .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
 
@@ -1012,12 +1016,14 @@ class _PodcastpageState extends State<Podcastpage>
       final topSeenSubscription = podcastStream.listen((snapshot) async {
         // Étape 1 : Extraire les données des podcasts
         final allPlaylists = snapshot.docs
+            // ignore: unnecessary_cast
             .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
 
         // Étape 2 : Récupérer les idUser (auteurs) uniques des podcasts
         final Set<String> userIds = allPlaylists
             .map((p) => p['idUser'] as String)
+            // ignore: unnecessary_null_comparison
             .where((id) => id != null)
             .toSet();
 
@@ -1080,7 +1086,6 @@ class _PodcastpageState extends State<Podcastpage>
         return null;
       });
     } catch (e) {
-      print('Erreur lors de la récupération de l\'userId du podcast: $e');
       return null;
     }
   }
@@ -1105,9 +1110,7 @@ class _PodcastpageState extends State<Podcastpage>
           isFollowing = snapshot.docs.isNotEmpty;
         });
       });
-    } catch (e) {
-      print('Erreur lors de la vérification du suivi: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> toggleFollow() async {
@@ -1120,10 +1123,12 @@ class _PodcastpageState extends State<Podcastpage>
 
       // Sauvegarder l'état précédent pour pouvoir revenir en arrière en cas d'erreur
       final previousFollowingState = isFollowing;
-
-      setState(() {
-        isFollowing = !isFollowing;
-      });
+      if (mounted) {
+        // Check if widget is still mounted
+        setState(() {
+          isFollowing = !isFollowing;
+        });
+      }
 
       if (isFollowing) {
         // Ajouter à la collection follow
@@ -1236,11 +1241,12 @@ class _PodcastpageState extends State<Podcastpage>
         }
       }
     } catch (e) {
-      // En cas d'erreur, revenir à l'état précédent
-      setState(() {
-        isFollowing = !isFollowing;
-      });
-      print('Erreur lors du changement de suivi: $e');
+      if (mounted) {
+        // Check if widget is still mounted
+        setState(() {
+          isFollowing = !isFollowing; // Revert on error
+        });
+      }
     }
   }
 
@@ -1311,7 +1317,7 @@ class _PodcastpageState extends State<Podcastpage>
                         top: 0,
                         left: 0,
                         right: 0,
-                        child: Container(
+                        child: SizedBox(
                           width: w.width,
                           height: w.height * 0.3,
                           child: Image.network(podcast[0]["urlPhoto"],
@@ -1522,8 +1528,9 @@ class _PodcastpageState extends State<Podcastpage>
                                   value: podvue[0]
                                       ['percent'], // 65% de progression
                                   backgroundColor: Colors.grey[300],
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Color(0xFF754CEF)),
+                                  valueColor:
+                                      const AlwaysStoppedAnimation<Color>(
+                                          Color(0xFF754CEF)),
                                   minHeight: 8,
                                 ),
                               ),
@@ -1883,7 +1890,7 @@ class _PodcastpageState extends State<Podcastpage>
                       ],
                       Positioned(
                         top: w.height * 0.28,
-                        child: Container(
+                        child: SizedBox(
                           width: w.width * 0.6,
                           height: w.height * 0.1,
                           child: Column(children: [
@@ -2003,7 +2010,7 @@ class _PodcastpageState extends State<Podcastpage>
                         top: w.height * 0.43,
                         left: w.width * 0.05,
                         right: w.width * 0.05,
-                        child: Container(
+                        child: SizedBox(
                           height: w.height *
                               0.4, // Hauteur suffisante pour contenir TabBar et TabBarView
                           child: Column(
@@ -2031,7 +2038,7 @@ class _PodcastpageState extends State<Podcastpage>
                                   children: [
                                     // Premier onglet - Description
                                     Container(
-                                      padding: EdgeInsets.only(top: 10),
+                                      padding: const EdgeInsets.only(top: 10),
                                       width: w.width * 0.9,
                                       child: ReadMoreText(
                                         podcast[0]["description"],
@@ -2042,16 +2049,16 @@ class _PodcastpageState extends State<Podcastpage>
                                         moreStyle: TextStyle(
                                             fontSize: w.width * 0.03,
                                             fontWeight: FontWeight.bold,
-                                            color: Color(0xFF754CEF)),
+                                            color: const Color(0xFF754CEF)),
                                         lessStyle: TextStyle(
                                             fontSize: w.width * 0.03,
                                             fontWeight: FontWeight.bold,
-                                            color: Color(0xFF754CEF)),
+                                            color: const Color(0xFF754CEF)),
                                       ),
                                     ),
                                     // Deuxième onglet - Category
                                     Container(
-                                      padding: EdgeInsets.only(top: 10),
+                                      padding: const EdgeInsets.only(top: 10),
                                       width: w.width * 0.9,
                                       child: ReadMoreText(
                                         podcast[0]["category"],
@@ -2062,11 +2069,11 @@ class _PodcastpageState extends State<Podcastpage>
                                         moreStyle: TextStyle(
                                             fontSize: w.width * 0.03,
                                             fontWeight: FontWeight.bold,
-                                            color: Color(0xFF754CEF)),
+                                            color: const Color(0xFF754CEF)),
                                         lessStyle: TextStyle(
                                             fontSize: w.width * 0.05,
                                             fontWeight: FontWeight.bold,
-                                            color: Color(0xFF754CEF)),
+                                            color: const Color(0xFF754CEF)),
                                       ),
                                     ),
                                   ],
@@ -2082,6 +2089,7 @@ class _PodcastpageState extends State<Podcastpage>
                       Positioned(
                         top: w.height * 0.61,
                         left: w.width * 0.02,
+                        // ignore: avoid_unnecessary_containers
                         child: Container(
                           child: GestureDetector(
                             onTap: () {
@@ -2347,10 +2355,7 @@ class _PodcastpageState extends State<Podcastpage>
                                                                   "urlPhoto"]),
                                                           fit: BoxFit.cover,
                                                           onError: (exception,
-                                                              stackTrace) {
-                                                            print(
-                                                                'Error loading image: $exception');
-                                                          },
+                                                              stackTrace) {},
                                                         ),
                                                       ),
                                                     ),
@@ -2447,10 +2452,7 @@ class _PodcastpageState extends State<Podcastpage>
                                                                   "urlPhoto"]),
                                                           fit: BoxFit.cover,
                                                           onError: (exception,
-                                                              stackTrace) {
-                                                            print(
-                                                                'Error loading image: $exception');
-                                                          },
+                                                              stackTrace) {},
                                                         ),
                                                       ),
                                                     ),
@@ -2547,10 +2549,7 @@ class _PodcastpageState extends State<Podcastpage>
                                                                   "urlPhoto"]),
                                                           fit: BoxFit.cover,
                                                           onError: (exception,
-                                                              stackTrace) {
-                                                            print(
-                                                                'Error loading image: $exception');
-                                                          },
+                                                              stackTrace) {},
                                                         ),
                                                       ),
                                                     ),
@@ -2648,10 +2647,7 @@ class _PodcastpageState extends State<Podcastpage>
                                                                   "urlPhoto"]),
                                                           fit: BoxFit.cover,
                                                           onError: (exception,
-                                                              stackTrace) {
-                                                            print(
-                                                                'Error loading image: $exception');
-                                                          },
+                                                              stackTrace) {},
                                                         ),
                                                       ),
                                                     ),
@@ -2747,10 +2743,7 @@ class _PodcastpageState extends State<Podcastpage>
                                                                   "urlPhoto"]),
                                                           fit: BoxFit.cover,
                                                           onError: (exception,
-                                                              stackTrace) {
-                                                            print(
-                                                                'Error loading image: $exception');
-                                                          },
+                                                              stackTrace) {},
                                                         ),
                                                       ),
                                                     ),
@@ -2846,10 +2839,7 @@ class _PodcastpageState extends State<Podcastpage>
                                                                   "urlPhoto"]),
                                                           fit: BoxFit.cover,
                                                           onError: (exception,
-                                                              stackTrace) {
-                                                            print(
-                                                                'Error loading image: $exception');
-                                                          },
+                                                              stackTrace) {},
                                                         ),
                                                       ),
                                                     ),
@@ -2945,10 +2935,7 @@ class _PodcastpageState extends State<Podcastpage>
                                                                   "urlPhoto"]),
                                                           fit: BoxFit.cover,
                                                           onError: (exception,
-                                                              stackTrace) {
-                                                            print(
-                                                                'Error loading image: $exception');
-                                                          },
+                                                              stackTrace) {},
                                                         ),
                                                       ),
                                                     ),
@@ -3046,10 +3033,7 @@ class _PodcastpageState extends State<Podcastpage>
                                                                   "urlPhoto"]),
                                                           fit: BoxFit.cover,
                                                           onError: (exception,
-                                                              stackTrace) {
-                                                            print(
-                                                                'Error loading image: $exception');
-                                                          },
+                                                              stackTrace) {},
                                                         ),
                                                       ),
                                                     ),
@@ -3140,10 +3124,7 @@ class _PodcastpageState extends State<Podcastpage>
                                                                 'photoUrl']),
                                                         fit: BoxFit.cover,
                                                         onError: (exception,
-                                                            stackTrace) {
-                                                          print(
-                                                              'Error loading image: $exception');
-                                                        },
+                                                            stackTrace) {},
                                                       ),
                                                     ),
                                                   ),

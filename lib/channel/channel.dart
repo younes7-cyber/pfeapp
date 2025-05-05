@@ -160,6 +160,7 @@ class _ChannelpageState extends State<Channelpage>
       int likes = fetchedPodcasts.fold(
           // ignore: avoid_types_as_parameter_names
           0,
+          // ignore: avoid_types_as_parameter_names
           (sum, item) => sum + (item["likes"] ?? 0) as int);
 
       if (mounted) {
