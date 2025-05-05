@@ -1,8 +1,13 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pfeapp/ZoomPhotoPage.dart';
+import 'package:pfeapp/annimation.dart';
 import 'package:pfeapp/constants.dart';
+import 'package:pfeapp/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class Channelpage extends StatefulWidget {
   const Channelpage({super.key});
@@ -19,12 +24,14 @@ class _ChannelpageState extends State<Channelpage>
 
       final reportsRef = FirebaseFirestore.instance.collection('reports');
 
-      final query = await reportsRef
+      // Obtenir le premier snapshot pour vérifier si le rapport existe
+      final snapshot = await reportsRef
           .where('user', isEqualTo: user.uid)
           .where('chaine', isEqualTo: id)
-          .get();
+          .snapshots()
+          .first;
 
-      if (query.docs.isEmpty) {
+      if (snapshot.docs.isEmpty) {
         // Aucune déclaration trouvée : on ajoute
         await reportsRef.add({
           'user': user.uid,
@@ -34,14 +41,9 @@ class _ChannelpageState extends State<Channelpage>
         await FirebaseFirestore.instance.collection('channels').doc(id).update({
           'report': FieldValue.increment(1),
         }); // Add
-
-        print("Report ajouté !");
-      } else {
-        print("Report existe déjà.");
-      }
-    } catch (e) {
-      print("Erreur lors de la vérification/ajout du report : $e");
-    }
+      } else {}
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   String formatLikes(num likes) {
@@ -49,20 +51,15 @@ class _ChannelpageState extends State<Channelpage>
     final formatter = NumberFormat('#,##0.00', 'fr');
     // Pour les nombres importants, appliquer une logique de compactage manuel
     if (likes >= 1000000000000000) {
-      return formatter
-              .format(likes / 1000000000000000)
-              .replaceAll('\u202f', '') +
-          'P';
+      return '${formatter.format(likes / 1000000000000000).replaceAll('\u202f', '')}P';
     } else if (likes >= 1000000000000) {
-      return formatter.format(likes / 1000000000000).replaceAll('\u202f', '') +
-          'T';
+      return '${formatter.format(likes / 1000000000000).replaceAll('\u202f', '')}T';
     } else if (likes >= 1000000000) {
-      return formatter.format(likes / 1000000000).replaceAll('\u202f', '') +
-          'G';
+      return '${formatter.format(likes / 1000000000).replaceAll('\u202f', '')}G';
     } else if (likes >= 1000000) {
-      return formatter.format(likes / 1000000).replaceAll('\u202f', '') + 'M';
+      return '${formatter.format(likes / 1000000).replaceAll('\u202f', '')}M';
     } else if (likes >= 1000) {
-      return formatter.format(likes / 1000).replaceAll('\u202f', '') + 'k';
+      return '${formatter.format(likes / 1000).replaceAll('\u202f', '')}k';
     } else if (likes <= 999) {
       final formatter1 = NumberFormat('#0', 'fr');
       return formatter1.format(likes);
@@ -71,53 +68,6 @@ class _ChannelpageState extends State<Channelpage>
     return formatter.format(likes).replaceAll('\u202f', '');
   }
 
-  final List<Map<String, String>> pod = [
-    {
-      "img": "images/qq.png",
-      "tit": "The Joe Rogen..JJJJJ",
-      "cat": "music",
-      "like": "100K",
-      "view": "4k",
-      "com": "400",
-    },
-    {
-      "img": "images/ss.png",
-      "tit": "Needs A Freinds",
-      "cat": "music",
-      "like": "900",
-      "view": "3.8k",
-      "com": "400",
-    },
-    {
-      "img": "images/dd.png",
-      "tit": "Follow Your Dream",
-      "cat": "music",
-      "like": "700",
-      "view": "3.2k",
-      "com": "400",
-    },
-    {
-      "img": "images/a.png",
-      "tit": "The Joe Rogen...",
-      "cat": "music",
-      "like": "500",
-      "view": "2.8k",
-      "com": "400",
-    },
-    {
-      "img": "images/b.png",
-      "tit": "The Joe Rogen...",
-      "cat": "music",
-      "like": "200",
-      "view": "1k",
-      "com": "400",
-    },
-  ];
-  final List<Map<String, String>> play = [
-    {"img": "images/k.png", "tit": "Need A Freind", "tite": "63 Podcast"},
-    {"img": "images/k.png", "tit": "Need A Freind", "tite": "70 Podcast"},
-    {"img": "images/xx.png", "tit": "Music", "tite": "15 Podcast"},
-  ];
   bool isPressed = false;
   bool showWhiteContainer = false;
   late int r = 1;
@@ -126,15 +76,25 @@ class _ChannelpageState extends State<Channelpage>
   List<Map<String, dynamic>> playlists = [];
   List<Map<String, dynamic>> channels = [];
   List<Map<String, dynamic>> podcasts = [];
-  Future<void> fetchChannels(String id) async {
-    try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('channels')
-          .where('id', isEqualTo: id)
-          .get();
+  late int s = 0;
+  bool isFollowing = false;
+  bool isLoading = true;
 
-      debugPrint('Nombre de chaînes trouvées : ${querySnapshot.docs.length}');
+  // Abonnements aux streams pour pouvoir les annuler dans dispose()
+  StreamSubscription? _channelsSubscription;
+  StreamSubscription? _podcastsSubscription;
+  StreamSubscription? _playlistsSubscription;
+  StreamSubscription? _followingSubscription;
 
+  Future<void> listenToChannels(String id) async {
+    // Annuler l'abonnement précédent s'il existe
+    await _channelsSubscription?.cancel();
+
+    _channelsSubscription = FirebaseFirestore.instance
+        .collection('channels')
+        .where('id', isEqualTo: id)
+        .snapshots()
+        .listen((querySnapshot) async {
       List<Map<String, dynamic>> tempChannels = [];
 
       for (var doc in querySnapshot.docs) {
@@ -143,15 +103,16 @@ class _ChannelpageState extends State<Channelpage>
         // Récupérer l'utilisateur lié à ce channel
         String? userId = channelData['userId'];
         if (userId != null) {
-          final userQuery = await FirebaseFirestore.instance
+          // Utiliser .first pour obtenir un snapshot unique
+          final userSnapshot = await FirebaseFirestore.instance
               .collection('users')
               .where('userId', isEqualTo: userId)
-              .get();
+              .snapshots()
+              .first;
 
-          if (userQuery.docs.isNotEmpty) {
-            channelData['user'] = userQuery.docs.first.data();
+          if (userSnapshot.docs.isNotEmpty) {
+            channelData['user'] = userSnapshot.docs.first.data();
           } else {
-            debugPrint("Aucun utilisateur trouvé pour userId: $userId");
             channelData['user'] = null;
           }
         }
@@ -159,101 +120,150 @@ class _ChannelpageState extends State<Channelpage>
         tempChannels.add(channelData);
       }
 
-      setState(() {
-        channels = tempChannels;
-      });
-
-      debugPrint("Chaînes finales avec users : $channels");
-    } catch (e) {
-      debugPrint('Erreur lors de la récupération des chaînes : $e');
-      setState(() {
-        channels = [];
-      });
-    }
+      if (mounted) {
+        setState(() {
+          channels = tempChannels;
+        });
+      }
+    }, onError: (e) {});
   }
 
-  late int s = 0;
-  Future<void> fetchPodcastsByChannelId(String id) async {
-    try {
-      // Étape 1 : Récupérer le channel pour extraire userId
-      final channelSnapshot = await FirebaseFirestore.instance
-          .collection('channels')
-          .where('id', isEqualTo: id)
-          .get();
+  Future<void> listenToPodcasts(String id) async {
+    await _podcastsSubscription?.cancel();
 
-      if (channelSnapshot.docs.isEmpty) {
-        return;
-      }
+    // D'abord, obtenir l'userId du canal
+    final channelSnapshot = await FirebaseFirestore.instance
+        .collection('channels')
+        .where('id', isEqualTo: id)
+        .snapshots()
+        .first;
 
-      final channelData = channelSnapshot.docs.first.data();
-      final String userId = channelData['userId'];
+    if (channelSnapshot.docs.isEmpty) {
+      return;
+    }
 
-      // Étape 2 : Récupérer les podcasts liés à ce userId
-      final podcastsSnapshot = await FirebaseFirestore.instance
-          .collection('podcasts')
-          .where('idUser', isEqualTo: userId)
-          .orderBy('dateCreation', descending: true)
-          .get();
+    final channelData = channelSnapshot.docs.first.data();
+    final String userId = channelData['userId'];
 
-      final List<Map<String, dynamic>> fetchedPodcasts = podcastsSnapshot.docs
+    // Ensuite, écouter les podcasts de cet utilisateur
+    _podcastsSubscription = FirebaseFirestore.instance
+        .collection('podcasts')
+        .where('idUser', isEqualTo: userId)
+        .orderBy('dateCreation', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+      final List<Map<String, dynamic>> fetchedPodcasts = snapshot.docs
+          // ignore: unnecessary_cast
           .map((doc) => doc.data() as Map<String, dynamic>)
           .toList();
-      s = fetchedPodcasts.fold(
-          0, (sum, item) => sum + (item["likes"] ?? 0) as int);
-      // Debug
-      debugPrint("Podcasts trouvés : ${fetchedPodcasts.length}");
 
-      // Met à jour l'état si besoin
-      setState(() {
-        podcasts = fetchedPodcasts;
-      });
-    } catch (e) {
-      debugPrint("Erreur lors de la récupération des podcasts : $e");
-      setState(() {
-        podcasts = [];
-      });
-    }
+      int likes = fetchedPodcasts.fold(
+          // ignore: avoid_types_as_parameter_names
+          0,
+          (sum, item) => sum + (item["likes"] ?? 0) as int);
+
+      if (mounted) {
+        setState(() {
+          podcasts = fetchedPodcasts;
+          s = likes;
+        });
+      }
+    }, onError: (e) {});
   }
 
-  bool isFollowing = false;
-  Future<String?> getchannelUserId() async {
+  Future<void> listenToPlaylists(String id) async {
+    await _playlistsSubscription?.cancel();
+
+    // D'abord, obtenir l'userId du canal
+    final channelSnapshot = await FirebaseFirestore.instance
+        .collection('channels')
+        .where('id', isEqualTo: id)
+        .snapshots()
+        .first;
+
+    if (channelSnapshot.docs.isEmpty) {
+      return;
+    }
+
+    final channelData = channelSnapshot.docs.first.data();
+    final String userId = channelData['userId'];
+
+    // Ensuite, écouter les playlists de cet utilisateur
+    _playlistsSubscription = FirebaseFirestore.instance
+        .collection('playlist')
+        .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+      final List<Map<String, dynamic>> fetchedPlaylists = snapshot.docs
+          // ignore: unnecessary_cast
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+
+      if (mounted) {
+        setState(() {
+          playlists = fetchedPlaylists;
+        });
+      }
+    }, onError: (e) {});
+  }
+
+  Future<void> listenToFollowStatus() async {
+    await _followingSubscription?.cancel();
+
+    final user = FirebaseAuth.instance.currentUser?.uid;
+    if (user == null || id == null) return;
+
+    // D'abord, obtenir l'userId du canal
+    final channelSnapshot = await FirebaseFirestore.instance
+        .collection('channels')
+        .where('id', isEqualTo: id)
+        .snapshots()
+        .first;
+
+    if (channelSnapshot.docs.isEmpty) {
+      return;
+    }
+
+    final String? podcastUserId =
+        channelSnapshot.docs.first.data()['userId'] as String?;
+    if (podcastUserId == null) return;
+
+    // Ensuite, écouter le statut de suivi
+    _followingSubscription = FirebaseFirestore.instance
+        .collection('follow')
+        .where('idfollowers', isEqualTo: user)
+        .where('idfollowing', isEqualTo: podcastUserId)
+        .snapshots()
+        .listen((snapshot) {
+      if (mounted) {
+        setState(() {
+          isFollowing = snapshot.docs.isNotEmpty;
+        });
+      }
+    }, onError: (e) {});
+  }
+
+  Future<String?> getChannelUserId() async {
+    if (id == null) return null;
+
     try {
-      final podcastDoc = await FirebaseFirestore.instance
+      final snapshot = await FirebaseFirestore.instance
           .collection('channels')
           .where('id', isEqualTo: id)
-          .get();
+          .snapshots()
+          .first;
 
-      if (podcastDoc.docs.isNotEmpty) {
-        return podcastDoc.docs.first.data()['userId'] as String?;
+      if (snapshot.docs.isNotEmpty) {
+        return snapshot.docs.first.data()['userId'] as String?;
       }
       return null;
     } catch (e) {
-      print('Erreur lors de la récupération de l\'userId du podcast: $e');
       return null;
     }
   }
 
   final String user = FirebaseAuth.instance.currentUser?.uid ?? "";
-  Future<void> checkIfUserIsFollowing() async {
-    try {
-      // Obtenir l'userId du podcast
-      final podcastUserId = await getchannelUserId();
-      if (podcastUserId == null) return;
-
-      // Vérifier si l'utilisateur suit déjà
-      final followDoc = await FirebaseFirestore.instance
-          .collection('follow')
-          .where('idfollowers', isEqualTo: user)
-          .where('idfollowing', isEqualTo: podcastUserId)
-          .get();
-
-      setState(() {
-        isFollowing = followDoc.docs.isNotEmpty;
-      });
-    } catch (e) {
-      print('Erreur lors de la vérification du suivi: $e');
-    }
-  }
 
   Future<void> toggleFollow() async {
     // ignore: unnecessary_null_comparison
@@ -261,7 +271,7 @@ class _ChannelpageState extends State<Channelpage>
 
     try {
       // Obtenir l'userId du podcast
-      final podcastUserId = await getchannelUserId();
+      final podcastUserId = await getChannelUserId();
       if (podcastUserId == null) return;
 
       // Sauvegarder l'état précédent pour pouvoir revenir en arrière en cas d'erreur
@@ -285,16 +295,18 @@ class _ChannelpageState extends State<Channelpage>
           'date': Timestamp.now(),
           'isviewed': false,
         });
+
         // Vérification du channel en cherchant où userId == podcastUserId
-        final QuerySnapshot channelQuery = await FirebaseFirestore.instance
+        final channelSnapshot = await FirebaseFirestore.instance
             .collection('channels')
             .where('userId', isEqualTo: podcastUserId)
-            .get();
+            .snapshots()
+            .first;
 
-// Vérifier si un document a été trouvé
-        if (channelQuery.docs.isNotEmpty) {
+        // Vérifier si un document a été trouvé
+        if (channelSnapshot.docs.isNotEmpty) {
           // Récupérer l'ID du document
-          String channelId = channelQuery.docs.first.id;
+          String channelId = channelSnapshot.docs.first.id;
 
           // Mettre à jour le champ followers avec l'ID récupéré
           await FirebaseFirestore.instance
@@ -306,14 +318,15 @@ class _ChannelpageState extends State<Channelpage>
         }
 
         // Vérifier si le document de l'utilisateur actuel existe
-        final channelDocUser = await FirebaseFirestore.instance
+        final channelDocUserSnapshot = await FirebaseFirestore.instance
             .collection('channels')
             .where('userId', isEqualTo: user)
-            .get();
+            .snapshots()
+            .first;
 
-        if (channelDocUser.docs.isNotEmpty) {
+        if (channelDocUserSnapshot.docs.isNotEmpty) {
           // Récupérer l'ID du document
-          String channelIdd = channelDocUser.docs.first.id;
+          String channelIdd = channelDocUserSnapshot.docs.first.id;
 
           // Mettre à jour le champ followers avec l'ID récupéré
           await FirebaseFirestore.instance
@@ -325,14 +338,15 @@ class _ChannelpageState extends State<Channelpage>
         }
       } else {
         // Supprimer de la collection follow
-        final followDocs = await FirebaseFirestore.instance
+        final followSnapshot = await FirebaseFirestore.instance
             .collection('follow')
             .where('idfollowers', isEqualTo: user)
             .where('idfollowing', isEqualTo: podcastUserId)
-            .get();
+            .snapshots()
+            .first;
 
         // Si aucun document n'est trouvé, c'est une erreur ou une incohérence
-        if (followDocs.docs.isEmpty) {
+        if (followSnapshot.docs.isEmpty) {
           setState(() {
             isFollowing = previousFollowingState;
           });
@@ -340,17 +354,19 @@ class _ChannelpageState extends State<Channelpage>
         }
 
         // Pour chaque document trouvé
-        for (var doc in followDocs.docs) {
+        for (var doc in followSnapshot.docs) {
           await doc.reference.delete();
-          final QuerySnapshot channelQueryy = await FirebaseFirestore.instance
+
+          final channelQuerySnapshot = await FirebaseFirestore.instance
               .collection('channels')
               .where('userId', isEqualTo: podcastUserId)
-              .get();
+              .snapshots()
+              .first;
 
-// Vérifier si un document a été trouvé
-          if (channelQueryy.docs.isNotEmpty) {
+          // Vérifier si un document a été trouvé
+          if (channelQuerySnapshot.docs.isNotEmpty) {
             // Récupérer l'ID du document
-            String channelIddd = channelQueryy.docs.first.id;
+            String channelIddd = channelQuerySnapshot.docs.first.id;
 
             // Mettre à jour le champ followers avec l'ID récupéré
             await FirebaseFirestore.instance
@@ -362,14 +378,15 @@ class _ChannelpageState extends State<Channelpage>
           }
 
           // Vérifier si le document de l'utilisateur actuel existe
-          final channelDocUserr = await FirebaseFirestore.instance
+          final channelDocUserSnapshot = await FirebaseFirestore.instance
               .collection('channels')
               .where('userId', isEqualTo: user)
-              .get();
+              .snapshots()
+              .first;
 
-          if (channelDocUserr.docs.isNotEmpty) {
+          if (channelDocUserSnapshot.docs.isNotEmpty) {
             // Récupérer l'ID du document
-            String channelIdds = channelDocUserr.docs.first.id;
+            String channelIdds = channelDocUserSnapshot.docs.first.id;
 
             // Mettre à jour le champ followers avec l'ID récupéré
             await FirebaseFirestore.instance
@@ -386,10 +403,10 @@ class _ChannelpageState extends State<Channelpage>
       setState(() {
         isFollowing = !isFollowing;
       });
-      print('Erreur lors du changement de suivi: $e');
     }
   }
 
+  @override
   void initState() {
     super.initState();
     _tabController1 = TabController(length: 2, vsync: this);
@@ -410,773 +427,923 @@ class _ChannelpageState extends State<Channelpage>
         }
 
         if (id != null) {
-          await fetchChannels(id!);
-          await fetchPodcastsByChannelId(id!);
-          await fetchplaylists(id!);
-          await checkIfUserIsFollowing();
+          // Configuration des écouteurs pour les streams
+          await listenToChannels(id!);
+          await listenToPodcasts(id!);
+          await listenToPlaylists(id!);
+          await listenToFollowStatus();
         }
       }
-
+      await Future.delayed(const Duration(seconds: 3));
       setState(() => isLoading = false);
     });
   }
 
-  Future<void> fetchplaylists(String id) async {
-    try {
-      // Étape 1 : Récupérer le channel pour extraire userId
-      final channelSnapshot = await FirebaseFirestore.instance
-          .collection('channels')
-          .where('id', isEqualTo: id)
-          .get();
-
-      if (channelSnapshot.docs.isEmpty) {
-        return;
-      }
-
-      final channelData = channelSnapshot.docs.first.data();
-      final String userId = channelData['userId'];
-
-      // Étape 2 : Récupérer les podcasts liés à ce userId
-      final podcastsSnapshot = await FirebaseFirestore.instance
-          .collection('playlist')
-          .where('userId', isEqualTo: userId)
-          .orderBy('createdAt', descending: true)
-          .get();
-
-      final List<Map<String, dynamic>> fetchedPodcasts = podcastsSnapshot.docs
-          .map((doc) => doc.data() as Map<String, dynamic>)
-          .toList();
-      // Debug
-      debugPrint("Podcasts trouvés : ${fetchedPodcasts.length}");
-
-      // Met à jour l'état si besoin
-      setState(() {
-        playlists = fetchedPodcasts;
-      });
-    } catch (e) {
-      debugPrint("Erreur lors de la récupération des podcasts : $e");
-      setState(() {
-        playlists = [];
-      });
-    }
-  }
-
-  bool isLoading = true;
   late TabController _tabController1;
+
   @override
   void dispose() {
+    // Annuler tous les abonnements aux streams
+    _channelsSubscription?.cancel();
+    _podcastsSubscription?.cancel();
+    _playlistsSubscription?.cancel();
+    _followingSubscription?.cancel();
+
     _tabController1.dispose();
     super.dispose();
   }
+
+  // Le reste de votre code (méthode build, etc.)...
 
   @override
   Widget build(BuildContext context) {
     final Size v = MediaQuery.of(context).size;
     return Scaffold(
         body: SafeArea(
-      child: Container(
-        decoration: const BoxDecoration(color: Colors.white),
-        width: double.infinity, // Added to provide width constraint
-        height: double.infinity, // Added to provide height constraint
+      child: isLoading
+          ? const Annimationwidjet()
+          : Consumer<ThemeProvider>(builder: (context, themeProvider, child) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: themeProvider.isDarkMode ? Colors.black : Colors.white,
+                ),
+                width: double.infinity, // Added to provide width constraint
+                height: double.infinity, // Added to provide height constraint
 
-        child: isLoading
-            ? const Center(child: Text(""))
-            : Column(
-                children: [
-                  SizedBox(
-                    height: v.width * 0.2,
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          top: v.height * 0.01,
-                          left: v.width * 0.03,
-                          child: IconButton(
-                            onPressed: () {
-                              if (chaine == 2) {
-                                Navigator.pushNamedAndRemoveUntil(
-                                    context, '/podly', (route) => false,
-                                    arguments: {'selectedIndex': 0});
-                              }
-                              if (chaine == 3) {
-                                Navigator.pushNamedAndRemoveUntil(
-                                    context, '/podly', (route) => false,
-                                    arguments: {'selectedIndex': 3});
-                              }
-                              if (chaine == 4) {
-                                Navigator.pop(context);
-                              }
-                              if (chaine == 5) {
-                                Navigator.pop(context);
-                              }
-                              if (chaine == 6) {
-                                Navigator.pop(context);
-                              }
-                            },
-                            icon: Image.network(
-                              s18,
-                              width: v.width * 0.07,
-                              height: v.width * 0.07,
-                            ),
-                          ),
-                        ),
-                        Positioned(
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: v.width * 0.2,
+                      child: Stack(
+                        children: [
+                          Positioned(
                             top: v.height * 0.01,
-                            right: v.width * 0.03,
-                            child: PopupMenuButton(
+                            left: v.width * 0.03,
+                            child: IconButton(
+                              onPressed: () {
+                                if (chaine == 2) {
+                                  Navigator.pushNamedAndRemoveUntil(
+                                      context, '/podly', (route) => false,
+                                      arguments: {'selectedIndex': 0});
+                                }
+                                if (chaine == 3) {
+                                  Navigator.pushNamedAndRemoveUntil(
+                                      context, '/podly', (route) => false,
+                                      arguments: {'selectedIndex': 3});
+                                }
+                                if (chaine == 4) {
+                                  Navigator.pop(context);
+                                }
+                                if (chaine == 5) {
+                                  Navigator.pop(context);
+                                }
+                                if (chaine == 6) {
+                                  Navigator.pop(context);
+                                }
+                              },
                               icon: Image.network(
-                                s49,
-                                width: v.width * 0.06,
-                                height: v.width * 0.06,
+                                themeProvider.isDarkMode ? s97 : s18,
+                                width: v.width * 0.07,
+                                height: v.width * 0.07,
                               ),
-                              color: Colors
-                                  .white, // Définit la couleur de fond du menu popup
-                              itemBuilder: (BuildContext context) => [
-                                PopupMenuItem(
-                                  height: v.width * 0.12,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors
-                                          .white, // Couleur de fond du container
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Image.network(
-                                          s50,
-                                          width: v.width * 0.05,
-                                          height: v.width * 0.05,
-                                        ),
-                                        SizedBox(width: v.width * 0.02),
-                                        Text(
-                                          "Report",
-                                          style: TextStyle(
-                                            fontSize: v.width * 0.04,
-                                            color: Colors
-                                                .black, // Couleur du texte
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  onTap: () async {
-                                    await checkAndAddReport(id!);
-                                  },
-                                ),
-                              ],
-                            )),
-                        Positioned(
-                            top: v.height * 0.02,
-                            left: v.width * 0.35,
-                            child: Container(
-                                width: v.width * 0.4,
-                                height: v.height * 0.1,
-                                // decoration: BoxDecoration(color: Colors.black),
-                                child: Text(
-                                  channels[0]["name"],
-                                  style: TextStyle(
-                                      fontSize: v.width * 0.06,
-                                      fontWeight: FontWeight.bold),
-                                ))),
-                      ],
-                    ),
-                  ),
-                  SizedBox(
-                    width: v.width,
-                    height: v.width * 0.32,
-                    child: Stack(
-                      children: [
-                        Positioned(
-                            top: v.height * 0.03,
-                            left: v.width * 0.38,
-                            child: Container(
-                              width: v.width * 0.25,
-                              height: v.width * 0.25,
-                              decoration: BoxDecoration(
-                                  borderRadius:
-                                      BorderRadius.circular(v.width * 0.2)),
-                              child: ClipOval(
-                                child: Image.network(
-                                  channels[0]["photoUrl"],
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            )),
-                      ],
-                    ),
-                  ),
-                  SizedBox(
-                    width: v.width,
-                    height: v.width * 0.02,
-                  ),
-                  SizedBox(
-                      child: Stack(children: [
-                    Positioned(
-                      child: Text(
-                        channels[0]['user']['email'],
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w400, color: Colors.grey),
-                      ),
-                    ),
-                  ])),
-                  SizedBox(
-                    width: v.width,
-                    height: v.width * 0.05,
-                  ),
-                  SizedBox(
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: v.width * 0.17,
-                        ),
-                        Column(
-                          children: [
-                            Text(
-                              formatLikes(channels[0]['following']),
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: v.width * 0.04),
                             ),
-                            const Text(
-                              "Following",
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ],
-                        ),
-                        SizedBox(
-                          width: v.width * 0.1,
-                        ),
-                        Column(
-                          children: [
-                            Text(
-                              formatLikes(channels[0]['followers']),
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: v.width * 0.04),
-                            ),
-                            const Text(
-                              "Followers",
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ],
-                        ),
-                        SizedBox(
-                          width: v.width * 0.1,
-                        ),
-                        Column(
-                          children: [
-                            Text(
-                              formatLikes(s),
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: v.width * 0.04),
-                            ),
-                            const Text(
-                              "Likes",
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ],
-                        )
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: v.width * 0.05),
-                  SizedBox(
-                    height: v.height * 0.07,
-                    width: v.width * 0.75,
-                    child: MaterialButton(
-                      onPressed: toggleFollow,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 1),
-                        height: v.height * 0.07,
-                        width: v.width * 0.75,
-                        decoration: BoxDecoration(
-                          color: isFollowing
-                              ? Colors.white
-                              : const Color(0xFF754CEF),
-                          borderRadius: BorderRadius.all(
-                            Radius.circular(v.width * 0.05),
                           ),
-                          border: isFollowing
-                              ? Border.all(color: const Color(0xFF754CEF))
-                              : null,
-                        ),
-                        child: Stack(
-                          children: [
-                            if (!isFollowing)
-                              Positioned(
-                                top: v.height * 0.022,
-                                left: v.width * 0.23,
-                                child: Text(
-                                  "Follow Now",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: v.width * 0.04,
-                                  ),
+                          Positioned(
+                              top: v.height * 0.01,
+                              right: v.width * 0.03,
+                              child: PopupMenuButton(
+                                icon: Image.network(
+                                  themeProvider.isDarkMode ? s106 : s49,
+                                  width: v.width * 0.06,
+                                  height: v.width * 0.06,
                                 ),
-                              ),
-                            if (isFollowing)
-                              Positioned(
-                                top: v.height * 0.015,
-                                left: v.width * 0.2,
-                                child: Row(
-                                  children: [
-                                    Image.network(
-                                      s51,
-                                      width: v.width * 0.06,
-                                      height: v.width * 0.06,
-                                    ),
-                                    SizedBox(width: v.width * 0.02),
-                                    Text(
-                                      "Following",
-                                      style: TextStyle(
-                                        color: const Color(0xFF754CEF),
-                                        fontSize: v.width * 0.04,
+                                color: themeProvider.isDarkMode
+                                    ? Colors.black
+                                    : Colors
+                                        .white, // Définit la couleur de fond du menu popup
+                                itemBuilder: (BuildContext context) => [
+                                  PopupMenuItem(
+                                    height: v.width * 0.12,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: themeProvider.isDarkMode
+                                            ? Colors.black
+                                            : Colors
+                                                .white, // Couleur de fond du container
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  TabBar(
-                    controller: _tabController1,
-                    labelColor: Colors.black,
-                    unselectedLabelColor: Colors.grey,
-                    indicatorColor: Colors.black,
-                    tabs: const [
-                      Tab(text: 'Podcast'),
-                      Tab(text: 'Playlist'),
-                    ],
-                  ),
-
-                  // Tab bar view - Fixed section
-                  Expanded(
-                    child: TabBarView(
-                      controller: _tabController1,
-                      children: [
-                        Column(
-                          children: [
-                            // See All header for Podcast
-                            Padding(
-                              padding: const EdgeInsets.symmetric(),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    "",
-                                    style: TextStyle(
-                                      fontSize: v.width * 0.045,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        "See All",
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: v.width * 0.035,
-                                            color: const Color(0xFF754CEF)),
-                                      ),
-                                      SizedBox(width: v.width * 0.01),
-                                      IconButton(
-                                        onPressed: () {
-                                          Navigator.pushNamed(
-                                            context,
-                                            '/seeall',
-                                            arguments: {
-                                              'id': channels[0]["id"],
-                                              'r': 14
-                                            }, // Passe la valeur de r comme argument
-                                          );
-
-                                          print(r);
-                                        },
-                                        icon: Image.network(
-                                          s36,
-                                          width: v.width * 0.04,
-                                          height: v.width * 0.04,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              child: ListView.builder(
-                                itemCount: podcasts.length,
-                                itemBuilder: (context, index) {
-                                  final item = podcasts[index];
-                                  return Container(
-                                    margin: EdgeInsets.all(v.width * 0.02),
-                                    decoration: BoxDecoration(
-                                      borderRadius:
-                                          BorderRadius.circular(v.width * 0.05),
-                                      border: Border.all(color: Colors.black12),
-                                    ),
-                                    width: v.width * 0.95,
-                                    height: v.width * 0.3,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        Navigator.pushNamed(
-                                          context,
-                                          '/podcast',
-                                          arguments: {
-                                            'idpod': item["id"],
-                                            'feat':
-                                                12, // remplace "someValue" par ce que tu veux représenter
-                                          },
-                                        );
-                                      },
                                       child: Row(
                                         children: [
-                                          SizedBox(width: v.width * 0.01),
-                                          Container(
-                                            child: Image.network(
-                                              s48,
-                                              width: v.width * 0.09,
-                                              height: v.width * 0.09,
-                                              fit: BoxFit.cover,
-                                            ),
-                                          ),
-                                          SizedBox(width: v.width * 0.03),
-                                          Container(
-                                            height: v.width * 0.2,
-                                            width: v.width * 0.2,
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                      v.width * 0.04),
-                                              image: DecorationImage(
-                                                image: NetworkImage(
-                                                    item["urlPhoto"]!),
-                                                fit: BoxFit.cover,
-                                              ),
-                                            ),
+                                          Image.network(
+                                            themeProvider.isDarkMode
+                                                ? s118
+                                                : s50,
+                                            width: v.width * 0.05,
+                                            height: v.width * 0.05,
                                           ),
                                           SizedBox(width: v.width * 0.02),
-                                          Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              SizedBox(height: v.width * 0.0),
-                                              SizedBox(
-                                                width: v.width * 0.35,
-                                                child: Text(
-                                                  item["name"]!,
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: v.width * 0.04,
-                                                  ),
-                                                  maxLines: 4,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                              SizedBox(height: v.width * 0.01),
-                                            ],
-                                          ),
-                                          SizedBox(
-                                            width: v.width * 0.05,
-                                          ),
-                                          Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              SizedBox(
-                                                  width: v.width *
-                                                      0.2, // Constrain the width of the progress bar
-                                                  child: Column(
-                                                    children: [
-                                                      Row(
-                                                        children: [
-                                                          SizedBox(
-                                                            child:
-                                                                Image.network(
-                                                                    s37),
-                                                            width:
-                                                                v.width * 0.05,
-                                                            height:
-                                                                v.width * 0.05,
-                                                          ),
-                                                          SizedBox(
-                                                            width:
-                                                                v.width * 0.01,
-                                                          ),
-                                                          Text(
-                                                            formatLikes(
-                                                                item["likes"]),
-                                                            style: TextStyle(
-                                                                fontSize:
-                                                                    v.width *
-                                                                        0.035,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold),
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      SizedBox(
-                                                        height: v.width * 0.02,
-                                                      ),
-                                                      Row(
-                                                        children: [
-                                                          SizedBox(
-                                                            child:
-                                                                Image.network(
-                                                                    s14),
-                                                            width:
-                                                                v.width * 0.05,
-                                                            height:
-                                                                v.width * 0.05,
-                                                          ),
-                                                          SizedBox(
-                                                            width:
-                                                                v.width * 0.01,
-                                                          ),
-                                                          Text(
-                                                            formatLikes(
-                                                                item["vue"]),
-                                                            style: TextStyle(
-                                                                fontSize:
-                                                                    v.width *
-                                                                        0.035,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold),
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      SizedBox(
-                                                        height: v.width * 0.02,
-                                                      ),
-                                                      Row(
-                                                        children: [
-                                                          SizedBox(
-                                                            child:
-                                                                Image.network(
-                                                                    s38),
-                                                            width:
-                                                                v.width * 0.05,
-                                                            height:
-                                                                v.width * 0.05,
-                                                          ),
-                                                          SizedBox(
-                                                            width:
-                                                                v.width * 0.01,
-                                                          ),
-                                                          Text(
-                                                            formatLikes(item[
-                                                                "comments"]),
-                                                            style: TextStyle(
-                                                                fontSize:
-                                                                    v.width *
-                                                                        0.035,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold),
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ],
-                                                  )),
-                                            ],
+                                          Text(
+                                            "Report",
+                                            style: TextStyle(
+                                              fontSize: v.width * 0.04,
+                                              // Couleur du texte
+                                            ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                  );
-                                },
+                                    onTap: () async {
+                                      await checkAndAddReport(id!);
+                                    },
+                                  ),
+                                ],
+                              )),
+                          Positioned(
+                              top: v.height * 0.02,
+                              left: v.width * 0.35,
+                              child: SizedBox(
+                                  width: v.width * 0.4,
+                                  height: v.height * 0.1,
+                                  child: Text(
+                                    channels[0]["name"],
+                                    style: TextStyle(
+                                        fontSize: v.width * 0.06,
+                                        fontWeight: FontWeight.bold),
+                                  ))),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      width: v.width,
+                      height: v.width * 0.32,
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            top: v.height * 0.03,
+                            left: v.width * 0.38,
+                            child: GestureDetector(
+                              onTap: () {
+                                showDialog(
+                                  context: context,
+                                  barrierColor: themeProvider.isDarkMode
+                                      ? Colors.white.withOpacity(0.9)
+                                      : Colors.black.withOpacity(
+                                          0.9), // fond sombre comme TikTok
+                                  builder: (context) {
+                                    return Dialog(
+                                      backgroundColor: Colors.transparent,
+                                      insetPadding:
+                                          EdgeInsets.zero, // plein écran
+                                      child: Stack(
+                                        children: [
+                                          Center(
+                                            child: Image.network(
+                                              channels[0]["photoUrl"],
+                                              fit: BoxFit.contain,
+                                            ),
+                                          ),
+                                          Positioned(
+                                            top: 40,
+                                            right: 20,
+                                            child: IconButton(
+                                              icon: Icon(Icons.close,
+                                                  color:
+                                                      themeProvider.isDarkMode
+                                                          ? Colors.black
+                                                          : Colors.white,
+                                                  size: 30),
+                                              onPressed: () {
+                                                Navigator.of(context)
+                                                    .pop(); // Fermer l'overlay
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                              child: Container(
+                                width: v.width * 0.25,
+                                height: v.width * 0.25,
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: const Color(0xFF754CEF),
+                                    width: v.width * 0.002,
+                                  ),
+                                  borderRadius:
+                                      BorderRadius.circular(v.width * 0.2),
+                                ),
+                                child: ClipOval(
+                                  child: Image.network(
+                                    channels[0]["photoUrl"],
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
                               ),
                             ),
-                          ],
-                        ),
-                        Column(
-                          children: [
-                            // See All header for Podcast
-                            Padding(
-                              padding: const EdgeInsets.symmetric(),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    "",
-                                    style: TextStyle(
-                                      fontSize: v.width * 0.045,
-                                      fontWeight: FontWeight.bold,
+                          ),
+                          Positioned(
+                            top: v.height * 0.03,
+                            left: v.width * 0.38,
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  PageRouteBuilder(
+                                    opaque: false,
+                                    transitionDuration:
+                                        const Duration(milliseconds: 500),
+                                    pageBuilder: (context, animation,
+                                        secondaryAnimation) {
+                                      return FadeTransition(
+                                        opacity: animation,
+                                        child: ZoomPhotoPage(
+                                            imageUrl: channels[0]["photoUrl"]),
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                              child: Hero(
+                                tag:
+                                    'photoZoomHero11', // Tag partagé pour animation Hero
+                                child: Container(
+                                  width: v.width * 0.25,
+                                  height: v.width * 0.25,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: const Color(0xFF754CEF),
+                                      width: v.width * 0.002,
+                                    ),
+                                    borderRadius:
+                                        BorderRadius.circular(v.width * 0.2),
+                                  ),
+                                  child: ClipOval(
+                                    child: Image.network(
+                                      channels[0]["photoUrl"],
+                                      fit: BoxFit.cover,
                                     ),
                                   ),
-                                  Row(
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      width: v.width,
+                      height: v.width * 0.02,
+                    ),
+                    SizedBox(
+                        child: Stack(children: [
+                      Positioned(
+                        child: Text(
+                          channels[0]['user']['email'],
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w400, color: Colors.grey),
+                        ),
+                      ),
+                    ])),
+                    SizedBox(
+                      width: v.width,
+                      height: v.width * 0.05,
+                    ),
+                    SizedBox(
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: v.width * 0.17,
+                          ),
+                          Column(
+                            children: [
+                              Text(
+                                formatLikes(channels[0]['following']),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: v.width * 0.04),
+                              ),
+                              const Text(
+                                "Following",
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                          SizedBox(
+                            width: v.width * 0.1,
+                          ),
+                          Column(
+                            children: [
+                              Text(
+                                formatLikes(channels[0]['followers']),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: v.width * 0.04),
+                              ),
+                              const Text(
+                                "Followers",
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                          SizedBox(
+                            width: v.width * 0.1,
+                          ),
+                          Column(
+                            children: [
+                              Text(
+                                formatLikes(s),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: v.width * 0.04),
+                              ),
+                              const Text(
+                                "Likes",
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          )
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: v.width * 0.05),
+                    SizedBox(
+                      height: v.height * 0.07,
+                      width: v.width * 0.75,
+                      child: MaterialButton(
+                        onPressed: toggleFollow,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 1),
+                          height: v.height * 0.07,
+                          width: v.width * 0.75,
+                          decoration: BoxDecoration(
+                            color: isFollowing
+                                ? themeProvider.isDarkMode
+                                    ? Colors.black
+                                    : Colors.white
+                                : const Color(0xFF754CEF),
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(v.width * 0.05),
+                            ),
+                            border: isFollowing
+                                ? Border.all(color: const Color(0xFF754CEF))
+                                : null,
+                          ),
+                          child: Stack(
+                            children: [
+                              if (!isFollowing)
+                                Positioned(
+                                  top: v.height * 0.022,
+                                  left: v.width * 0.23,
+                                  child: Text(
+                                    "Follow Now",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: v.width * 0.04,
+                                    ),
+                                  ),
+                                ),
+                              if (isFollowing)
+                                Positioned(
+                                  top: v.height * 0.015,
+                                  left: v.width * 0.2,
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        "See All",
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: v.width * 0.035,
-                                            color: const Color(0xFF754CEF)),
+                                      Image.network(
+                                        themeProvider.isDarkMode ? s119 : s51,
+                                        width: v.width * 0.06,
+                                        height: v.width * 0.06,
                                       ),
-                                      SizedBox(width: v.width * 0.01),
-                                      IconButton(
-                                        onPressed: () {
-                                          Navigator.pushNamed(
-                                            context,
-                                            '/seeall',
-                                            arguments: {
-                                              'id': channels[0]["id"],
-                                              'r': 15
-                                            }, // Passe la valeur de r comme argument
-                                          );
-
-                                          print(r);
-                                        },
-                                        icon: Image.network(
-                                          s36,
-                                          width: v.width * 0.04,
-                                          height: v.width * 0.04,
+                                      SizedBox(width: v.width * 0.02),
+                                      Text(
+                                        "Following",
+                                        style: TextStyle(
+                                          color: const Color(0xFF754CEF),
+                                          fontSize: v.width * 0.04,
                                         ),
                                       ),
                                     ],
                                   ),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              child: // Playlist tab
-                                  ListView.builder(
-                                itemCount: playlists.length,
-                                itemBuilder: (context, index) {
-                                  final item = playlists[index];
-                                  return Container(
-                                    margin: EdgeInsets.all(v.width * 0.02),
-                                    decoration: BoxDecoration(
-                                      borderRadius:
-                                          BorderRadius.circular(v.width * 0.05),
-                                      border: Border.all(color: Colors.black12),
-                                    ),
-                                    width: v.width * 0.95,
-                                    height: v.width * 0.3,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        Navigator.pushNamed(context, '/play',
-                                            arguments: {
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    TabBar(
+                      controller: _tabController1,
+                      labelColor: themeProvider.isDarkMode
+                          ? Colors.white
+                          : Colors.black,
+                      unselectedLabelColor: Colors.grey,
+                      indicatorColor: themeProvider.isDarkMode
+                          ? Colors.white
+                          : Colors.black,
+                      tabs: const [
+                        Tab(text: 'Podcast'),
+                        Tab(text: 'Playlist'),
+                      ],
+                    ),
+
+                    // Tab bar view - Fixed section
+                    Expanded(
+                      child: TabBarView(
+                        controller: _tabController1,
+                        children: [
+                          Column(
+                            children: [
+                              if (podcasts.isNotEmpty) ...[
+                                // See All header for Podcast
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        "",
+                                        style: TextStyle(
+                                          fontSize: v.width * 0.045,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            "See All",
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: v.width * 0.035,
+                                                color: const Color(0xFF754CEF)),
+                                          ),
+                                          SizedBox(width: v.width * 0.01),
+                                          IconButton(
+                                            onPressed: () {
+                                              Navigator.pushNamed(
+                                                context,
+                                                '/seeall',
+                                                arguments: {
+                                                  'id': channels[0]["id"],
+                                                  'r': 14
+                                                }, // Passe la valeur de r comme argument
+                                              );
+                                            },
+                                            icon: Image.network(
+                                              s36,
+                                              width: v.width * 0.04,
+                                              height: v.width * 0.04,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                Expanded(
+                                  child: ListView.builder(
+                                    itemCount: podcasts.length,
+                                    itemBuilder: (context, index) {
+                                      final item = podcasts[index];
+                                      return Container(
+                                        margin: EdgeInsets.all(v.width * 0.02),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                              v.width * 0.05),
+                                          border: Border.all(
+                                            color: themeProvider.isDarkMode
+                                                ? Colors.white70
+                                                : Colors.black12,
+                                          ),
+                                        ),
+                                        width: v.width * 0.95,
+                                        height: v.width * 0.3,
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            Navigator.pushNamed(
+                                              context,
+                                              '/podcast',
+                                              arguments: {
+                                                'idpod': item["id"],
+                                                'feat':
+                                                    12, // remplace "someValue" par ce que tu veux représenter
+                                              },
+                                            );
+                                          },
+                                          child: Row(
+                                            children: [
+                                              SizedBox(width: v.width * 0.01),
+                                              Image.network(
+                                                s48,
+                                                width: v.width * 0.09,
+                                                height: v.width * 0.09,
+                                                fit: BoxFit.cover,
+                                              ),
+                                              SizedBox(width: v.width * 0.03),
+                                              Container(
+                                                height: v.width * 0.2,
+                                                width: v.width * 0.2,
+                                                decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          v.width * 0.04),
+                                                  image: DecorationImage(
+                                                    image: NetworkImage(
+                                                        item["urlPhoto"]!),
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                ),
+                                              ),
+                                              SizedBox(width: v.width * 0.02),
+                                              Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  SizedBox(
+                                                      height: v.width * 0.0),
+                                                  SizedBox(
+                                                    width: v.width * 0.35,
+                                                    child: Text(
+                                                      item["name"]!,
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize:
+                                                            v.width * 0.04,
+                                                      ),
+                                                      maxLines: 4,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                  SizedBox(
+                                                      height: v.width * 0.01),
+                                                ],
+                                              ),
+                                              SizedBox(
+                                                width: v.width * 0.05,
+                                              ),
+                                              Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  SizedBox(
+                                                      width: v.width *
+                                                          0.2, // Constrain the width of the progress bar
+                                                      child: Column(
+                                                        children: [
+                                                          Row(
+                                                            children: [
+                                                              SizedBox(
+                                                                width: v.width *
+                                                                    0.05,
+                                                                height:
+                                                                    v.width *
+                                                                        0.05,
+                                                                child: Image
+                                                                    .network(
+                                                                  themeProvider
+                                                                          .isDarkMode
+                                                                      ? s111
+                                                                      : s37,
+                                                                ),
+                                                              ),
+                                                              SizedBox(
+                                                                width: v.width *
+                                                                    0.01,
+                                                              ),
+                                                              Text(
+                                                                formatLikes(item[
+                                                                    "likes"]),
+                                                                style: TextStyle(
+                                                                    fontSize:
+                                                                        v.width *
+                                                                            0.035,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold),
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          SizedBox(
+                                                            height:
+                                                                v.width * 0.02,
+                                                          ),
+                                                          Row(
+                                                            children: [
+                                                              SizedBox(
+                                                                width: v.width *
+                                                                    0.05,
+                                                                height:
+                                                                    v.width *
+                                                                        0.05,
+                                                                child: Image
+                                                                    .network(
+                                                                  themeProvider
+                                                                          .isDarkMode
+                                                                      ? s108
+                                                                      : s14,
+                                                                ),
+                                                              ),
+                                                              SizedBox(
+                                                                width: v.width *
+                                                                    0.01,
+                                                              ),
+                                                              Text(
+                                                                formatLikes(
+                                                                    item[
+                                                                        "vue"]),
+                                                                style: TextStyle(
+                                                                    fontSize:
+                                                                        v.width *
+                                                                            0.035,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold),
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          SizedBox(
+                                                            height:
+                                                                v.width * 0.02,
+                                                          ),
+                                                          Row(
+                                                            children: [
+                                                              SizedBox(
+                                                                width: v.width *
+                                                                    0.05,
+                                                                height:
+                                                                    v.width *
+                                                                        0.05,
+                                                                child: Image
+                                                                    .network(
+                                                                  themeProvider
+                                                                          .isDarkMode
+                                                                      ? s112
+                                                                      : s38,
+                                                                ),
+                                                              ),
+                                                              SizedBox(
+                                                                width: v.width *
+                                                                    0.01,
+                                                              ),
+                                                              Text(
+                                                                formatLikes(item[
+                                                                    "comments"]),
+                                                                style: TextStyle(
+                                                                    fontSize:
+                                                                        v.width *
+                                                                            0.035,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold),
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ],
+                                                      )),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                              if (podcasts.isEmpty) ...[
+                                Column(children: [
+                                  SizedBox(
+                                    height: v.height * 0.05,
+                                  ),
+                                  SizedBox(
+                                    width: v.width * 0.7,
+                                    height: v.height * 0.3,
+                                    child: Image.network(
+                                        themeProvider.isDarkMode ? s109 : s28),
+                                  ),
+                                  Text("Not Yet",
+                                      style: TextStyle(
+                                          fontSize: v.width * 0.04,
+                                          fontWeight: FontWeight.bold)),
+                                ])
+                              ],
+                            ],
+                          ),
+                          Column(
+                            children: [
+                              if (playlists.isEmpty) ...[
+                                Column(children: [
+                                  SizedBox(
+                                    height: v.height * 0.05,
+                                  ),
+                                  SizedBox(
+                                    width: v.width * 0.7,
+                                    height: v.height * 0.3,
+                                    child: Image.network(
+                                        themeProvider.isDarkMode ? s109 : s28),
+                                  ),
+                                  Text("Not Yet",
+                                      style: TextStyle(
+                                          fontSize: v.width * 0.04,
+                                          fontWeight: FontWeight.bold)),
+                                ])
+                              ],
+                              if (playlists.isNotEmpty) ...[
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        "",
+                                        style: TextStyle(
+                                          fontSize: v.width * 0.045,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            "See All",
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: v.width * 0.035,
+                                                color: const Color(0xFF754CEF)),
+                                          ),
+                                          SizedBox(width: v.width * 0.01),
+                                          IconButton(
+                                            onPressed: () {
+                                              Navigator.pushNamed(
+                                                context,
+                                                '/seeall',
+                                                arguments: {
+                                                  'id': channels[0]["id"],
+                                                  'r': 15
+                                                }, // Passe la valeur de r comme argument
+                                              );
+                                            },
+                                            icon: Image.network(
+                                              s36,
+                                              width: v.width * 0.04,
+                                              height: v.width * 0.04,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Expanded(
+                                  child: // Playlist tab
+                                      ListView.builder(
+                                    itemCount: playlists.length,
+                                    itemBuilder: (context, index) {
+                                      final item = playlists[index];
+                                      return Container(
+                                        margin: EdgeInsets.all(v.width * 0.02),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                              v.width * 0.05),
+                                          border: Border.all(
+                                            color: themeProvider.isDarkMode
+                                                ? Colors.white70
+                                                : Colors.black12,
+                                          ),
+                                        ),
+                                        width: v.width * 0.95,
+                                        height: v.width * 0.3,
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            Navigator.pushNamed(
+                                                context, '/play', arguments: {
                                               'idplay': item["id"],
                                               'pp': 5
                                             });
-                                      },
-                                      child: Row(
-                                        children: [
-                                          SizedBox(
-                                            width: v.width * 0.01,
-                                          ),
-                                          Container(
-                                            height: v.width * 0.25,
-                                            width: v.width * 0.25,
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                      v.width * 0.04),
-                                              image: DecorationImage(
-                                                image: NetworkImage(
-                                                    item["photoUrl"]!),
-                                                fit: BoxFit.cover,
-                                              ),
-                                            ),
-                                          ),
-                                          SizedBox(width: v.width * 0.04),
-                                          Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
+                                          },
+                                          child: Row(
                                             children: [
-                                              SizedBox(height: v.width * 0.02),
                                               SizedBox(
-                                                width: v.width * 0.3,
-                                                child: Text(
-                                                  item["name"]!,
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: v.width * 0.04,
+                                                width: v.width * 0.01,
+                                              ),
+                                              Container(
+                                                height: v.width * 0.25,
+                                                width: v.width * 0.25,
+                                                decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          v.width * 0.04),
+                                                  image: DecorationImage(
+                                                    image: NetworkImage(
+                                                        item["photoUrl"]!),
+                                                    fit: BoxFit.cover,
                                                   ),
-                                                  maxLines: 4,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
                                                 ),
                                               ),
+                                              SizedBox(width: v.width * 0.04),
+                                              Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  SizedBox(
+                                                      height: v.width * 0.02),
+                                                  SizedBox(
+                                                    width: v.width * 0.3,
+                                                    child: Text(
+                                                      item["name"]!,
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize:
+                                                            v.width * 0.04,
+                                                      ),
+                                                      maxLines: 4,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              SizedBox(
+                                                width: v.width * 0.04,
+                                              ),
+                                              Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    SizedBox(
+                                                        width: v.width *
+                                                            0.2, // Constrain the width of the progress bar
+                                                        child:
+                                                            Column(children: [
+                                                          SizedBox(
+                                                            height:
+                                                                v.width * 0.02,
+                                                          ),
+                                                          Column(children: [
+                                                            Text(
+                                                              formatLikes(item[
+                                                                  "podcast"]!),
+                                                              style: TextStyle(
+                                                                fontSize:
+                                                                    v.width *
+                                                                        0.035,
+                                                              ),
+                                                              maxLines: 4,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
+                                                            SizedBox(
+                                                              width: v.width *
+                                                                  0.03,
+                                                            ),
+                                                            Text(
+                                                              "Podcast",
+                                                              style: TextStyle(
+                                                                fontSize:
+                                                                    v.width *
+                                                                        0.035,
+                                                              ),
+                                                              maxLines: 4,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
+                                                          ])
+                                                        ]))
+                                                  ])
                                             ],
                                           ),
-                                          SizedBox(
-                                            width: v.width * 0.04,
-                                          ),
-                                          Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                SizedBox(
-                                                    width: v.width *
-                                                        0.2, // Constrain the width of the progress bar
-                                                    child: Column(children: [
-                                                      SizedBox(
-                                                        height: v.width * 0.02,
-                                                      ),
-                                                      Column(children: [
-                                                        Text(
-                                                          formatLikes(
-                                                              item["podcast"]!),
-                                                          style: TextStyle(
-                                                            fontSize:
-                                                                v.width * 0.035,
-                                                          ),
-                                                          maxLines: 4,
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
-                                                        ),
-                                                        SizedBox(
-                                                          width: v.width * 0.03,
-                                                        ),
-                                                        Text(
-                                                          "Podcast",
-                                                          style: TextStyle(
-                                                            fontSize:
-                                                                v.width * 0.035,
-                                                          ),
-                                                          maxLines: 4,
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
-                                                        ),
-                                                      ])
-                                                    ]))
-                                              ])
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-      ),
+                  ],
+                ),
+              );
+            }),
     ));
   }
 }

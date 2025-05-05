@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:drop_down_list/drop_down_list.dart';
@@ -26,6 +27,11 @@ class _Modif1pageState extends State<Modif1page> {
   List<SelectedListItem<PlaylistItem>> play2 = [];
   List<SelectedListItem<PlaylistItem>> play3 = [];
   late int n = 1;
+
+  // Subscriptions to clean up when the widget is disposed
+  final List<StreamSubscription> _subscriptions = [];
+
+  @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -53,9 +59,18 @@ class _Modif1pageState extends State<Modif1page> {
           await _loadPlaylist1(idpp!);
         }
       }
-
+      await Future.delayed(const Duration(seconds: 3));
       setState(() => isLoading = false);
     });
+  }
+
+  @override
+  void dispose() {
+    // Cancel all stream subscriptions when the widget is disposed
+    for (var subscription in _subscriptions) {
+      subscription.cancel();
+    }
+    super.dispose();
   }
 
   String? idp;
@@ -66,41 +81,51 @@ class _Modif1pageState extends State<Modif1page> {
       if (currentUser == null) return;
 
       // Étape 1 : Récupérer les playlistId déjà liés au podcast
-      final playinpodSnapshot = await FirebaseFirestore.instance
+      final playinpodStream = FirebaseFirestore.instance
           .collection('playinpod')
           .where('podcastId', isEqualTo: idp)
-          .get();
+          .snapshots();
 
-      final List<String> existingPlaylistIds = playinpodSnapshot.docs
-          .map((doc) => doc['playlistId'] as String)
-          .toList();
+      final subscription = playinpodStream.listen((playinpodSnapshot) {
+        final List<String> existingPlaylistIds = playinpodSnapshot.docs
+            .map((doc) => doc['playlistId'] as String)
+            .toList();
 
-      // Étape 2 : Récupérer les playlists de l'utilisateur
-      final playlistSnapshot = await FirebaseFirestore.instance
-          .collection('playlist')
-          .where('userId', isEqualTo: currentUser)
-          .get();
+        // Étape 2 : Récupérer les playlists de l'utilisateur
+        final playlistStream = FirebaseFirestore.instance
+            .collection('playlist')
+            .where('userId', isEqualTo: currentUser)
+            .snapshots();
 
-      // Étape 3 : Filtrer les playlists non déjà liées au podcast
-      final List<SelectedListItem<PlaylistItem>> fetchedPlaylists =
-          playlistSnapshot.docs
-              .where((doc) => existingPlaylistIds.contains(doc.id))
-              .map((doc) {
-        final data = doc.data() as Map<String, dynamic>; // ✅ Cast nécessaire
-        final name = data['name'] ?? 'Unknown Playlist';
-        final id = doc.id;
-        return SelectedListItem<PlaylistItem>(
-          data: PlaylistItem(id: id, name: name),
-        );
-      }).toList();
+        final playlistSubscription = playlistStream.listen((playlistSnapshot) {
+          // Étape 3 : Filtrer les playlists non déjà liées au podcast
+          final List<SelectedListItem<PlaylistItem>> fetchedPlaylists =
+              playlistSnapshot.docs
+                  .where((doc) => existingPlaylistIds.contains(doc.id))
+                  .map((doc) {
+            final data =
+                // ignore: unnecessary_cast
+                doc.data() as Map<String, dynamic>; // ✅ Cast nécessaire
+            final name = data['name'] ?? 'Unknown Playlist';
+            final id = doc.id;
+            return SelectedListItem<PlaylistItem>(
+              data: PlaylistItem(id: id, name: name),
+            );
+          }).toList();
 
-      // Mettre à jour l'état
-      setState(() {
-        play1.addAll(fetchedPlaylists);
+          // Mettre à jour l'état
+          setState(() {
+            play1.clear();
+            play1.addAll(fetchedPlaylists);
+          });
+        });
+
+        _subscriptions.add(playlistSubscription);
       });
-    } catch (e) {
-      print('Error loading playlists: $e');
-    }
+
+      _subscriptions.add(subscription);
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   Future<void> _loadPlaylists(String idp) async {
@@ -109,41 +134,51 @@ class _Modif1pageState extends State<Modif1page> {
       if (currentUser == null) return;
 
       // Étape 1 : Récupérer les playlistId déjà liés au podcast
-      final playinpodSnapshot = await FirebaseFirestore.instance
+      final playinpodStream = FirebaseFirestore.instance
           .collection('playinpod')
           .where('podcastId', isEqualTo: idp)
-          .get();
+          .snapshots();
 
-      final List<String> existingPlaylistIds = playinpodSnapshot.docs
-          .map((doc) => doc['playlistId'] as String)
-          .toList();
+      final subscription = playinpodStream.listen((playinpodSnapshot) {
+        final List<String> existingPlaylistIds = playinpodSnapshot.docs
+            .map((doc) => doc['playlistId'] as String)
+            .toList();
 
-      // Étape 2 : Récupérer les playlists de l'utilisateur
-      final playlistSnapshot = await FirebaseFirestore.instance
-          .collection('playlist')
-          .where('userId', isEqualTo: currentUser)
-          .get();
+        // Étape 2 : Récupérer les playlists de l'utilisateur
+        final playlistStream = FirebaseFirestore.instance
+            .collection('playlist')
+            .where('userId', isEqualTo: currentUser)
+            .snapshots();
 
-      // Étape 3 : Filtrer les playlists non déjà liées au podcast
-      final List<SelectedListItem<PlaylistItem>> fetchedPlaylists =
-          playlistSnapshot.docs
-              .where((doc) => !existingPlaylistIds.contains(doc.id))
-              .map((doc) {
-        final data = doc.data() as Map<String, dynamic>; // ✅ Cast nécessaire
-        final name = data['name'] ?? 'Unknown Playlist';
-        final id = doc.id;
-        return SelectedListItem<PlaylistItem>(
-          data: PlaylistItem(id: id, name: name),
-        );
-      }).toList();
+        final playlistSubscription = playlistStream.listen((playlistSnapshot) {
+          // Étape 3 : Filtrer les playlists non déjà liées au podcast
+          final List<SelectedListItem<PlaylistItem>> fetchedPlaylists =
+              playlistSnapshot.docs
+                  .where((doc) => !existingPlaylistIds.contains(doc.id))
+                  .map((doc) {
+            final data =
+                // ignore: unnecessary_cast
+                doc.data() as Map<String, dynamic>; // ✅ Cast nécessaire
+            final name = data['name'] ?? 'Unknown Playlist';
+            final id = doc.id;
+            return SelectedListItem<PlaylistItem>(
+              data: PlaylistItem(id: id, name: name),
+            );
+          }).toList();
 
-      // Mettre à jour l'état
-      setState(() {
-        play.addAll(fetchedPlaylists);
+          // Mettre à jour l'état
+          setState(() {
+            play.clear();
+            play.addAll(fetchedPlaylists);
+          });
+        });
+
+        _subscriptions.add(playlistSubscription);
       });
-    } catch (e) {
-      print('Error loading playlists: $e');
-    }
+
+      _subscriptions.add(subscription);
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   Future<void> _loadPlaylist1(String idpp) async {
@@ -152,99 +187,107 @@ class _Modif1pageState extends State<Modif1page> {
       if (currentUser == null) return;
 
       // Étape 1 : Récupérer les playlistId déjà liés au podcast
-      final playinpodSnapshot = await FirebaseFirestore.instance
+      final playinpodStream = FirebaseFirestore.instance
           .collection('playinpod')
           .where('playlistId', isEqualTo: idpp)
-          .get();
-      print('playinpod documents trouvés : ${playinpodSnapshot.docs.length}');
-      final List<String> existingPlaylistIds = playinpodSnapshot.docs
-          .map((doc) => doc['podcastId'] as String)
-          .toList();
+          .snapshots();
 
-      // Étape 2 : Récupérer les playlists de l'utilisateur
-      final playlistSnapshot = await FirebaseFirestore.instance
-          .collection('podcasts')
-          .where('idUser', isEqualTo: currentUser)
-          .get();
+      final subscription = playinpodStream.listen((playinpodSnapshot) {
+        final List<String> existingPlaylistIds = playinpodSnapshot.docs
+            .map((doc) => doc['podcastId'] as String)
+            .toList();
 
-      // Étape 3 : Filtrer les playlists non déjà liées au podcast
-      final List<SelectedListItem<PlaylistItem>> fetchedPlaylists =
-          playlistSnapshot.docs
-              .where((doc) => existingPlaylistIds.contains(doc.id))
-              .map((doc) {
-        final data = doc.data() as Map<String, dynamic>; // ✅ Cast nécessaire
-        final name = data['name'] ?? 'Unknown Playlist';
-        final id = doc.id;
-        return SelectedListItem<PlaylistItem>(
-          data: PlaylistItem(id: id, name: name),
-        );
-      }).toList();
+        // Étape 2 : Récupérer les playlists de l'utilisateur
+        final playlistStream = FirebaseFirestore.instance
+            .collection('podcasts')
+            .where('idUser', isEqualTo: currentUser)
+            .snapshots();
 
-      // Mettre à jour l'état
-      setState(() {
-        play3.addAll(fetchedPlaylists);
+        final playlistSubscription = playlistStream.listen((playlistSnapshot) {
+          // Étape 3 : Filtrer les playlists non déjà liées au podcast
+          final List<SelectedListItem<PlaylistItem>> fetchedPlaylists =
+              playlistSnapshot.docs
+                  .where((doc) => existingPlaylistIds.contains(doc.id))
+                  .map((doc) {
+            final data =
+                // ignore: unnecessary_cast
+                doc.data() as Map<String, dynamic>; // ✅ Cast nécessaire
+            final name = data['name'] ?? 'Unknown Playlist';
+            final id = doc.id;
+            return SelectedListItem<PlaylistItem>(
+              data: PlaylistItem(id: id, name: name),
+            );
+          }).toList();
+
+          // Mettre à jour l'état
+          setState(() {
+            play3.clear();
+            play3.addAll(fetchedPlaylists);
+          });
+        });
+
+        _subscriptions.add(playlistSubscription);
       });
-    } catch (e) {
-      print('Error loading playlists: $e');
-    }
+
+      _subscriptions.add(subscription);
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   Future<void> _loadPlaylist(String idpp) async {
     try {
       final currentUser = FirebaseAuth.instance.currentUser?.uid;
       if (currentUser == null) {
-        print('Utilisateur non connecté.');
         return;
       }
 
-      // Étape 1 : Récupérer les podcastId liés à cette playlist (inverse de l’autre logique)
-      final playinpodSnapshot = await FirebaseFirestore.instance
+      // Étape 1 : Récupérer les podcastId liés à cette playlist (inverse de l'autre logique)
+      final playinpodStream = FirebaseFirestore.instance
           .collection('playinpod')
           .where('playlistId', isEqualTo: idpp)
-          .get();
+          .snapshots();
 
-      print('playinpod documents trouvés : ${playinpodSnapshot.docs.length}');
+      final subscription = playinpodStream.listen((playinpodSnapshot) {
+        final List<String> existingPodcastIds =
+            playinpodSnapshot.docs.map((doc) {
+          final data = doc.data();
+          return data['podcastId'] as String;
+        }).toList();
 
-      final List<String> existingPodcastIds = playinpodSnapshot.docs.map((doc) {
-        final data = doc.data();
-        print('playinpod doc: ${data}');
-        return data['podcastId'] as String;
-      }).toList();
+        // Étape 2 : Récupérer les podcasts de l'utilisateur
+        final podcastStream = FirebaseFirestore.instance
+            .collection('podcasts')
+            .where('idUser', isEqualTo: currentUser)
+            .snapshots();
 
-      print('Liste des podcastId déjà liés : $existingPodcastIds');
+        final podcastSubscription = podcastStream.listen((podcastSnapshot) {
+          // Étape 3 : Filtrer les podcasts non liés à la playlist
+          final List<SelectedListItem<PlaylistItem>> fetchedPlaylists =
+              podcastSnapshot.docs
+                  .where((doc) => !existingPodcastIds.contains(doc.id))
+                  .map((doc) {
+            // ignore: unnecessary_cast
+            final data = doc.data() as Map<String, dynamic>;
+            final name = data['name'] ?? 'Unknown Playlist';
+            final id = doc.id;
+            return SelectedListItem<PlaylistItem>(
+              data: PlaylistItem(id: id, name: name),
+            );
+          }).toList();
 
-      // Étape 2 : Récupérer les podcasts de l'utilisateur
-      final podcastSnapshot = await FirebaseFirestore.instance
-          .collection('podcasts')
-          .where('idUser', isEqualTo: currentUser)
-          .get();
+          // Mettre à jour l'état
+          setState(() {
+            play2.clear();
+            play2.addAll(fetchedPlaylists);
+          });
+        });
 
-      print('Podcasts utilisateur trouvés : ${podcastSnapshot.docs.length}');
-
-      // Étape 3 : Filtrer les podcasts non liés à la playlist
-      final List<SelectedListItem<PlaylistItem>> fetchedPlaylists =
-          podcastSnapshot.docs
-              .where((doc) => !existingPodcastIds.contains(doc.id))
-              .map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        final name = data['name'] ?? 'Unknown Playlist';
-        final id = doc.id;
-        print('Podcast retenu : $id - $name');
-        return SelectedListItem<PlaylistItem>(
-          data: PlaylistItem(id: id, name: name),
-        );
-      }).toList();
-
-      print(
-          'Nombre de podcasts filtrés ajoutés à play2 : ${fetchedPlaylists.length}');
-
-      // Mettre à jour l'état
-      setState(() {
-        play2.addAll(fetchedPlaylists);
+        _subscriptions.add(podcastSubscription);
       });
-    } catch (e) {
-      print('Erreur lors du chargement : $e');
-    }
+
+      _subscriptions.add(subscription);
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   final emailController = TextEditingController();
@@ -301,9 +344,9 @@ class _Modif1pageState extends State<Modif1page> {
                           Positioned(
                               top: i.height * 0.1,
                               left: i.width * 0.05,
-                              child: Container(
+                              child: SizedBox(
                                 width: i.width,
-                                child: Text(
+                                child: const Text(
                                   "You Can Change Your Username And Use The Real Name For Esasy Utilisation ",
                                   style: TextStyle(color: Colors.grey),
                                   maxLines: 2,
@@ -475,7 +518,7 @@ class _Modif1pageState extends State<Modif1page> {
 
                                   if (firstName.isEmpty || lastName.isEmpty) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
+                                      const SnackBar(
                                           content:
                                               Text('Fields must not be empty')),
                                     );
@@ -484,7 +527,7 @@ class _Modif1pageState extends State<Modif1page> {
 
                                   if (uid == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
+                                      const SnackBar(
                                           content: Text('User not logged in')),
                                     );
                                     return;
@@ -507,22 +550,26 @@ class _Modif1pageState extends State<Modif1page> {
                                         'firstName': firstName,
                                         'lastName': lastName,
                                       });
-
+                                      firstNameController.clear();
+                                      lastNameController.clear();
+                                      // ignore: use_build_context_synchronously
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
-                                        SnackBar(
+                                        const SnackBar(
                                             content: Text(
                                                 'Profile updated successfully')),
                                       );
                                     } else {
+                                      // ignore: use_build_context_synchronously
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
-                                        SnackBar(
+                                        const SnackBar(
                                             content: Text(
                                                 'User document not found')),
                                       );
                                     }
                                   } catch (e) {
+                                    // ignore: use_build_context_synchronously
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                           content:
@@ -567,9 +614,9 @@ class _Modif1pageState extends State<Modif1page> {
                           Positioned(
                               top: i.height * 0.1,
                               left: i.width * 0.05,
-                              child: Container(
+                              child: SizedBox(
                                 width: i.width,
-                                child: Text(
+                                child: const Text(
                                   "You Can Change Your Motpass If You Don't Remeber Or Your Corrently Motpass Is Easy To Know ",
                                   style: TextStyle(color: Colors.grey),
                                   maxLines: 2,
@@ -677,6 +724,7 @@ class _Modif1pageState extends State<Modif1page> {
 
                                   // Si l'utilisateur utilise la méthode Google, bloquer la modification de l'email
                                   if (userDoc.docs.isNotEmpty) {
+                                    // ignore: use_build_context_synchronously
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                         content: Text(
@@ -686,20 +734,21 @@ class _Modif1pageState extends State<Modif1page> {
                                     return;
                                   }
                                   if (pass.text.length < 6) {
+                                    // ignore: use_build_context_synchronously
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                         content: Text(
-                                            'Le mot de passe doit contenir au moins 6 caractères'),
+                                            'please Entre password >6 caracter'),
                                       ),
                                     );
                                     return;
                                   }
 
                                   // Afficher un indicateur de chargement
+                                  // ignore: use_build_context_synchronously
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text(
-                                          'Mise à jour du mot de passe en cours...'),
+                                      content: Text('Updating Password...'),
                                       duration: Duration(seconds: 1),
                                     ),
                                   );
@@ -712,11 +761,12 @@ class _Modif1pageState extends State<Modif1page> {
                                     // Effacer les champs après mise à jour réussie
                                     pass.clear();
 
+                                    // ignore: use_build_context_synchronously
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                         content: Text(
-                                            'Mot de passe mis à jour avec succès'),
-                                        backgroundColor: Colors.green,
+                                            'Succesfull updating password'),
+                                        backgroundColor: Colors.grey,
                                       ),
                                     );
                                   } catch (error) {
@@ -736,6 +786,7 @@ class _Modif1pageState extends State<Modif1page> {
                                       }
                                     }
 
+                                    // ignore: use_build_context_synchronously
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text(errorMessage),
@@ -781,9 +832,9 @@ class _Modif1pageState extends State<Modif1page> {
                           Positioned(
                               top: i.height * 0.1,
                               left: i.width * 0.05,
-                              child: Container(
+                              child: SizedBox(
                                 width: i.width,
-                                child: Text(
+                                child: const Text(
                                   "You Can Change Your Name Channel And Use The Real Name For Esasy Utilisation ",
                                   style: TextStyle(color: Colors.grey),
                                   maxLines: 2,
@@ -880,7 +931,7 @@ class _Modif1pageState extends State<Modif1page> {
 
                                   if (cha.isEmpty) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
+                                      const SnackBar(
                                           content:
                                               Text('Field must not be empty')),
                                     );
@@ -889,7 +940,7 @@ class _Modif1pageState extends State<Modif1page> {
 
                                   if (uid == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
+                                      const SnackBar(
                                           content: Text('User not logged in')),
                                     );
                                     return;
@@ -911,22 +962,25 @@ class _Modif1pageState extends State<Modif1page> {
                                       await docRef.update({
                                         'name': cha,
                                       });
-
+                                      channel.clear();
+                                      // ignore: use_build_context_synchronously
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
-                                        SnackBar(
+                                        const SnackBar(
                                             content: Text(
                                                 'Profile updated successfully')),
                                       );
                                     } else {
+                                      // ignore: use_build_context_synchronously
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
-                                        SnackBar(
+                                        const SnackBar(
                                             content: Text(
                                                 'User document not found')),
                                       );
                                     }
                                   } catch (e) {
+                                    // ignore: use_build_context_synchronously
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                           content:
@@ -972,9 +1026,9 @@ class _Modif1pageState extends State<Modif1page> {
                           Positioned(
                               top: i.height * 0.1,
                               left: i.width * 0.05,
-                              child: Container(
+                              child: SizedBox(
                                 width: i.width,
-                                child: Text(
+                                child: const Text(
                                   "You Can  Add More Podcast To A Playlist For The Esealy Receivit ",
                                   style: TextStyle(color: Colors.grey),
                                   maxLines: 2,
@@ -1044,6 +1098,8 @@ class _Modif1pageState extends State<Modif1page> {
                                         .update({
                                       'podcast': FieldValue.increment(1),
                                     });
+                                    // ignore: use_build_context_synchronously
+                                    Navigator.pop(context);
                                   }
                                 },
                                 child: Text(
@@ -1083,9 +1139,9 @@ class _Modif1pageState extends State<Modif1page> {
                           Positioned(
                               top: i.height * 0.1,
                               left: i.width * 0.05,
-                              child: Container(
+                              child: SizedBox(
                                 width: i.width,
-                                child: Text(
+                                child: const Text(
                                   "You Can  Add More Podcast To A Playlist For The Esealy Receivit ",
                                   style: TextStyle(color: Colors.grey),
                                   maxLines: 2,
@@ -1143,6 +1199,8 @@ class _Modif1pageState extends State<Modif1page> {
                                         .update({
                                       'podcast': FieldValue.increment(1),
                                     });
+                                    // ignore: use_build_context_synchronously
+                                    Navigator.pop(context);
                                   }
                                 }, // Implement login logic
 
@@ -1183,9 +1241,9 @@ class _Modif1pageState extends State<Modif1page> {
                           Positioned(
                               top: i.height * 0.1,
                               left: i.width * 0.05,
-                              child: Container(
+                              child: SizedBox(
                                 width: i.width,
-                                child: Text(
+                                child: const Text(
                                   "You Can  Delete More Podcast From Playlist For The Esealy Receivit ",
                                   style: TextStyle(color: Colors.grey),
                                   maxLines: 2,
@@ -1251,9 +1309,13 @@ class _Modif1pageState extends State<Modif1page> {
                                           .update({
                                         'podcast': FieldValue.increment(-1),
                                       });
+                                      // ignore: use_build_context_synchronously
+                                      Navigator.pop(context);
                                     } catch (e) {
-                                      print(
-                                          'Error deleting from playinpod or updating playlist: $e');
+                                      if (kDebugMode) {
+                                        print(
+                                            'Error deleting from playinpod or updating playlist: $e');
+                                      }
                                     }
                                   }
                                 },
@@ -1294,9 +1356,9 @@ class _Modif1pageState extends State<Modif1page> {
                           Positioned(
                               top: i.height * 0.1,
                               left: i.width * 0.05,
-                              child: Container(
+                              child: SizedBox(
                                 width: i.width,
-                                child: Text(
+                                child: const Text(
                                   "You Can  Delete More Podcast From A Playlist For The Esealy Receivit ",
                                   style: TextStyle(color: Colors.grey),
                                   maxLines: 2,
@@ -1372,10 +1434,10 @@ class _Modif1pageState extends State<Modif1page> {
                                           .update({
                                         'podcast': FieldValue.increment(-1),
                                       });
-                                    } catch (e) {
-                                      print(
-                                          'Error deleting from playinpod or updating playlist: $e');
-                                    }
+                                      // ignore: use_build_context_synchronously
+                                      Navigator.pop(context);
+                                      // ignore: empty_catches
+                                    } catch (e) {}
                                   }
                                 },
                                 child: Text(
@@ -1468,9 +1530,6 @@ class _Modif1pageState extends State<Modif1page> {
                       _playlistController.text =
                           playlistItem.name; // Affiche le nom
                     });
-
-                    print('Selected Playlist ID: ${playlistItem.id}');
-                    print('Selected Playlist Name: ${playlistItem.name}');
                   }
                 },
                 enableMultipleSelection: false,

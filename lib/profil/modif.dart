@@ -28,7 +28,7 @@ class _ModifpageState extends State<Modifpage> {
   final FirebaseFirestore firestore1 = FirebaseFirestore.instance;
 
   // Stream subscriptions to manage
-  List<StreamSubscription<QuerySnapshot>> _subscriptions = [];
+  final List<StreamSubscription<QuerySnapshot>> _subscriptions = [];
 
   Future<bool> _requestStoragePermission1() async {
     final status = await Permission.storage.request();
@@ -38,7 +38,6 @@ class _ModifpageState extends State<Modifpage> {
   Future<void> _pickAndUploadImage1() async {
     final String userId = FirebaseAuth.instance.currentUser?.uid ?? "";
     if (userId.isEmpty) {
-      print("Utilisateur non connecté.");
       return;
     }
 
@@ -58,12 +57,11 @@ class _ModifpageState extends State<Modifpage> {
               .get();
 
           if (querySnapshot.docs.isEmpty) {
-            print("❌ Erreur : Aucun document trouvé pour cet utilisateur.");
             return;
           }
 
           DocumentSnapshot channelDoc = querySnapshot.docs.first;
-          await Future.delayed(Duration(milliseconds: 500));
+          await Future.delayed(const Duration(milliseconds: 500));
 
           // 📤 **Étape 3 : Télécharger la nouvelle image**
           final filePath =
@@ -78,12 +76,9 @@ class _ModifpageState extends State<Modifpage> {
 
           // 📝 **Étape 5 : Mettre à jour Firestore avec la nouvelle URL**
           await channelDoc.reference.update({'photoUrl': newPhotoUrl});
-
-          print("✅ Nouvelle photo enregistrée : $newPhotoUrl");
         }
-      } catch (e) {
-        print("❌ Erreur lors de l'importation de l'image : $e");
-      }
+        // ignore: empty_catches
+      } catch (e) {}
     }
   }
 
@@ -97,7 +92,6 @@ class _ModifpageState extends State<Modifpage> {
   Future<void> _pickAndUploadImage3(String id2) async {
     final String userId = FirebaseAuth.instance.currentUser?.uid ?? "";
     if (userId.isEmpty) {
-      print("Utilisateur non connecté.");
       return;
     }
 
@@ -117,12 +111,11 @@ class _ModifpageState extends State<Modifpage> {
               .get();
 
           if (querySnapshot.docs.isEmpty) {
-            print("❌ Erreur : Aucun document trouvé pour cet utilisateur.");
             return;
           }
 
           DocumentSnapshot channelDoc = querySnapshot.docs.first;
-          await Future.delayed(Duration(milliseconds: 500));
+          await Future.delayed(const Duration(milliseconds: 500));
 
           // 📤 **Étape 3 : Télécharger la nouvelle image**
           final filePath =
@@ -137,12 +130,9 @@ class _ModifpageState extends State<Modifpage> {
 
           // 📝 **Étape 5 : Mettre à jour Firestore avec la nouvelle URL**
           await channelDoc.reference.update({'photoUrl': newPhotoUrl});
-
-          print("✅ Nouvelle photo enregistrée : $newPhotoUrl");
         }
-      } catch (e) {
-        print("❌ Erreur lors de l'importation de l'image : $e");
-      }
+        // ignore: empty_catches
+      } catch (e) {}
     }
   }
 
@@ -156,7 +146,6 @@ class _ModifpageState extends State<Modifpage> {
   Future<void> _pickAndUploadImage2(String id1) async {
     final String userId = FirebaseAuth.instance.currentUser?.uid ?? "";
     if (userId.isEmpty) {
-      print("Utilisateur non connecté.");
       return;
     }
 
@@ -176,12 +165,11 @@ class _ModifpageState extends State<Modifpage> {
               .get();
 
           if (querySnapshot.docs.isEmpty) {
-            print("❌ Erreur : Aucun document trouvé pour cet utilisateur.");
             return;
           }
 
           DocumentSnapshot channelDoc = querySnapshot.docs.first;
-          await Future.delayed(Duration(milliseconds: 500));
+          await Future.delayed(const Duration(milliseconds: 500));
 
           // 📤 **Étape 3 : Télécharger la nouvelle image**
           final filePath =
@@ -197,9 +185,8 @@ class _ModifpageState extends State<Modifpage> {
           // 📝 **Étape 5 : Mettre à jour Firestore avec la nouvelle URL**
           await channelDoc.reference.update({'urlPhoto': newPhotoUrl});
         }
-      } catch (e) {
-        print("❌ Erreur lors de l'importation de l'image : $e");
-      }
+        // ignore: empty_catches
+      } catch (e) {}
     }
   }
 
@@ -213,25 +200,20 @@ class _ModifpageState extends State<Modifpage> {
 
       final subscription = stream.listen((querySnapshot) {
         // Ajout des logs pour déboguer
-        debugPrint(
-            'Nombre de utilisateurs trouvés : ${querySnapshot.docs.length}');
-        debugPrint(
-            'Données des utilisateurs : ${querySnapshot.docs.map((doc) => doc.data()).toList()}');
 
         setState(() {
           user = querySnapshot.docs
+              // ignore: unnecessary_cast
               .map((doc) => doc.data() as Map<String, dynamic>)
               .toList();
         });
       }, onError: (e) {
-        debugPrint('Erreur lors de la récupération des utilisateurs : $e');
         setState(() {});
       });
 
       _subscriptions.add(subscription);
-    } catch (e) {
-      debugPrint('Erreur lors de la configuration du stream utilisateur : $e');
-    }
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   Future<void> fetchPlaylidtById(String id2) async {
@@ -244,19 +226,15 @@ class _ModifpageState extends State<Modifpage> {
       final subscription = stream.listen((querySnapshot) {
         setState(() {
           playlistt = querySnapshot.docs
+              // ignore: unnecessary_cast
               .map((doc) => doc.data() as Map<String, dynamic>)
               .toList();
         });
-
-        debugPrint("Playlist récupérée : ${playlistt.length}");
-      }, onError: (e) {
-        debugPrint("Erreur lors du chargement de la playlist : $e");
-      });
+      }, onError: (e) {});
 
       _subscriptions.add(subscription);
-    } catch (e) {
-      debugPrint("Erreur lors de la configuration du stream playlist : $e");
-    }
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   List<Map<String, dynamic>> playlistt = [];
@@ -273,24 +251,20 @@ class _ModifpageState extends State<Modifpage> {
 
       final subscription = stream.listen((querySnapshot) {
         // Ajout des logs pour déboguer
-        debugPrint('Nombre de chaînes trouvées : ${querySnapshot.docs.length}');
-        debugPrint(
-            'Données des chaînes : ${querySnapshot.docs.map((doc) => doc.data()).toList()}');
 
         setState(() {
           channels = querySnapshot.docs
+              // ignore: unnecessary_cast
               .map((doc) => doc.data() as Map<String, dynamic>)
               .toList();
         });
       }, onError: (e) {
-        debugPrint('Erreur lors de la récupération des chaînes : $e');
         setState(() {});
       });
 
       _subscriptions.add(subscription);
-    } catch (e) {
-      debugPrint('Erreur lors de la configuration du stream chaînes : $e');
-    }
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   Future<void> fetchPlaylistsByPodcastId(String id1) async {
@@ -312,8 +286,6 @@ class _ModifpageState extends State<Modifpage> {
 
         final List<String> playlistIds =
             playinPodData.map((item) => item["playlistId"] as String).toList();
-
-        debugPrint("Playlists trouvées dans playinpod : $playlistIds");
 
         if (playlistIds.isNotEmpty) {
           // 2️⃣ Récupérer les playlists correspondant aux `playlistId`
@@ -353,7 +325,6 @@ class _ModifpageState extends State<Modifpage> {
           }
 
           final List<String> podcastIds = podcastToPlaylists.keys.toList();
-          debugPrint("Podcasts liés aux playlists trouvés : $podcastIds");
 
           if (podcastIds.isNotEmpty) {
             // 4️⃣ Récupérer les podcasts avec `podcastIds`
@@ -366,6 +337,7 @@ class _ModifpageState extends State<Modifpage> {
 
             List<Map<String, dynamic>> loadedPodcasts =
                 podcastSnapshot.docs.map((doc) {
+              // ignore: unnecessary_cast
               final podcastData = doc.data() as Map<String, dynamic>;
               final podcastId = doc.id;
               return {
@@ -379,8 +351,6 @@ class _ModifpageState extends State<Modifpage> {
               playlist = loadedPlaylists;
               playinpod = loadedPodcasts;
             });
-
-            debugPrint("Podcasts finaux récupérés : ${playinpod.length}");
           } else {
             setState(() {
               playlist = loadedPlaylists;
@@ -393,14 +363,11 @@ class _ModifpageState extends State<Modifpage> {
             playinpod = [];
           });
         }
-      }, onError: (e) {
-        debugPrint("Erreur lors du chargement des playlists : $e");
-      });
+      }, onError: (e) {});
 
       _subscriptions.add(subscription);
-    } catch (e) {
-      debugPrint("Erreur lors de la configuration du stream playlists : $e");
-    }
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   List<Map<String, dynamic>> playlist = [];
@@ -411,20 +378,15 @@ class _ModifpageState extends State<Modifpage> {
     final formatter = NumberFormat('#,##0.00', 'fr');
     // Pour les nombres importants, appliquer une logique de compactage manuel
     if (likes >= 1000000000000000) {
-      return formatter
-              .format(likes / 1000000000000000)
-              .replaceAll('\u202f', '') +
-          'P';
+      return '${formatter.format(likes / 1000000000000000).replaceAll('\u202f', '')}P';
     } else if (likes >= 1000000000000) {
-      return formatter.format(likes / 1000000000000).replaceAll('\u202f', '') +
-          'T';
+      return '${formatter.format(likes / 1000000000000).replaceAll('\u202f', '')}T';
     } else if (likes >= 1000000000) {
-      return formatter.format(likes / 1000000000).replaceAll('\u202f', '') +
-          'G';
+      return '${formatter.format(likes / 1000000000).replaceAll('\u202f', '')}G';
     } else if (likes >= 1000000) {
-      return formatter.format(likes / 1000000).replaceAll('\u202f', '') + 'M';
+      return '${formatter.format(likes / 1000000).replaceAll('\u202f', '')}M';
     } else if (likes >= 1000) {
-      return formatter.format(likes / 1000).replaceAll('\u202f', '') + 'k';
+      return '${formatter.format(likes / 1000).replaceAll('\u202f', '')}k';
     } else if (likes <= 999) {
       final formatter1 = NumberFormat('#0', 'fr');
       return formatter1.format(likes);
@@ -443,7 +405,6 @@ class _ModifpageState extends State<Modifpage> {
   Future<void> _pickAndUploadImage() async {
     final String userId = FirebaseAuth.instance.currentUser?.uid ?? "";
     if (userId.isEmpty) {
-      print("Utilisateur non connecté.");
       return;
     }
 
@@ -463,12 +424,11 @@ class _ModifpageState extends State<Modifpage> {
               .get();
 
           if (querySnapshot.docs.isEmpty) {
-            print("❌ Erreur : Aucun document trouvé pour cet utilisateur.");
             return;
           }
 
           DocumentSnapshot channelDoc = querySnapshot.docs.first;
-          await Future.delayed(Duration(milliseconds: 500));
+          await Future.delayed(const Duration(milliseconds: 500));
 
           // 📤 **Étape 3 : Télécharger la nouvelle image**
           final filePath =
@@ -483,12 +443,9 @@ class _ModifpageState extends State<Modifpage> {
 
           // 📝 **Étape 5 : Mettre à jour Firestore avec la nouvelle URL**
           await channelDoc.reference.update({'photoUrl': newPhotoUrl});
-
-          print("✅ Nouvelle photo enregistrée : $newPhotoUrl");
         }
-      } catch (e) {
-        print("❌ Erreur lors de l'importation de l'image : $e");
-      }
+        // ignore: empty_catches
+      } catch (e) {}
     }
   }
 
@@ -518,11 +475,10 @@ class _ModifpageState extends State<Modifpage> {
         if (id2 != null) {
           await fetchPlaylidtById(id2!);
         }
-
         await fetchuser();
         await fetchChannels();
       }
-
+      await Future.delayed(const Duration(seconds: 3));
       setState(() => isLoading = false);
     });
   }
@@ -538,19 +494,15 @@ class _ModifpageState extends State<Modifpage> {
       final subscription = stream.listen((querySnapshot) {
         setState(() {
           podcast = querySnapshot.docs
+              // ignore: unnecessary_cast
               .map((doc) => doc.data() as Map<String, dynamic>)
               .toList();
         });
-
-        debugPrint("Podcasts récupérés : ${podcast.length}");
-      }, onError: (e) {
-        debugPrint("Erreur lors du chargement des podcasts : $e");
-      });
+      }, onError: (e) {});
 
       _subscriptions.add(subscription);
-    } catch (e) {
-      debugPrint("Erreur lors de la configuration du stream podcasts : $e");
-    }
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   @override
@@ -632,7 +584,7 @@ class _ModifpageState extends State<Modifpage> {
                                             children: [
                                               Center(
                                                 child: isLoading
-                                                    ? Text("")
+                                                    ? const Text("")
                                                     : Image.network(
                                                         user[0]["photoUrl"],
                                                         fit: BoxFit.contain,
@@ -703,7 +655,7 @@ class _ModifpageState extends State<Modifpage> {
                                   },
                                   child: Hero(
                                     tag:
-                                        'photoZoomHero', // Tag partagé pour animation Hero
+                                        'photoZoomHero1', // Tag partagé pour animation Hero
                                     child: Container(
                                       width: e.width * 0.25,
                                       height: e.width * 0.25,
@@ -783,7 +735,7 @@ class _ModifpageState extends State<Modifpage> {
                               Positioned(
                                 top: e.height * 0.37,
                                 left: e.width * 0.3,
-                                child: Container(
+                                child: SizedBox(
                                   width: e.width * 0.55,
                                   height: e.height * 0.1,
                                   child: Text(
@@ -850,7 +802,7 @@ class _ModifpageState extends State<Modifpage> {
                               Positioned(
                                   top: e.height * 0.54,
                                   left: e.width * 0.3,
-                                  child: Container(
+                                  child: SizedBox(
                                       width: e.width * 0.55,
                                       height: e.height * 0.1,
                                       child: Text(
@@ -892,7 +844,7 @@ class _ModifpageState extends State<Modifpage> {
                               Positioned(
                                   top: e.height * 0.62,
                                   left: e.width * 0.3,
-                                  child: Container(
+                                  child: SizedBox(
                                       width: e.width * 0.55,
                                       height: e.height * 0.1,
                                       child: Text(
@@ -915,7 +867,7 @@ class _ModifpageState extends State<Modifpage> {
                               Positioned(
                                   top: e.height * 0.7,
                                   left: e.width * 0.3,
-                                  child: Container(
+                                  child: SizedBox(
                                       width: e.width * 0.55,
                                       height: e.height * 0.1,
                                       child: Text(
@@ -938,7 +890,7 @@ class _ModifpageState extends State<Modifpage> {
                               Positioned(
                                   top: e.height * 0.77,
                                   left: e.width * 0.3,
-                                  child: Container(
+                                  child: SizedBox(
                                       width: e.width * 0.55,
                                       height: e.height * 0.1,
                                       child: Text(
@@ -1077,7 +1029,7 @@ class _ModifpageState extends State<Modifpage> {
                                   },
                                   child: Hero(
                                     tag:
-                                        'photoZoomHero', // Tag partagé pour animation Hero
+                                        'photoZoomHero2', // Tag partagé pour animation Hero
                                     child: Container(
                                       width: e.width * 0.25,
                                       height: e.width * 0.25,
@@ -1157,7 +1109,7 @@ class _ModifpageState extends State<Modifpage> {
                               Positioned(
                                   top: e.height * 0.37,
                                   left: e.width * 0.35,
-                                  child: Container(
+                                  child: SizedBox(
                                       width: e.width * 0.5,
                                       height: e.height * 0.1,
                                       child: Text(
@@ -1202,7 +1154,7 @@ class _ModifpageState extends State<Modifpage> {
                               Positioned(
                                   top: e.height * 0.45,
                                   left: e.width * 0.35,
-                                  child: Container(
+                                  child: SizedBox(
                                       width: e.width * 0.55,
                                       height: e.height * 0.1,
                                       child: Text(
@@ -1244,711 +1196,7 @@ class _ModifpageState extends State<Modifpage> {
                               Positioned(
                                 top: e.height * 0.6,
                                 left: e.width * 0.04,
-                                child: Container(
-                                    child: GestureDetector(
-                                        onTap: () {
-                                          // Afficher une boîte de dialogue de confirmation
-                                          showDialog(
-                                            context: context,
-                                            builder: (BuildContext context) {
-                                              return AlertDialog(
-                                                backgroundColor:
-                                                    themeProvider.isDarkMode
-                                                        ? Colors.black
-                                                        : Colors.white,
-                                                title: const Text(
-                                                    "Delete Channel"),
-                                                content: const Text(
-                                                  "Are you sure you want to delete your channel? This action is irreversible and all your data will be lost.",
-                                                ),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () async {
-                                                      Navigator.of(context)
-                                                          .pop(); // Fermer la boîte de dialogue
-
-                                                      // Afficher un indicateur de chargement
-                                                      showDialog(
-                                                        context: context,
-                                                        barrierDismissible:
-                                                            false,
-                                                        builder: (BuildContext
-                                                            context) {
-                                                          return AlertDialog(
-                                                            backgroundColor:
-                                                                themeProvider
-                                                                        .isDarkMode
-                                                                    ? Colors
-                                                                        .black
-                                                                    : Colors
-                                                                        .white,
-                                                            content: Column(
-                                                              mainAxisSize:
-                                                                  MainAxisSize
-                                                                      .min,
-                                                              children: [
-                                                                Annimationwidjet(),
-                                                                SizedBox(
-                                                                    height: 16),
-                                                                Text(
-                                                                    "Channel being deleted..."),
-                                                              ],
-                                                            ),
-                                                          );
-                                                        },
-                                                      );
-
-                                                      try {
-                                                        // Récupérer l'utilisateur actuel et son ID
-                                                        final currentUser =
-                                                            FirebaseAuth
-                                                                .instance
-                                                                .currentUser;
-                                                        final currentUserId =
-                                                            currentUser?.uid;
-
-                                                        if (currentUserId ==
-                                                            null) {
-                                                          throw Exception(
-                                                              "Aucun utilisateur connecté");
-                                                        }
-
-                                                        // Firestore instance
-                                                        final firestore =
-                                                            FirebaseFirestore
-                                                                .instance;
-
-                                                        final followsAsAsFollowing =
-                                                            await firestore
-                                                                .collection(
-                                                                    'follow')
-                                                                .where(
-                                                                    'idfollowing',
-                                                                    isEqualTo:
-                                                                        currentUserId)
-                                                                .get();
-
-// Pour chaque personne suivie, décrémenter son compteur de followers dans channels
-                                                        for (var doc
-                                                            in followsAsAsFollowing
-                                                                .docs) {
-                                                          // Récupérer l'ID de l'utilisateur suivi
-                                                          final idFollowing =
-                                                              doc.data()[
-                                                                  'idfollowers'];
-
-                                                          // Rechercher le document channel correspondant
-                                                          final channelQuery =
-                                                              await firestore
-                                                                  .collection(
-                                                                      'channels')
-                                                                  .where(
-                                                                      'userId',
-                                                                      isEqualTo:
-                                                                          idFollowing)
-                                                                  .get();
-
-                                                          // Mettre à jour le compteur de followers pour chaque channel trouvé
-                                                          for (var channelDoc
-                                                              in channelQuery
-                                                                  .docs) {
-                                                            // Récupérer le compteur actuel de followers
-                                                            final currentFollowers =
-                                                                channelDoc.data()[
-                                                                        'following'] ??
-                                                                    0;
-
-                                                            // Décrémenter le compteur (en s'assurant qu'il ne devient pas négatif)
-                                                            final newFollowers =
-                                                                currentFollowers >
-                                                                        0
-                                                                    ? currentFollowers -
-                                                                        1
-                                                                    : 0;
-
-                                                            // Mettre à jour le document
-                                                            await channelDoc
-                                                                .reference
-                                                                .update({
-                                                              'following':
-                                                                  newFollowers
-                                                            });
-                                                          }
-
-                                                          // Supprimer la relation follow
-                                                          await doc.reference
-                                                              .delete();
-                                                        }
-                                                        // 3. Gérer les podcasts et références associées
-                                                        final podcastsToDelete =
-                                                            await firestore
-                                                                .collection(
-                                                                    'podcasts')
-                                                                .where('idUser',
-                                                                    isEqualTo:
-                                                                        currentUserId)
-                                                                .get();
-
-                                                        for (var podcastDoc
-                                                            in podcastsToDelete
-                                                                .docs) {
-                                                          final podcastId =
-                                                              podcastDoc.id;
-
-                                                          // Récupérer les références dans playinpod
-                                                          final playInPodRefs =
-                                                              await firestore
-                                                                  .collection(
-                                                                      'playinpod')
-                                                                  .where(
-                                                                      'podcastId',
-                                                                      isEqualTo:
-                                                                          podcastId)
-                                                                  .get();
-
-                                                          // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
-                                                          for (var doc
-                                                              in playInPodRefs
-                                                                  .docs) {
-                                                            // Récupérer l'ID de la playlist
-                                                            final playlistId =
-                                                                doc.data()[
-                                                                    'playlistId'];
-
-                                                            if (playlistId !=
-                                                                null) {
-                                                              // Récupérer la playlist
-                                                              final playlistDoc =
-                                                                  await firestore
-                                                                      .collection(
-                                                                          'playlist')
-                                                                      .doc(
-                                                                          playlistId)
-                                                                      .get();
-
-                                                              if (playlistDoc
-                                                                  .exists) {
-                                                                // Récupérer le compteur actuel de podcasts
-                                                                final currentPodcastCount =
-                                                                    playlistDoc.data()?[
-                                                                            'podcast'] ??
-                                                                        0;
-
-                                                                // Décrémenter le compteur (en s'assurant qu'il ne devient pas négatif)
-                                                                final newPodcastCount =
-                                                                    currentPodcastCount >
-                                                                            0
-                                                                        ? currentPodcastCount -
-                                                                            1
-                                                                        : 0;
-
-                                                                // Mettre à jour le document
-                                                                await playlistDoc
-                                                                    .reference
-                                                                    .update({
-                                                                  'podcast':
-                                                                      newPodcastCount
-                                                                });
-                                                              }
-                                                            }
-
-                                                            // Supprimer la référence dans playinpod
-                                                            await doc.reference
-                                                                .delete();
-                                                          }
-
-                                                          // Supprimer le podcast lui-même
-                                                          await podcastDoc
-                                                              .reference
-                                                              .delete();
-                                                        }
-                                                        // Supprimer les références dans myplaylist pour cet utilisateur
-                                                        final myPlaylistRefs =
-                                                            await firestore
-                                                                .collection(
-                                                                    'myplaylist')
-                                                                .where('iduser',
-                                                                    isEqualTo:
-                                                                        currentUserId)
-                                                                .get();
-
-                                                        for (var doc
-                                                            in myPlaylistRefs
-                                                                .docs) {
-                                                          await doc.reference
-                                                              .delete();
-                                                        }
-
-                                                        // 4. Gérer les playlists et références associées
-                                                        // 3. Gérer les podcasts et références associées
-                                                        final playlistToDelete =
-                                                            await firestore
-                                                                .collection(
-                                                                    'playlist')
-                                                                .where('userId',
-                                                                    isEqualTo:
-                                                                        currentUserId)
-                                                                .get();
-
-                                                        for (var podcastDoc
-                                                            in playlistToDelete
-                                                                .docs) {
-                                                          final podcastId =
-                                                              podcastDoc.id;
-
-                                                          // Récupérer les références dans playinpod
-                                                          final playInPodRefs =
-                                                              await firestore
-                                                                  .collection(
-                                                                      'playinpod')
-                                                                  .where(
-                                                                      'playlistId',
-                                                                      isEqualTo:
-                                                                          podcastId)
-                                                                  .get();
-
-                                                          // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
-                                                          for (var doc
-                                                              in playInPodRefs
-                                                                  .docs) {
-                                                            // Supprimer la référence dans playinpod
-                                                            await doc.reference
-                                                                .delete();
-                                                          }
-
-                                                          // Supprimer le podcast lui-même
-                                                          await podcastDoc
-                                                              .reference
-                                                              .delete();
-                                                        }
-
-                                                        // Supprimer les références dans mesplaylist pour cet utilisateur
-                                                        final mesPlaylistRefs =
-                                                            await firestore
-                                                                .collection(
-                                                                    'mesplaylist')
-                                                                .where('iduser',
-                                                                    isEqualTo:
-                                                                        currentUserId)
-                                                                .get();
-
-                                                        for (var doc
-                                                            in mesPlaylistRefs
-                                                                .docs) {
-                                                          await doc.reference
-                                                              .delete();
-                                                        }
-
-                                                        // Enfin, supprimer le compte utilisateur de Firebase Auth
-
-                                                        // Fermer la boîte de dialogue de chargement
-                                                        Navigator.of(context)
-                                                            .pop();
-
-                                                        // Rediriger vers l'écran de connexion après la suppression réussie
-                                                        Navigator
-                                                            .pushNamedAndRemoveUntil(
-                                                                context,
-                                                                '/podly',
-                                                                (route) =>
-                                                                    false);
-
-                                                        // Afficher un message de confirmation
-                                                        ScaffoldMessenger.of(
-                                                                context)
-                                                            .showSnackBar(
-                                                          const SnackBar(
-                                                            content: Text(
-                                                                "Your channel has been successfully deleted."),
-                                                            backgroundColor:
-                                                                Color(
-                                                                    0xFF754CEF),
-                                                          ),
-                                                        );
-                                                      } catch (e) {
-                                                        // Fermer la boîte de dialogue de chargement
-                                                        Navigator.of(context)
-                                                            .pop();
-
-                                                        // Afficher un message d'erreur
-                                                        ScaffoldMessenger.of(
-                                                                context)
-                                                            .showSnackBar(
-                                                          SnackBar(
-                                                            content: Text(
-                                                                "Erreur lors de la suppression du compte: ${e.toString()}"),
-                                                            backgroundColor:
-                                                                Colors.red,
-                                                          ),
-                                                        );
-
-                                                        print(
-                                                            "Erreur de suppression du compte: $e");
-                                                      }
-                                                    },
-                                                    child: const Text(
-                                                      "Delete",
-                                                      style: TextStyle(
-                                                          color: Colors.red),
-                                                    ),
-                                                  ),
-                                                ],
-                                              );
-                                            },
-                                          );
-                                        },
-                                        child: Row(children: [
-                                          Image.network(
-                                            s91,
-                                            width: e.width * 0.06,
-                                            height: e.width * 0.06,
-                                          ),
-                                          Text(
-                                            "Delete Channel",
-                                            style: TextStyle(
-                                                fontSize: e.width * 0.045,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.red),
-                                          ),
-                                        ]))),
-                              ),
-                            ],
-                            if (q == 4) ...[
-                              Positioned(
-                                top: e.height * 0.01,
-                                left: e.width * 0.03,
-                                child: IconButton(
-                                  onPressed: () {
-                                    Navigator.pushNamedAndRemoveUntil(
-                                      context,
-                                      '/your',
-                                      (route) => false,
-                                    );
-                                  },
-                                  icon: Image.network(
-                                    themeProvider.isDarkMode ? s97 : s18,
-                                    width: e.width * 0.07,
-                                    height: e.width * 0.07,
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                  top: e.height * 0.02,
-                                  left: e.width * 0.15,
-                                  child: Text(
-                                    "Podcast",
-                                    style: TextStyle(
-                                        fontSize: e.width * 0.06,
-                                        fontWeight: FontWeight.bold),
-                                  )),
-                              Positioned(
-                                top: e.height * 0.08,
-                                left: e.width * 0.38,
                                 child: GestureDetector(
-                                  onTap: () {
-                                    Navigator.of(context).push(
-                                      PageRouteBuilder(
-                                        opaque: false,
-                                        transitionDuration:
-                                            Duration(milliseconds: 500),
-                                        pageBuilder: (context, animation,
-                                            secondaryAnimation) {
-                                          return FadeTransition(
-                                            opacity: animation,
-                                            child: ZoomPhotoPage(
-                                                imageUrl: podcast[0]
-                                                    ["urlPhoto"]),
-                                          );
-                                        },
-                                      ),
-                                    );
-                                  },
-                                  child: Hero(
-                                    tag: 'zoomImageHero',
-                                    child: Container(
-                                      width: e.width * 0.25,
-                                      height: e.width * 0.25,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(
-                                            e.width * 0.04),
-                                        image: DecorationImage(
-                                          image: NetworkImage(
-                                              podcast[0]["urlPhoto"]),
-                                          fit: BoxFit.cover,
-                                          onError: (exception, stackTrace) {
-                                            print(
-                                                'Erreur de chargement de l\'image');
-                                          },
-                                        ),
-                                        color: Colors.grey[300],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                  top: e.height * 0.166,
-                                  left: e.width * 0.55,
-                                  child: Container(
-                                    width: e.width * 0.09,
-                                    height: e.width * 0.09,
-                                    decoration: BoxDecoration(
-                                        color: themeProvider.isDarkMode
-                                            ? Colors.black
-                                            : Colors.white,
-                                        borderRadius: BorderRadius.circular(
-                                            e.width * 0.2)),
-                                  )),
-                              Positioned(
-                                  top: e.height * 0.171,
-                                  left: e.width * 0.56,
-                                  child: Container(
-                                      width: e.width * 0.07,
-                                      height: e.width * 0.07,
-                                      decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                              e.width * 0.2)),
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          _pickAndUploadImage2(id1!);
-                                        },
-                                        child: Image.network(s26),
-                                      ))),
-                              Positioned(
-                                  top: e.height * 0.25,
-                                  left: e.width * 0.07,
-                                  right: e.width * 0.07,
-                                  child: Container(
-                                    width: e.width * 0.8,
-                                    height: e.height *
-                                        0.002, // Épaisseur de la ligne
-                                    color: Colors.grey[400],
-                                  )),
-                              Positioned(
-                                  top: e.height * 0.3,
-                                  left: e.width * 0.07,
-                                  child: Text(
-                                    "Podcast Information",
-                                    style: TextStyle(
-                                        fontSize: e.width * 0.05,
-                                        fontWeight: FontWeight.bold),
-                                  )),
-                              Positioned(
-                                  top: e.height * 0.37,
-                                  left: e.width * 0.07,
-                                  child: Text(
-                                    "Namepodcast",
-                                    style: TextStyle(
-                                        fontSize: e.width * 0.04,
-                                        color: Colors.grey,
-                                        fontWeight: FontWeight.bold),
-                                  )),
-                              Positioned(
-                                top: e.height * 0.37,
-                                left: e.width * 0.35,
-                                child: Container(
-                                  height: e.height * 0.1,
-                                  width: e.width * 0.5,
-                                  child: Text(
-                                    podcast[0]["name"],
-                                    style: TextStyle(
-                                      fontSize: e.width * 0.04,
-                                    ),
-                                    maxLines: 2,
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                  top: e.height * 0.43,
-                                  left: e.width * 0.07,
-                                  child: Text(
-                                    "Podcast Id",
-                                    style: TextStyle(
-                                        fontSize: e.width * 0.04,
-                                        color: Colors.grey,
-                                        fontWeight: FontWeight.bold),
-                                  )),
-                              Positioned(
-                                top: e.height * 0.43,
-                                left: e.width * 0.35,
-                                child: Container(
-                                  height: e.height * 0.1,
-                                  width: e.width * 0.5,
-                                  child: Text(
-                                    podcast[0]["id"],
-                                    style: TextStyle(
-                                      fontSize: e.width * 0.04,
-                                    ),
-                                    maxLines: 2,
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                top: e.height * 0.41,
-                                right: e.width * 0.01,
-                                child: TextButton(
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text("Text Copied"),
-                                          backgroundColor: Color(0xFF754CEF),
-                                        ),
-                                      );
-                                    },
-                                    child: Image.network(
-                                      themeProvider.isDarkMode ? s117 : s116,
-                                      width: e.width * 0.05,
-                                      height: e.height * 0.05,
-                                    )),
-                              ),
-                              Positioned(
-                                  top: e.height * 0.49,
-                                  left: e.width * 0.07,
-                                  child: Text(
-                                    "Description",
-                                    style: TextStyle(
-                                        fontSize: e.width * 0.04,
-                                        color: Colors.grey,
-                                        fontWeight: FontWeight.bold),
-                                  )),
-                              Positioned(
-                                top: e.height * 0.49,
-                                left: e.width * 0.35,
-                                child: Container(
-                                  height: e.height * 0.1,
-                                  width: e.width * 0.5,
-                                  child: Text(
-                                    podcast[0]["description"],
-                                    style: TextStyle(
-                                      fontSize: e.width * 0.04,
-                                    ),
-                                    maxLines: 2,
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                  top: e.height * 0.55,
-                                  left: e.width * 0.07,
-                                  child: Text(
-                                    "Category",
-                                    style: TextStyle(
-                                        fontSize: e.width * 0.04,
-                                        color: Colors.grey,
-                                        fontWeight: FontWeight.bold),
-                                  )),
-                              Positioned(
-                                top: e.height * 0.55,
-                                left: e.width * 0.35,
-                                child: Container(
-                                  height: e.height * 0.1,
-                                  width: e.width * 0.5,
-                                  child: Text(
-                                    podcast[0]["category"],
-                                    style: TextStyle(
-                                      fontSize: e.width * 0.04,
-                                    ),
-                                    maxLines: 2,
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                  top: e.height * 0.61,
-                                  left: e.width * 0.07,
-                                  child: Text(
-                                    "Playlist",
-                                    style: TextStyle(
-                                        fontSize: e.width * 0.04,
-                                        color: Colors.grey,
-                                        fontWeight: FontWeight.bold),
-                                  )),
-                              /*                                          child: Container(
-                                            width: c.width * 0.7,
-                                            height: c.width *
-                                                0.06, // Définit une hauteur pour éviter les bugs d'affichage
-
-                                            
-                                          ),
- */
-                              Positioned(
-                                top: e.height * 0.61,
-                                left: e.width * 0.35,
-                                child: Container(
-                                  height: e.height * 0.1,
-                                  width: e.width * 0.5,
-                                  child: // Affiche un loader pendant le chargement
-                                      Text(
-                                    playinpod
-                                        .firstWhere((p) => p["id"] == id1,
-                                            orElse: () => {
-                                                  "playlistIds": []
-                                                })["playlistIds"]
-                                        .map((pid) => playlist.firstWhere(
-                                            (pl) => pl["id"] == pid,
-                                            orElse: () =>
-                                                {"name": "Inconnue"})["name"])
-                                        .join(
-                                            "   •   "), // Séparer par un symbole
-                                    style: TextStyle(
-                                      fontSize: e.width * 0.04,
-                                    ),
-                                    maxLines: 2,
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                  top: e.height * 0.68,
-                                  left: e.width * 0.07,
-                                  right: e.width * 0.07,
-                                  child: Container(
-                                    width: e.width * 0.8,
-                                    height: e.height *
-                                        0.002, // Épaisseur de la ligne
-                                    color: Colors.grey[400],
-                                  )),
-                              Positioned(
-                                  top: e.height * 0.695,
-                                  left: e.width * 0.04,
-                                  child: TextButton(
-                                      onPressed: () {
-                                        Navigator.pushNamed(context, '/modif1',
-                                            arguments: {
-                                              'n': 6,
-                                              'id1': podcast[0]["id"]
-                                            });
-                                      },
-                                      child: Text(
-                                        "Add To A Playlist",
-                                        style: TextStyle(
-                                            fontSize: e.width * 0.04,
-                                            color: themeProvider.isDarkMode
-                                                ? Colors.white
-                                                : Colors.black,
-                                            fontWeight: FontWeight.bold),
-                                      ))),
-                              Positioned(
-                                  top: e.height * 0.745,
-                                  left: e.width * 0.05,
-                                  child: TextButton(
-                                      onPressed: () {
-                                        Navigator.pushNamed(context, '/modif1',
-                                            arguments: {
-                                              'n': 9,
-                                              'id1': podcast[0]["id"]
-                                            });
-                                      },
-                                      child: Text(
-                                        "Delete Playlist",
-                                        style: TextStyle(
-                                            fontSize: e.width * 0.04,
-                                            color: Colors.red,
-                                            fontWeight: FontWeight.bold),
-                                      ))),
-                              Positioned(
-                                top: e.height * 0.81,
-                                left: e.width * 0.04,
-                                child: Container(
-                                  child: GestureDetector(
                                     onTap: () {
                                       // Afficher une boîte de dialogue de confirmation
                                       showDialog(
@@ -1959,9 +1207,9 @@ class _ModifpageState extends State<Modifpage> {
                                                 themeProvider.isDarkMode
                                                     ? Colors.black
                                                     : Colors.white,
-                                            title: const Text("Delete Podcast"),
+                                            title: const Text("Delete Channel"),
                                             content: const Text(
-                                              "Are you sure you want to delete your podcast? This action is irreversible and all your data will be lost.",
+                                              "Are you sure you want to delete your channel? This action is irreversible and all your data will be lost.",
                                             ),
                                             actions: [
                                               TextButton(
@@ -1981,7 +1229,7 @@ class _ModifpageState extends State<Modifpage> {
                                                                     .isDarkMode
                                                                 ? Colors.black
                                                                 : Colors.white,
-                                                        content: Column(
+                                                        content: const Column(
                                                           mainAxisSize:
                                                               MainAxisSize.min,
                                                           children: [
@@ -1989,7 +1237,7 @@ class _ModifpageState extends State<Modifpage> {
                                                             SizedBox(
                                                                 height: 16),
                                                             Text(
-                                                                "Deleting the podcast in progress..."),
+                                                                "Channel being deleted..."),
                                                           ],
                                                         ),
                                                       );
@@ -2014,15 +1262,73 @@ class _ModifpageState extends State<Modifpage> {
                                                         FirebaseFirestore
                                                             .instance;
 
+                                                    final followsAsAsFollowing =
+                                                        await firestore
+                                                            .collection(
+                                                                'follow')
+                                                            .where(
+                                                                'idfollowing',
+                                                                isEqualTo:
+                                                                    currentUserId)
+                                                            .get();
+
+                                                    // Pour chaque personne suivie, décrémenter son compteur de followers dans channels
+                                                    for (var doc
+                                                        in followsAsAsFollowing
+                                                            .docs) {
+                                                      // Récupérer l'ID de l'utilisateur suivi
+                                                      final idFollowing =
+                                                          doc.data()[
+                                                              'idfollowers'];
+
+                                                      // Rechercher le document channel correspondant
+                                                      final channelQuery =
+                                                          await firestore
+                                                              .collection(
+                                                                  'channels')
+                                                              .where('userId',
+                                                                  isEqualTo:
+                                                                      idFollowing)
+                                                              .get();
+
+                                                      // Mettre à jour le compteur de followers pour chaque channel trouvé
+                                                      for (var channelDoc
+                                                          in channelQuery
+                                                              .docs) {
+                                                        // Récupérer le compteur actuel de followers
+                                                        final currentFollowers =
+                                                            channelDoc.data()[
+                                                                    'following'] ??
+                                                                0;
+
+                                                        // Décrémenter le compteur (en s'assurant qu'il ne devient pas négatif)
+                                                        final newFollowers =
+                                                            currentFollowers > 0
+                                                                ? currentFollowers -
+                                                                    1
+                                                                : 0;
+
+                                                        // Mettre à jour le document
+                                                        await channelDoc
+                                                            .reference
+                                                            .update({
+                                                          'following':
+                                                              newFollowers
+                                                        });
+                                                      }
+
+                                                      // Supprimer la relation follow
+                                                      await doc.reference
+                                                          .delete();
+                                                    }
                                                     // 3. Gérer les podcasts et références associées
                                                     final podcastsToDelete =
                                                         await firestore
                                                             .collection(
                                                                 'podcasts')
-                                                            .where('id',
+                                                            .where('idUser',
                                                                 isEqualTo:
-                                                                    podcast[0]
-                                                                        ["id"])
+                                                                    currentUserId)
                                                             .get();
 
                                                     for (var podcastDoc
@@ -2102,10 +1408,9 @@ class _ModifpageState extends State<Modifpage> {
                                                         await firestore
                                                             .collection(
                                                                 'myplaylist')
-                                                            .where('idpod',
+                                                            .where('iduser',
                                                                 isEqualTo:
-                                                                    podcast[0]
-                                                                        ["id"])
+                                                                    currentUserId)
                                                             .get();
 
                                                     for (var doc
@@ -2115,35 +1420,99 @@ class _ModifpageState extends State<Modifpage> {
                                                           .delete();
                                                     }
 
+                                                    // 4. Gérer les playlists et références associées
+                                                    // 3. Gérer les podcasts et références associées
+                                                    final playlistToDelete =
+                                                        await firestore
+                                                            .collection(
+                                                                'playlist')
+                                                            .where('userId',
+                                                                isEqualTo:
+                                                                    currentUserId)
+                                                            .get();
+
+                                                    for (var podcastDoc
+                                                        in playlistToDelete
+                                                            .docs) {
+                                                      final podcastId =
+                                                          podcastDoc.id;
+
+                                                      // Récupérer les références dans playinpod
+                                                      final playInPodRefs =
+                                                          await firestore
+                                                              .collection(
+                                                                  'playinpod')
+                                                              .where(
+                                                                  'playlistId',
+                                                                  isEqualTo:
+                                                                      podcastId)
+                                                              .get();
+
+                                                      // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
+                                                      for (var doc
+                                                          in playInPodRefs
+                                                              .docs) {
+                                                        // Supprimer la référence dans playinpod
+                                                        await doc.reference
+                                                            .delete();
+                                                      }
+
+                                                      // Supprimer le podcast lui-même
+                                                      await podcastDoc.reference
+                                                          .delete();
+                                                    }
+
+                                                    // Supprimer les références dans mesplaylist pour cet utilisateur
+                                                    final mesPlaylistRefs =
+                                                        await firestore
+                                                            .collection(
+                                                                'mesplaylist')
+                                                            .where('iduser',
+                                                                isEqualTo:
+                                                                    currentUserId)
+                                                            .get();
+
+                                                    for (var doc
+                                                        in mesPlaylistRefs
+                                                            .docs) {
+                                                      await doc.reference
+                                                          .delete();
+                                                    }
+
+                                                    // Enfin, supprimer le compte utilisateur de Firebase Auth
+
                                                     // Fermer la boîte de dialogue de chargement
+                                                    // ignore: use_build_context_synchronously
                                                     Navigator.of(context).pop();
 
                                                     // Rediriger vers l'écran de connexion après la suppression réussie
                                                     Navigator
                                                         .pushNamedAndRemoveUntil(
+                                                            // ignore: use_build_context_synchronously
                                                             context,
-                                                            '/your',
+                                                            '/podly',
                                                             (route) => false);
 
                                                     // Afficher un message de confirmation
                                                     ScaffoldMessenger.of(
-                                                            context)
-                                                        .showSnackBar(
+                                                        // ignore: use_build_context_synchronously
+                                                        context).showSnackBar(
                                                       const SnackBar(
                                                         content: Text(
-                                                            "Your podcast has been successfully deleted"),
+                                                            "Your channel has been successfully deleted."),
                                                         backgroundColor:
                                                             Color(0xFF754CEF),
                                                       ),
                                                     );
                                                   } catch (e) {
                                                     // Fermer la boîte de dialogue de chargement
+                                                    // ignore: use_build_context_synchronously
                                                     Navigator.of(context).pop();
 
                                                     // Afficher un message d'erreur
                                                     ScaffoldMessenger.of(
-                                                            context)
-                                                        .showSnackBar(
+                                                        // ignore: use_build_context_synchronously
+                                                        context).showSnackBar(
                                                       SnackBar(
                                                         content: Text(
                                                             "Erreur lors de la suppression du compte: ${e.toString()}"),
@@ -2151,9 +1520,6 @@ class _ModifpageState extends State<Modifpage> {
                                                             Colors.red,
                                                       ),
                                                     );
-
-                                                    print(
-                                                        "Erreur de suppression du compte: $e");
                                                   }
                                                 },
                                                 child: const Text(
@@ -2167,22 +1533,579 @@ class _ModifpageState extends State<Modifpage> {
                                         },
                                       );
                                     },
-                                    child: Row(
-                                      children: [
-                                        Image.network(
-                                          s91,
-                                          width: e.width * 0.06,
-                                          height: e.width * 0.06,
+                                    child: Row(children: [
+                                      Image.network(
+                                        s91,
+                                        width: e.width * 0.06,
+                                        height: e.width * 0.06,
+                                      ),
+                                      Text(
+                                        "Delete Channel",
+                                        style: TextStyle(
+                                            fontSize: e.width * 0.045,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.red),
+                                      ),
+                                    ])),
+                              ),
+                            ],
+                            if (q == 4) ...[
+                              Positioned(
+                                top: e.height * 0.01,
+                                left: e.width * 0.03,
+                                child: IconButton(
+                                  onPressed: () {
+                                    Navigator.pushNamedAndRemoveUntil(
+                                      context,
+                                      '/your',
+                                      (route) => false,
+                                    );
+                                  },
+                                  icon: Image.network(
+                                    themeProvider.isDarkMode ? s97 : s18,
+                                    width: e.width * 0.07,
+                                    height: e.width * 0.07,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                  top: e.height * 0.02,
+                                  left: e.width * 0.15,
+                                  child: Text(
+                                    "Podcast",
+                                    style: TextStyle(
+                                        fontSize: e.width * 0.06,
+                                        fontWeight: FontWeight.bold),
+                                  )),
+                              Positioned(
+                                top: e.height * 0.08,
+                                left: e.width * 0.38,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      PageRouteBuilder(
+                                        opaque: false,
+                                        transitionDuration:
+                                            const Duration(milliseconds: 500),
+                                        pageBuilder: (context, animation,
+                                            secondaryAnimation) {
+                                          return FadeTransition(
+                                            opacity: animation,
+                                            child: ZoomPhotoPage(
+                                                imageUrl: podcast[0]
+                                                    ["urlPhoto"]),
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  },
+                                  child: Hero(
+                                    tag: 'zoomImageHero3',
+                                    child: Container(
+                                      width: e.width * 0.25,
+                                      height: e.width * 0.25,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(
+                                            e.width * 0.04),
+                                        image: DecorationImage(
+                                          image: NetworkImage(
+                                              podcast[0]["urlPhoto"]),
+                                          fit: BoxFit.cover,
+                                          onError: (exception, stackTrace) {},
                                         ),
-                                        Text(
-                                          "Delete Podcast",
-                                          style: TextStyle(
-                                              fontSize: e.width * 0.045,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.red),
-                                        ),
-                                      ],
+                                        color: Colors.grey[300],
+                                      ),
                                     ),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                  top: e.height * 0.166,
+                                  left: e.width * 0.55,
+                                  child: Container(
+                                    width: e.width * 0.09,
+                                    height: e.width * 0.09,
+                                    decoration: BoxDecoration(
+                                        color: themeProvider.isDarkMode
+                                            ? Colors.black
+                                            : Colors.white,
+                                        borderRadius: BorderRadius.circular(
+                                            e.width * 0.2)),
+                                  )),
+                              Positioned(
+                                  top: e.height * 0.171,
+                                  left: e.width * 0.56,
+                                  child: Container(
+                                      width: e.width * 0.07,
+                                      height: e.width * 0.07,
+                                      decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                              e.width * 0.2)),
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          _pickAndUploadImage2(id1!);
+                                        },
+                                        child: Image.network(s26),
+                                      ))),
+                              Positioned(
+                                  top: e.height * 0.25,
+                                  left: e.width * 0.07,
+                                  right: e.width * 0.07,
+                                  child: Container(
+                                    width: e.width * 0.8,
+                                    height: e.height *
+                                        0.002, // Épaisseur de la ligne
+                                    color: Colors.grey[400],
+                                  )),
+                              Positioned(
+                                  top: e.height * 0.3,
+                                  left: e.width * 0.07,
+                                  child: Text(
+                                    "Podcast Information",
+                                    style: TextStyle(
+                                        fontSize: e.width * 0.05,
+                                        fontWeight: FontWeight.bold),
+                                  )),
+                              Positioned(
+                                  top: e.height * 0.37,
+                                  left: e.width * 0.07,
+                                  child: Text(
+                                    "Namepodcast",
+                                    style: TextStyle(
+                                        fontSize: e.width * 0.04,
+                                        color: Colors.grey,
+                                        fontWeight: FontWeight.bold),
+                                  )),
+                              Positioned(
+                                top: e.height * 0.37,
+                                left: e.width * 0.35,
+                                child: SizedBox(
+                                  height: e.height * 0.1,
+                                  width: e.width * 0.5,
+                                  child: Text(
+                                    podcast[0]["name"],
+                                    style: TextStyle(
+                                      fontSize: e.width * 0.04,
+                                    ),
+                                    maxLines: 2,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                  top: e.height * 0.43,
+                                  left: e.width * 0.07,
+                                  child: Text(
+                                    "Podcast Id",
+                                    style: TextStyle(
+                                        fontSize: e.width * 0.04,
+                                        color: Colors.grey,
+                                        fontWeight: FontWeight.bold),
+                                  )),
+                              Positioned(
+                                top: e.height * 0.43,
+                                left: e.width * 0.35,
+                                child: SizedBox(
+                                  height: e.height * 0.1,
+                                  width: e.width * 0.5,
+                                  child: Text(
+                                    podcast[0]["id"],
+                                    style: TextStyle(
+                                      fontSize: e.width * 0.04,
+                                    ),
+                                    maxLines: 2,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: e.height * 0.41,
+                                right: e.width * 0.01,
+                                child: TextButton(
+                                    onPressed: () {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Text Copied"),
+                                          backgroundColor: Color(0xFF754CEF),
+                                        ),
+                                      );
+                                    },
+                                    child: Image.network(
+                                      themeProvider.isDarkMode ? s117 : s116,
+                                      width: e.width * 0.05,
+                                      height: e.height * 0.05,
+                                    )),
+                              ),
+                              Positioned(
+                                  top: e.height * 0.49,
+                                  left: e.width * 0.07,
+                                  child: Text(
+                                    "Description",
+                                    style: TextStyle(
+                                        fontSize: e.width * 0.04,
+                                        color: Colors.grey,
+                                        fontWeight: FontWeight.bold),
+                                  )),
+                              Positioned(
+                                top: e.height * 0.49,
+                                left: e.width * 0.35,
+                                child: SizedBox(
+                                  height: e.height * 0.1,
+                                  width: e.width * 0.5,
+                                  child: Text(
+                                    podcast[0]["description"],
+                                    style: TextStyle(
+                                      fontSize: e.width * 0.04,
+                                    ),
+                                    maxLines: 2,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                  top: e.height * 0.55,
+                                  left: e.width * 0.07,
+                                  child: Text(
+                                    "Category",
+                                    style: TextStyle(
+                                        fontSize: e.width * 0.04,
+                                        color: Colors.grey,
+                                        fontWeight: FontWeight.bold),
+                                  )),
+                              Positioned(
+                                top: e.height * 0.55,
+                                left: e.width * 0.35,
+                                child: SizedBox(
+                                  height: e.height * 0.1,
+                                  width: e.width * 0.5,
+                                  child: Text(
+                                    podcast[0]["category"],
+                                    style: TextStyle(
+                                      fontSize: e.width * 0.04,
+                                    ),
+                                    maxLines: 2,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                  top: e.height * 0.61,
+                                  left: e.width * 0.07,
+                                  child: Text(
+                                    "Playlist",
+                                    style: TextStyle(
+                                        fontSize: e.width * 0.04,
+                                        color: Colors.grey,
+                                        fontWeight: FontWeight.bold),
+                                  )),
+                              /*                                          child: Container(
+                                            width: c.width * 0.7,
+                                            height: c.width *
+                                                0.06, // Définit une hauteur pour éviter les bugs d'affichage
+
+                                            
+                                          ),
+ */
+                              Positioned(
+                                top: e.height * 0.61,
+                                left: e.width * 0.35,
+                                child: SizedBox(
+                                  height: e.height * 0.1,
+                                  width: e.width * 0.5,
+                                  child: // Affiche un loader pendant le chargement
+                                      Text(
+                                    playinpod
+                                        .firstWhere((p) => p["id"] == id1,
+                                            orElse: () => {
+                                                  "playlistIds": []
+                                                })["playlistIds"]
+                                        .map((pid) => playlist.firstWhere(
+                                            (pl) => pl["id"] == pid,
+                                            orElse: () =>
+                                                {"name": "Inconnue"})["name"])
+                                        .join(
+                                            "   •   "), // Séparer par un symbole
+                                    style: TextStyle(
+                                      fontSize: e.width * 0.04,
+                                    ),
+                                    maxLines: 2,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                  top: e.height * 0.68,
+                                  left: e.width * 0.07,
+                                  right: e.width * 0.07,
+                                  child: Container(
+                                    width: e.width * 0.8,
+                                    height: e.height *
+                                        0.002, // Épaisseur de la ligne
+                                    color: Colors.grey[400],
+                                  )),
+                              Positioned(
+                                  top: e.height * 0.695,
+                                  left: e.width * 0.04,
+                                  child: TextButton(
+                                      onPressed: () {
+                                        Navigator.pushNamed(context, '/modif1',
+                                            arguments: {
+                                              'n': 6,
+                                              'id1': podcast[0]["id"]
+                                            });
+                                      },
+                                      child: Text(
+                                        "Add To A Playlist",
+                                        style: TextStyle(
+                                            fontSize: e.width * 0.04,
+                                            color: themeProvider.isDarkMode
+                                                ? Colors.white
+                                                : Colors.black,
+                                            fontWeight: FontWeight.bold),
+                                      ))),
+                              Positioned(
+                                  top: e.height * 0.745,
+                                  left: e.width * 0.05,
+                                  child: TextButton(
+                                      onPressed: () {
+                                        Navigator.pushNamed(context, '/modif1',
+                                            arguments: {
+                                              'n': 9,
+                                              'id1': podcast[0]["id"]
+                                            });
+                                      },
+                                      child: Text(
+                                        "Delete Playlist",
+                                        style: TextStyle(
+                                            fontSize: e.width * 0.04,
+                                            color: Colors.red,
+                                            fontWeight: FontWeight.bold),
+                                      ))),
+                              Positioned(
+                                top: e.height * 0.81,
+                                left: e.width * 0.04,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    // Afficher une boîte de dialogue de confirmation
+                                    showDialog(
+                                      context: context,
+                                      builder: (BuildContext context) {
+                                        return AlertDialog(
+                                          backgroundColor:
+                                              themeProvider.isDarkMode
+                                                  ? Colors.black
+                                                  : Colors.white,
+                                          title: const Text("Delete Podcast"),
+                                          content: const Text(
+                                            "Are you sure you want to delete your podcast? This action is irreversible and all your data will be lost.",
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () async {
+                                                Navigator.of(context)
+                                                    .pop(); // Fermer la boîte de dialogue
+
+                                                // Afficher un indicateur de chargement
+                                                showDialog(
+                                                  context: context,
+                                                  barrierDismissible: false,
+                                                  builder:
+                                                      (BuildContext context) {
+                                                    return AlertDialog(
+                                                      backgroundColor:
+                                                          themeProvider
+                                                                  .isDarkMode
+                                                              ? Colors.black
+                                                              : Colors.white,
+                                                      content: const Column(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          Annimationwidjet(),
+                                                          SizedBox(height: 16),
+                                                          Text(
+                                                              "Deleting the podcast in progress..."),
+                                                        ],
+                                                      ),
+                                                    );
+                                                  },
+                                                );
+
+                                                try {
+                                                  // Récupérer l'utilisateur actuel et son ID
+                                                  final currentUser =
+                                                      FirebaseAuth
+                                                          .instance.currentUser;
+                                                  final currentUserId =
+                                                      currentUser?.uid;
+
+                                                  if (currentUserId == null) {
+                                                    throw Exception(
+                                                        "Aucun utilisateur connecté");
+                                                  }
+
+                                                  // Firestore instance
+                                                  final firestore =
+                                                      FirebaseFirestore
+                                                          .instance;
+
+                                                  // 3. Gérer les podcasts et références associées
+                                                  final podcastsToDelete =
+                                                      await firestore
+                                                          .collection(
+                                                              'podcasts')
+                                                          .where('id',
+                                                              isEqualTo:
+                                                                  podcast[0]
+                                                                      ["id"])
+                                                          .get();
+
+                                                  for (var podcastDoc
+                                                      in podcastsToDelete
+                                                          .docs) {
+                                                    final podcastId =
+                                                        podcastDoc.id;
+
+                                                    // Récupérer les références dans playinpod
+                                                    final playInPodRefs =
+                                                        await firestore
+                                                            .collection(
+                                                                'playinpod')
+                                                            .where('podcastId',
+                                                                isEqualTo:
+                                                                    podcastId)
+                                                            .get();
+
+                                                    // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
+                                                    for (var doc
+                                                        in playInPodRefs.docs) {
+                                                      // Récupérer l'ID de la playlist
+                                                      final playlistId = doc
+                                                          .data()['playlistId'];
+
+                                                      if (playlistId != null) {
+                                                        // Récupérer la playlist
+                                                        final playlistDoc =
+                                                            await firestore
+                                                                .collection(
+                                                                    'playlist')
+                                                                .doc(playlistId)
+                                                                .get();
+
+                                                        if (playlistDoc
+                                                            .exists) {
+                                                          // Récupérer le compteur actuel de podcasts
+                                                          final currentPodcastCount =
+                                                              playlistDoc.data()?[
+                                                                      'podcast'] ??
+                                                                  0;
+
+                                                          // Décrémenter le compteur (en s'assurant qu'il ne devient pas négatif)
+                                                          final newPodcastCount =
+                                                              currentPodcastCount >
+                                                                      0
+                                                                  ? currentPodcastCount -
+                                                                      1
+                                                                  : 0;
+
+                                                          // Mettre à jour le document
+                                                          await playlistDoc
+                                                              .reference
+                                                              .update({
+                                                            'podcast':
+                                                                newPodcastCount
+                                                          });
+                                                        }
+                                                      }
+
+                                                      // Supprimer la référence dans playinpod
+                                                      await doc.reference
+                                                          .delete();
+                                                    }
+
+                                                    // Supprimer le podcast lui-même
+                                                    await podcastDoc.reference
+                                                        .delete();
+                                                  }
+                                                  // Supprimer les références dans myplaylist pour cet utilisateur
+                                                  final myPlaylistRefs =
+                                                      await firestore
+                                                          .collection(
+                                                              'myplaylist')
+                                                          .where('idpod',
+                                                              isEqualTo:
+                                                                  podcast[0]
+                                                                      ["id"])
+                                                          .get();
+
+                                                  for (var doc
+                                                      in myPlaylistRefs.docs) {
+                                                    await doc.reference
+                                                        .delete();
+                                                  }
+
+                                                  // Fermer la boîte de dialogue de chargement
+                                                  // ignore: use_build_context_synchronously
+                                                  Navigator.of(context).pop();
+
+                                                  // Rediriger vers l'écran de connexion après la suppression réussie
+                                                  Navigator.pushNamedAndRemoveUntil(
+                                                      // ignore: use_build_context_synchronously
+                                                      context,
+                                                      '/your',
+                                                      (route) => false);
+
+                                                  // Afficher un message de confirmation
+                                                  ScaffoldMessenger.of(
+                                                      // ignore: use_build_context_synchronously
+                                                      context).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                          "Your podcast has been successfully deleted"),
+                                                      backgroundColor:
+                                                          Color(0xFF754CEF),
+                                                    ),
+                                                  );
+                                                } catch (e) {
+                                                  // Fermer la boîte de dialogue de chargement
+                                                  // ignore: use_build_context_synchronously
+                                                  Navigator.of(context).pop();
+
+                                                  // Afficher un message d'erreur
+                                                  ScaffoldMessenger.of(
+                                                      // ignore: use_build_context_synchronously
+                                                      context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                          "Erreur lors de la suppression du compte: ${e.toString()}"),
+                                                      backgroundColor:
+                                                          Colors.red,
+                                                    ),
+                                                  );
+                                                }
+                                              },
+                                              child: const Text(
+                                                "Delete",
+                                                style: TextStyle(
+                                                    color: Colors.red),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  },
+                                  child: Row(
+                                    children: [
+                                      Image.network(
+                                        s91,
+                                        width: e.width * 0.06,
+                                        height: e.width * 0.06,
+                                      ),
+                                      Text(
+                                        "Delete Podcast",
+                                        style: TextStyle(
+                                            fontSize: e.width * 0.045,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.red),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -2234,7 +2157,7 @@ class _ModifpageState extends State<Modifpage> {
                                       PageRouteBuilder(
                                         opaque: false,
                                         transitionDuration:
-                                            Duration(milliseconds: 500),
+                                            const Duration(milliseconds: 500),
                                         pageBuilder: (context, animation,
                                             secondaryAnimation) {
                                           return FadeTransition(
@@ -2249,7 +2172,7 @@ class _ModifpageState extends State<Modifpage> {
                                   },
                                   child: Hero(
                                     tag:
-                                        'playlistHero', // Un tag unique pour cette image
+                                        'playlistHero4', // Un tag unique pour cette image
                                     child: Container(
                                       width: e.width * 0.25,
                                       height: e.width * 0.25,
@@ -2257,13 +2180,12 @@ class _ModifpageState extends State<Modifpage> {
                                         borderRadius: BorderRadius.circular(
                                             e.width * 0.04),
                                         image: DecorationImage(
-                                          image: NetworkImage(
-                                              playlistt[0]["photoUrl"]),
+                                          image: NetworkImage(playlistt
+                                                  .isNotEmpty
+                                              ? playlistt[0]["photoUrl"] ?? ''
+                                              : 'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/output-onlinejpgtools%20(2).jpg'),
                                           fit: BoxFit.cover,
-                                          onError: (exception, stackTrace) {
-                                            print(
-                                                'Erreur de chargement de l\'image');
-                                          },
+                                          onError: (exception, stackTrace) {},
                                         ),
                                         color: Colors.grey[300],
                                       ),
@@ -2331,11 +2253,13 @@ class _ModifpageState extends State<Modifpage> {
                               Positioned(
                                 top: e.height * 0.37,
                                 left: e.width * 0.35,
-                                child: Container(
+                                child: SizedBox(
                                     width: e.width * 0.5,
                                     height: e.height * 0.1,
                                     child: Text(
-                                      playlistt[0]["name"],
+                                      playlistt.isNotEmpty
+                                          ? playlistt[0]["name"] ?? ''
+                                          : "",
                                       style: TextStyle(
                                         fontSize: e.width * 0.04,
                                       ),
@@ -2355,11 +2279,13 @@ class _ModifpageState extends State<Modifpage> {
                               Positioned(
                                 top: e.height * 0.43,
                                 left: e.width * 0.35,
-                                child: Container(
+                                child: SizedBox(
                                     width: e.width * 0.5,
                                     height: e.height * 0.1,
                                     child: Text(
-                                      playlistt[0]["id"],
+                                      playlistt.isNotEmpty
+                                          ? playlistt[0]["id"] ?? ''
+                                          : "",
                                       style: TextStyle(
                                         fontSize: e.width * 0.04,
                                       ),
@@ -2398,11 +2324,13 @@ class _ModifpageState extends State<Modifpage> {
                               Positioned(
                                 top: e.height * 0.49,
                                 left: e.width * 0.35,
-                                child: Container(
+                                child: SizedBox(
                                     width: e.width * 0.5,
                                     height: e.height * 0.1,
                                     child: Text(
-                                      playlistt[0]["description"],
+                                      playlistt.isNotEmpty
+                                          ? playlistt[0]["description"] ?? ''
+                                          : "",
                                       style: TextStyle(
                                         fontSize: e.width * 0.04,
                                       ),
@@ -2422,11 +2350,13 @@ class _ModifpageState extends State<Modifpage> {
                               Positioned(
                                   top: e.height * 0.55,
                                   left: e.width * 0.35,
-                                  child: Container(
+                                  child: SizedBox(
                                       width: e.width * 0.5,
                                       height: e.height * 0.1,
                                       child: Text(
-                                        formatLikes(playlistt[0]["podcast"]),
+                                        formatLikes(playlistt.isNotEmpty
+                                            ? playlistt[0]["podcast"] ?? ''
+                                            : 0),
                                         style: TextStyle(
                                           fontSize: e.width * 0.04,
                                         ),
@@ -2485,151 +2415,147 @@ class _ModifpageState extends State<Modifpage> {
                               Positioned(
                                 top: e.height * 0.77,
                                 left: e.width * 0.04,
-                                child: Container(
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      // Afficher une boîte de dialogue de confirmation
-                                      showDialog(
-                                        context: context,
-                                        builder: (BuildContext context) {
-                                          return AlertDialog(
-                                            backgroundColor:
-                                                themeProvider.isDarkMode
-                                                    ? Colors.black
-                                                    : Colors.white,
-                                            title:
-                                                const Text("Delete Playlist"),
-                                            content: const Text(
-                                              "Are you sure you want to delete your playlist? This action is irreversible and all your data will be lost.",
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () async {
-                                                  Navigator.of(context)
-                                                      .pop(); // Fermer la boîte de dialogue
+                                child: GestureDetector(
+                                  onTap: () {
+                                    // Afficher une boîte de dialogue de confirmation
+                                    showDialog(
+                                      context: context,
+                                      builder: (BuildContext context) {
+                                        return AlertDialog(
+                                          backgroundColor:
+                                              themeProvider.isDarkMode
+                                                  ? Colors.black
+                                                  : Colors.white,
+                                          title: const Text("Delete Playlist"),
+                                          content: const Text(
+                                            "Are you sure you want to delete your playlist? This action is irreversible and all your data will be lost.",
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () async {
+                                                Navigator.of(context)
+                                                    .pop(); // Fermer la boîte de dialogue
 
-                                                  // Afficher un indicateur de chargement
-                                                  showDialog(
-                                                    context: context,
-                                                    barrierDismissible: false,
-                                                    builder:
-                                                        (BuildContext context) {
-                                                      return AlertDialog(
-                                                        backgroundColor:
-                                                            themeProvider
-                                                                    .isDarkMode
-                                                                ? Colors.black
-                                                                : Colors.white,
-                                                        content: Column(
-                                                          mainAxisSize:
-                                                              MainAxisSize.min,
-                                                          children: [
-                                                            Annimationwidjet(),
-                                                            SizedBox(
-                                                                height: 16),
-                                                            Text(
-                                                                "Delete Playlist In Progress"),
-                                                          ],
-                                                        ),
-                                                      );
-                                                    },
-                                                  );
+                                                // Afficher un indicateur de chargement
+                                                showDialog(
+                                                  context: context,
+                                                  barrierDismissible: false,
+                                                  builder:
+                                                      (BuildContext context) {
+                                                    return AlertDialog(
+                                                      backgroundColor:
+                                                          themeProvider
+                                                                  .isDarkMode
+                                                              ? Colors.black
+                                                              : Colors.white,
+                                                      content: const Column(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          Annimationwidjet(),
+                                                          SizedBox(height: 16),
+                                                          Text(
+                                                              "Delete Playlist In Progress"),
+                                                        ],
+                                                      ),
+                                                    );
+                                                  },
+                                                );
 
-                                                  try {
-                                                    // Récupérer l'utilisateur actuel et son ID
-                                                    final currentUser =
-                                                        FirebaseAuth.instance
-                                                            .currentUser;
-                                                    final currentUserId =
-                                                        currentUser?.uid;
+                                                try {
+                                                  // Récupérer l'utilisateur actuel et son ID
+                                                  final currentUser =
+                                                      FirebaseAuth
+                                                          .instance.currentUser;
+                                                  final currentUserId =
+                                                      currentUser?.uid;
 
-                                                    if (currentUserId == null) {
-                                                      throw Exception(
-                                                          "Aucun utilisateur connecté");
-                                                    }
+                                                  if (currentUserId == null) {
+                                                    throw Exception(
+                                                        "Aucun utilisateur connecté");
+                                                  }
 
-                                                    // Firestore instance
-                                                    final firestore =
-                                                        FirebaseFirestore
-                                                            .instance;
+                                                  // Firestore instance
+                                                  final firestore =
+                                                      FirebaseFirestore
+                                                          .instance;
 
-                                                    // 4. Gérer les playlists et références associées
-                                                    // 3. Gérer les podcasts et références associées
-                                                    final playlistToDelete =
+                                                  // 4. Gérer les playlists et références associées
+                                                  // 3. Gérer les podcasts et références associées
+                                                  final playlistToDelete =
+                                                      await firestore
+                                                          .collection(
+                                                              'playlist')
+                                                          .where('id',
+                                                              isEqualTo:
+                                                                  playlistt[0]
+                                                                      ["id"])
+                                                          .get();
+
+                                                  for (var podcastDoc
+                                                      in playlistToDelete
+                                                          .docs) {
+                                                    final podcastId =
+                                                        podcastDoc.id;
+
+                                                    // Récupérer les références dans playinpod
+                                                    final playInPodRefs =
                                                         await firestore
                                                             .collection(
-                                                                'playlist')
-                                                            .where('id',
+                                                                'playinpod')
+                                                            .where('playlistId',
                                                                 isEqualTo:
-                                                                    playlistt[0]
-                                                                        ["id"])
+                                                                    podcastId)
                                                             .get();
 
-                                                    for (var podcastDoc
-                                                        in playlistToDelete
-                                                            .docs) {
-                                                      final podcastId =
-                                                          podcastDoc.id;
-
-                                                      // Récupérer les références dans playinpod
-                                                      final playInPodRefs =
-                                                          await firestore
-                                                              .collection(
-                                                                  'playinpod')
-                                                              .where(
-                                                                  'playlistId',
-                                                                  isEqualTo:
-                                                                      podcastId)
-                                                              .get();
-
-                                                      // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
-                                                      for (var doc
-                                                          in playInPodRefs
-                                                              .docs) {
-                                                        // Supprimer la référence dans playinpod
-                                                        await doc.reference
-                                                            .delete();
-                                                      }
-
-                                                      // Supprimer le podcast lui-même
-                                                      await podcastDoc.reference
-                                                          .delete();
-                                                    }
-
-                                                    // Supprimer les références dans mesplaylist pour cet utilisateur
-                                                    final mesPlaylistRefs =
-                                                        await firestore
-                                                            .collection(
-                                                                'mesplaylist')
-                                                            .where('idplay',
-                                                                isEqualTo:
-                                                                    playlistt[0]
-                                                                        ["id"])
-                                                            .get();
-
+                                                    // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
                                                     for (var doc
-                                                        in mesPlaylistRefs
-                                                            .docs) {
+                                                        in playInPodRefs.docs) {
+                                                      // Supprimer la référence dans playinpod
                                                       await doc.reference
                                                           .delete();
                                                     }
 
-                                                    // Enfin, supprimer le compte utilisateur de Firebase Auth
-                                                    await currentUser?.delete();
+                                                    // Supprimer le podcast lui-même
+                                                    await podcastDoc.reference
+                                                        .delete();
+                                                  }
 
+                                                  // Supprimer les références dans mesplaylist pour cet utilisateur
+                                                  final mesPlaylistRefs =
+                                                      await firestore
+                                                          .collection(
+                                                              'mesplaylist')
+                                                          .where('idplay',
+                                                              isEqualTo:
+                                                                  playlistt[0]
+                                                                      ["id"])
+                                                          .get();
+
+                                                  for (var doc
+                                                      in mesPlaylistRefs.docs) {
+                                                    await doc.reference
+                                                        .delete();
+                                                  }
+
+                                                  // Enfin, supprimer le compte utilisateur de Firebase Auth
+                                                  await currentUser?.delete();
+                                                  if (mounted) {
                                                     // Fermer la boîte de dialogue de chargement
+                                                    // ignore: use_build_context_synchronously
                                                     Navigator.of(context).pop();
 
                                                     // Rediriger vers l'écran de connexion après la suppression réussie
                                                     Navigator
                                                         .pushNamedAndRemoveUntil(
+                                                            // ignore: use_build_context_synchronously
                                                             context,
                                                             '/your',
                                                             (route) => false);
 
                                                     ScaffoldMessenger.of(
-                                                            context)
-                                                        .showSnackBar(
+                                                        // ignore: use_build_context_synchronously
+                                                        context).showSnackBar(
                                                       const SnackBar(
                                                         content: Text(
                                                             "Your playlist has been successfully deleted"),
@@ -2637,53 +2563,47 @@ class _ModifpageState extends State<Modifpage> {
                                                             Color(0xFF754CEF),
                                                       ),
                                                     );
-                                                  } catch (e) {
-                                                    // Fermer la boîte de dialogue de chargement
-                                                    Navigator.of(context).pop();
-
-                                                    // Afficher un message d'erreur
+                                                  }
+                                                } catch (e) {
+                                                  if (mounted) {
+                                                    Navigator.of(context)
+                                                        .pop(); // Fermer le loader
                                                     ScaffoldMessenger.of(
                                                             context)
                                                         .showSnackBar(
                                                       SnackBar(
-                                                        content: Text(
-                                                            "Erreur lors de la suppression du compte: ${e.toString()}"),
-                                                        backgroundColor:
-                                                            Colors.red,
-                                                      ),
+                                                          content: Text(
+                                                              "Error: $e")),
                                                     );
-
-                                                    print(
-                                                        "Erreur de suppression du compte: $e");
                                                   }
-                                                },
-                                                child: const Text(
-                                                  "Delete",
-                                                  style: TextStyle(
-                                                      color: Colors.red),
-                                                ),
+                                                }
+                                              },
+                                              child: const Text(
+                                                "Delete",
+                                                style: TextStyle(
+                                                    color: Colors.red),
                                               ),
-                                            ],
-                                          );
-                                        },
-                                      );
-                                    },
-                                    child: Row(
-                                      children: [
-                                        Image.network(
-                                          s91,
-                                          width: e.width * 0.06,
-                                          height: e.width * 0.06,
-                                        ),
-                                        Text(
-                                          "Delete Playlist",
-                                          style: TextStyle(
-                                              fontSize: e.width * 0.045,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.red),
-                                        ),
-                                      ],
-                                    ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  },
+                                  child: Row(
+                                    children: [
+                                      Image.network(
+                                        s91,
+                                        width: e.width * 0.06,
+                                        height: e.width * 0.06,
+                                      ),
+                                      Text(
+                                        "Delete Playlist",
+                                        style: TextStyle(
+                                            fontSize: e.width * 0.045,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.red),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),

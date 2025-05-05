@@ -277,7 +277,7 @@ class _YourplaylistpageState extends State<Yourplaylistpage>
                                       arguments: {'selectedIndex': 3});
                                 },
                                 icon: Image.network(
-                                  s18,
+                                  themeProvider.isDarkMode ? s97 : s18,
                                   width: w.width * 0.07,
                                   height: w.width * 0.07,
                                 ),
