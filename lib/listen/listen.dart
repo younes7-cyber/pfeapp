@@ -2,9 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:pfeapp/annimation.dart';
 import 'package:pfeapp/constants.dart';
 import 'package:marquee/marquee.dart';
 import 'package:intl/intl.dart';
+import 'package:pfeapp/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class Listenpage extends StatefulWidget {
   const Listenpage({super.key});
@@ -648,7 +651,7 @@ class _ListenpageState extends State<Listenpage>
     setState(() {});
   }
 
-  void _showCommentsModal() {
+  Future<void> _showCommentsModal() async {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -680,11 +683,15 @@ class _ListenpageState extends State<Listenpage>
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Text(formatLikes(podcast[0]["comments"]),
                         style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black)),
                     Text(" "),
                     Text("Comments",
                         style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black)),
                   ]),
                   const SizedBox(height: 10),
                   Expanded(
@@ -694,11 +701,14 @@ class _ListenpageState extends State<Listenpage>
                           AsyncSnapshot<List<Map<String, dynamic>>> snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
-                          return const Center(
-                              child: CircularProgressIndicator());
+                          return const Center(child: Annimationwidjet());
                         }
                         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                          return const Center(child: Text("No comments yet"));
+                          return const Center(
+                              child: Text("No comments yet",
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                  )));
                         }
 
                         return ListView.builder(
@@ -890,10 +900,8 @@ class _ListenpageState extends State<Listenpage>
                                                                         ),
                                                                         children: [
                                                                           TextSpan(
-                                                                            text: reply['user'] != null
-                                                                                ? "${reply['user']['firstName']} ${reply['user']['lastName']}"
-                                                                                : "Unknown User",
-                                                                          ),
+                                                                              text: reply['user'] != null ? "${reply['user']['firstName']} ${reply['user']['lastName']}" : "Unknown User",
+                                                                              style: TextStyle(color: Colors.black)),
                                                                           if (isReplyCreator)
                                                                             TextSpan(
                                                                               text: " Creator",
@@ -918,9 +926,13 @@ class _ListenpageState extends State<Listenpage>
                                                                         height:
                                                                             4),
                                                                     // Display the actual reply text separately
-                                                                    Text(reply[
-                                                                            'text'] ??
-                                                                        ""),
+                                                                    Text(
+                                                                      reply['text'] ??
+                                                                          "",
+                                                                      style: TextStyle(
+                                                                          color:
+                                                                              Colors.black),
+                                                                    ),
                                                                   ],
                                                                 ),
                                                               ),
@@ -1045,26 +1057,31 @@ class _ListenpageState extends State<Listenpage>
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Confirm Deletion"),
-          content: const Text("Are you sure you want to delete this?"),
-          actions: [
-            TextButton(
-              child: const Text("No", style: TextStyle(color: Colors.grey)),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child:
-                  const Text("Yes", style: TextStyle(color: Color(0xFF754CEF))),
-              onPressed: () {
-                Navigator.of(context).pop();
-                onDeleteConfirmed();
-              },
-            ),
-          ],
-        );
+        return Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+          return AlertDialog(
+            backgroundColor:
+                themeProvider.isDarkMode ? Colors.black : Colors.white,
+            title: const Text("Confirm Deletion"),
+            content: const Text("Are you sure you want to delete this?"),
+            actions: [
+              TextButton(
+                child: const Text("No", style: TextStyle(color: Colors.grey)),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+              TextButton(
+                child: const Text("Yes",
+                    style: TextStyle(color: Color(0xFF754CEF))),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  onDeleteConfirmed();
+                },
+              ),
+            ],
+          );
+        });
       },
     );
   }
@@ -1080,7 +1097,7 @@ class _ListenpageState extends State<Listenpage>
             parentReplyId == null
                 ? "Reply to comment"
                 : "Reply to ${replyToUsername ?? 'reply'}",
-            style: TextStyle(fontWeight: FontWeight.bold)),
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
         content: TextField(
           controller: replyController,
           decoration: InputDecoration(
@@ -1092,7 +1109,9 @@ class _ListenpageState extends State<Listenpage>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            child: Text(
+              'Cancel',
+            ),
           ),
           TextButton(
             onPressed: () {
@@ -1295,12 +1314,33 @@ class _ListenpageState extends State<Listenpage>
     return deletedCount;
   }
 
+  String getlikeIcon(ThemeProvider themeProvider) {
+    if (isLiked) {
+      return themeProvider.isDarkMode ? s135 : s39;
+    } else {
+      return themeProvider.isDarkMode ? s111 : s37;
+    }
+  }
+
+  String getunlikeIcon(ThemeProvider themeProvider) {
+    if (isSaved) {
+      return themeProvider.isDarkMode ? s136 : s40;
+    } else {
+      return themeProvider.isDarkMode ? s122 : s41;
+    }
+  }
+
+  String getSaveIcon(ThemeProvider themeProvider) {
+    if (isSaved) {
+      return themeProvider.isDarkMode ? s121 : s43;
+    } else {
+      return themeProvider.isDarkMode ? s120 : s42;
+    }
+  }
+
   bool isSaved = false;
   bool isLiked = false;
   bool isUnliked = false;
-  String likeIcon = s37; // Icône de like par défaut
-  String unlikeIcon = s41; // Icône d'unlike par défaut
-  String saveIcon = s42; // Icône de like par défaut
   final currentUser = FirebaseAuth.instance.currentUser?.uid;
   Future<void> _fetchLikeStatus() async {
     final likeRef = FirebaseFirestore.instance.collection('like');
@@ -1311,7 +1351,6 @@ class _ListenpageState extends State<Listenpage>
 
     setState(() {
       isLiked = likeQuery.docs.isNotEmpty;
-      likeIcon = isLiked ? s39 : s37;
     });
   }
 
@@ -1324,7 +1363,6 @@ class _ListenpageState extends State<Listenpage>
 
     setState(() {
       isSaved = saveQuery.docs.isNotEmpty;
-      saveIcon = isSaved ? s43 : s42;
     });
   }
 
@@ -1337,7 +1375,6 @@ class _ListenpageState extends State<Listenpage>
 
     setState(() {
       isUnliked = unlikeQuery.docs.isNotEmpty;
-      unlikeIcon = isUnliked ? s40 : s41;
     });
   }
 
@@ -1367,7 +1404,6 @@ class _ListenpageState extends State<Listenpage>
       });
       setState(() {
         isLiked = true;
-        likeIcon = s39;
       });
 
       // Supprimer l'unlike s'il existe
@@ -1387,7 +1423,6 @@ class _ListenpageState extends State<Listenpage>
         }
         setState(() {
           isUnliked = false;
-          unlikeIcon = s41;
         });
       }
     } else {
@@ -1407,7 +1442,6 @@ class _ListenpageState extends State<Listenpage>
       }
       setState(() {
         isLiked = false;
-        likeIcon = s37;
       });
     }
   }
@@ -1437,7 +1471,6 @@ class _ListenpageState extends State<Listenpage>
       });
       setState(() {
         isSaved = true;
-        saveIcon = s43;
       });
     } else {
       // Supprimer le like
@@ -1456,7 +1489,6 @@ class _ListenpageState extends State<Listenpage>
       }
       setState(() {
         isSaved = false;
-        saveIcon = s42;
       });
     }
   }
@@ -1487,7 +1519,6 @@ class _ListenpageState extends State<Listenpage>
       });
       setState(() {
         isUnliked = true;
-        unlikeIcon = s40;
       });
 
       // Supprimer le like s'il existe
@@ -1508,7 +1539,6 @@ class _ListenpageState extends State<Listenpage>
         }
         setState(() {
           isLiked = false;
-          likeIcon = s37;
         });
       }
     } else {
@@ -1529,7 +1559,6 @@ class _ListenpageState extends State<Listenpage>
       }
       setState(() {
         isUnliked = false;
-        unlikeIcon = s41;
       });
     }
   }
@@ -2270,34 +2299,239 @@ class _ListenpageState extends State<Listenpage>
   @override
   Widget build(BuildContext context) {
     final Size c = MediaQuery.of(context).size;
-    return Scaffold(
-        endDrawer: Drawer(
-          backgroundColor: Colors.white,
-          child: ListView(padding: EdgeInsets.all(c.width * 0.02), children: [
-            if ([2, 3, 4, 5, 6, 7, 8, 9, 12, 13].contains(featl))
-              ...playlist.map((playlistItem) {
-                final playlistName = playlistItem["name"];
-                final playlistId = playlistItem["id"];
+    final themeProvider1 = Provider.of<ThemeProvider>(context);
+    final themeProvider2 = Provider.of<ThemeProvider>(context);
+    final themeProvider3 = Provider.of<ThemeProvider>(context);
+    return Consumer<ThemeProvider>(builder: (context, themeProvider, child) {
+      return Scaffold(
+          endDrawer: Drawer(
+            backgroundColor:
+                themeProvider.isDarkMode ? Colors.black : Colors.white,
+            child: ListView(padding: EdgeInsets.all(c.width * 0.02), children: [
+              if ([2, 3, 4, 5, 6, 7, 8, 9, 12, 13].contains(featl))
+                ...playlist.map((playlistItem) {
+                  final playlistName = playlistItem["name"];
+                  final playlistId = playlistItem["id"];
 
-                final associatedPodcasts = playinpod
-                    .where((podcast) =>
-                        (podcast["playlistIds"] as List).contains(playlistId))
-                    .toList();
-                return Column(
+                  final associatedPodcasts = playinpod
+                      .where((podcast) =>
+                          (podcast["playlistIds"] as List).contains(playlistId))
+                      .toList();
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: c.width * 0.02),
+                        child: Text(
+                          playlistName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: c.width * 0.05,
+                          ),
+                        ),
+                      ),
+                      ...associatedPodcasts.map((item) {
+                        return Container(
+                          margin: EdgeInsets.all(c.width * 0.02),
+                          decoration: BoxDecoration(
+                            //  color: isFirst ? Colors.black12 : Colors.transparent,
+                            color: item["id"] == idpod
+                                ? Colors.black12
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(c.width * 0.04),
+                            border: Border.all(
+                              color: themeProvider.isDarkMode
+                                  ? Colors.white70
+                                  : Colors.black12,
+                            ),
+                          ),
+                          width: c.width * 0.95,
+                          height: c.width * 0.3,
+                          child: GestureDetector(
+                            onTap: () {
+                              if (featl == 2) {
+                                idpod = item["id"];
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/listen',
+                                  arguments: {'idpod': idpod, 'featl': 2},
+                                );
+                              }
+                              if (featl == 3) {
+                                idpod = item["id"];
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/listen',
+                                  arguments: {'idpod': idpod, 'featl': 3},
+                                );
+                              }
+                              if (featl == 4) {
+                                idpod = item["id"];
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/listen',
+                                  arguments: {'idpod': idpod, 'featl': 4},
+                                );
+                              }
+                              if (featl == 5) {
+                                idpod = item["id"];
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/listen',
+                                  arguments: {'idpod': idpod, 'featl': 5},
+                                );
+                              }
+                              if (featl == 6) {
+                                idpod = item["id"];
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/listen',
+                                  arguments: {'idpod': idpod, 'featl': 6},
+                                );
+                              }
+                              if (featl == 7) {
+                                idpod = item["id"];
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/listen',
+                                  arguments: {'idpod': idpod, 'featl': 7},
+                                );
+                              }
+                              if (featl == 8) {
+                                idpod = item["id"];
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/listen',
+                                  arguments: {'idpod': idpod, 'featl': 8},
+                                );
+                              }
+                              if (featl == 9) {
+                                idpod = item["id"];
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/listen',
+                                  arguments: {'idpod': idpod, 'featl': 9},
+                                );
+                              }
+                              if (featl == 12) {
+                                idpod = item["id"];
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/listen',
+                                  arguments: {'idpod': idpod, 'featl': 12},
+                                );
+                              }
+                              if (featl == 13) {
+                                idpod = item["id"];
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/listen',
+                                  arguments: {'idpod': idpod, 'featl': 13},
+                                );
+                              }
+                            },
+                            child: Row(
+                              children: [
+                                SizedBox(width: c.width * 0.02),
+                                Image.network(s48,
+                                    width: c.width * 0.07,
+                                    height: c.width * 0.07),
+                                SizedBox(width: c.width * 0.02),
+                                Container(
+                                  height: c.width * 0.2,
+                                  width: c.width * 0.18,
+                                  decoration: BoxDecoration(
+                                    borderRadius:
+                                        BorderRadius.circular(c.width * 0.04),
+                                    image: DecorationImage(
+                                      image: NetworkImage(item["urlPhoto"]!),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: c.width * 0.02),
+                                Expanded(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item["name"]!,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: c.width * 0.035,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Image.network(
+                                            themeProvider.isDarkMode
+                                                ? s111
+                                                : s37,
+                                            width: c.width * 0.05,
+                                            height: c.width * 0.05),
+                                        SizedBox(width: c.width * 0.01),
+                                        Text(
+                                          formatLikes(item["likes"]),
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      children: [
+                                        Image.network(
+                                            themeProvider.isDarkMode
+                                                ? s108
+                                                : s14,
+                                            width: c.width * 0.05,
+                                            height: c.width * 0.05),
+                                        SizedBox(width: c.width * 0.01),
+                                        Text(
+                                          formatLikes(item["vue"]),
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      children: [
+                                        Image.network(
+                                            themeProvider.isDarkMode
+                                                ? s112
+                                                : s38,
+                                            width: c.width * 0.05,
+                                            height: c.width * 0.05),
+                                        SizedBox(width: c.width * 0.01),
+                                        Text(
+                                          formatLikes(item["comments"]),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ],
+                  );
+                }).toList(),
+              if (featl == 11) ...[
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
                       padding: EdgeInsets.symmetric(vertical: c.width * 0.02),
-                      child: Text(
-                        playlistName,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: c.width * 0.05,
-                        ),
-                      ),
                     ),
-                    ...associatedPodcasts.map((item) {
-                      return Container(
+                    for (var item in podcastPlaylists)
+                      Container(
                         margin: EdgeInsets.all(c.width * 0.02),
                         decoration: BoxDecoration(
                           //  color: isFirst ? Colors.black12 : Colors.transparent,
@@ -2305,92 +2539,27 @@ class _ListenpageState extends State<Listenpage>
                               ? Colors.black12
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(c.width * 0.04),
-                          border: Border.all(color: Colors.black12),
+                          border: Border.all(
+                            color: themeProvider.isDarkMode
+                                ? Colors.white70
+                                : Colors.black12,
+                          ),
                         ),
                         width: c.width * 0.95,
                         height: c.width * 0.3,
                         child: GestureDetector(
                           onTap: () {
-                            if (featl == 2) {
-                              idpod = item["id"];
-                              Navigator.pushReplacementNamed(
-                                context,
-                                '/listen',
-                                arguments: {'idpod': idpod, 'featl': 2},
-                              );
-                            }
-                            if (featl == 3) {
-                              idpod = item["id"];
-                              Navigator.pushReplacementNamed(
-                                context,
-                                '/listen',
-                                arguments: {'idpod': idpod, 'featl': 3},
-                              );
-                            }
-                            if (featl == 4) {
-                              idpod = item["id"];
-                              Navigator.pushReplacementNamed(
-                                context,
-                                '/listen',
-                                arguments: {'idpod': idpod, 'featl': 4},
-                              );
-                            }
-                            if (featl == 5) {
-                              idpod = item["id"];
-                              Navigator.pushReplacementNamed(
-                                context,
-                                '/listen',
-                                arguments: {'idpod': idpod, 'featl': 5},
-                              );
-                            }
-                            if (featl == 6) {
-                              idpod = item["id"];
-                              Navigator.pushReplacementNamed(
-                                context,
-                                '/listen',
-                                arguments: {'idpod': idpod, 'featl': 6},
-                              );
-                            }
-                            if (featl == 7) {
-                              idpod = item["id"];
-                              Navigator.pushReplacementNamed(
-                                context,
-                                '/listen',
-                                arguments: {'idpod': idpod, 'featl': 7},
-                              );
-                            }
-                            if (featl == 8) {
-                              idpod = item["id"];
-                              Navigator.pushReplacementNamed(
-                                context,
-                                '/listen',
-                                arguments: {'idpod': idpod, 'featl': 8},
-                              );
-                            }
-                            if (featl == 9) {
-                              idpod = item["id"];
-                              Navigator.pushReplacementNamed(
-                                context,
-                                '/listen',
-                                arguments: {'idpod': idpod, 'featl': 9},
-                              );
-                            }
-                            if (featl == 12) {
-                              idpod = item["id"];
-                              Navigator.pushReplacementNamed(
-                                context,
-                                '/listen',
-                                arguments: {'idpod': idpod, 'featl': 12},
-                              );
-                            }
-                            if (featl == 13) {
-                              idpod = item["id"];
-                              Navigator.pushReplacementNamed(
-                                context,
-                                '/listen',
-                                arguments: {'idpod': idpod, 'featl': 13},
-                              );
-                            }
+                            idpod = item["id"];
+                            Navigator.pushReplacementNamed(
+                              context,
+                              '/listen',
+                              arguments: {
+                                'idpod': idpod,
+                                'featl': 11,
+                                'idplay1': playlist[0][
+                                    'id'] // remplace "someValue" par ce que tu veux représenter
+                              },
+                            );
                           },
                           child: Row(
                             children: [
@@ -2434,34 +2603,37 @@ class _ListenpageState extends State<Listenpage>
                                 children: [
                                   Row(
                                     children: [
-                                      Image.network(s37,
+                                      Image.network(
+                                          themeProvider.isDarkMode ? s111 : s37,
                                           width: c.width * 0.05,
                                           height: c.width * 0.05),
                                       SizedBox(width: c.width * 0.01),
                                       Text(
-                                        item["likes"].toString(),
+                                        formatLikes(item["likes"]),
                                       ),
                                     ],
                                   ),
                                   Row(
                                     children: [
-                                      Image.network(s14,
+                                      Image.network(
+                                          themeProvider.isDarkMode ? s108 : s14,
                                           width: c.width * 0.05,
                                           height: c.width * 0.05),
                                       SizedBox(width: c.width * 0.01),
                                       Text(
-                                        item["vue"].toString(),
+                                        formatLikes(item["vue"]),
                                       ),
                                     ],
                                   ),
                                   Row(
                                     children: [
-                                      Image.network(s38,
+                                      Image.network(
+                                          themeProvider.isDarkMode ? s112 : s38,
                                           width: c.width * 0.05,
                                           height: c.width * 0.05),
                                       SizedBox(width: c.width * 0.01),
                                       Text(
-                                        item["comments"].toString(),
+                                        formatLikes(item["comments"]),
                                       ),
                                     ],
                                   ),
@@ -2470,248 +2642,143 @@ class _ListenpageState extends State<Listenpage>
                             ],
                           ),
                         ),
-                      );
-                    }).toList(),
+                      ),
                   ],
-                );
-              }).toList(),
-            if (featl == 11) ...[
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.symmetric(vertical: c.width * 0.02),
-                  ),
-                  for (var item in podcastPlaylists)
-                    Container(
-                      margin: EdgeInsets.all(c.width * 0.02),
-                      decoration: BoxDecoration(
-                        //  color: isFirst ? Colors.black12 : Colors.transparent,
-                        color: item["id"] == idpod
-                            ? Colors.black12
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(c.width * 0.04),
-                        border: Border.all(color: Colors.black12),
-                      ),
-                      width: c.width * 0.95,
-                      height: c.width * 0.3,
-                      child: GestureDetector(
-                        onTap: () {
-                          idpod = item["id"];
-                          Navigator.pushReplacementNamed(
-                            context,
-                            '/listen',
-                            arguments: {
-                              'idpod': idpod,
-                              'featl': 11,
-                              'idplay1': playlist[0][
-                                  'id'] // remplace "someValue" par ce que tu veux représenter
-                            },
-                          );
-                        },
-                        child: Row(
-                          children: [
-                            SizedBox(width: c.width * 0.02),
-                            Image.network(s48,
-                                width: c.width * 0.07, height: c.width * 0.07),
-                            SizedBox(width: c.width * 0.02),
-                            Container(
-                              height: c.width * 0.2,
-                              width: c.width * 0.18,
-                              decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.circular(c.width * 0.04),
-                                image: DecorationImage(
-                                  image: NetworkImage(item["urlPhoto"]!),
-                                  fit: BoxFit.cover,
+                ),
+              ],
+              if (featl == 10) ...[
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.symmetric(vertical: c.width * 0.02),
+                    ),
+                    for (var item in mesPodcasts12)
+                      Container(
+                        margin: EdgeInsets.all(c.width * 0.02),
+                        decoration: BoxDecoration(
+                          //  color: isFirst ? Colors.black12 : Colors.transparent,
+                          color: item["id"] == idpod
+                              ? Colors.black12
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(c.width * 0.04),
+                          border: Border.all(
+                              color: themeProvider.isDarkMode
+                                  ? Colors.white70
+                                  : Colors.black12),
+                        ),
+                        width: c.width * 0.95,
+                        height: c.width * 0.3,
+                        child: GestureDetector(
+                          onTap: () {
+                            idpod = item["id"];
+                            Navigator.pushReplacementNamed(
+                              context,
+                              '/listen',
+                              arguments: {
+                                'idpod': idpod,
+                                'featl':
+                                    10, // remplace "someValue" par ce que tu veux représenter
+                              },
+                            );
+                          },
+                          child: Row(
+                            children: [
+                              SizedBox(width: c.width * 0.02),
+                              Image.network(s48,
+                                  width: c.width * 0.07,
+                                  height: c.width * 0.07),
+                              SizedBox(width: c.width * 0.02),
+                              Container(
+                                height: c.width * 0.2,
+                                width: c.width * 0.18,
+                                decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(c.width * 0.04),
+                                  image: DecorationImage(
+                                    image: NetworkImage(item["urlPhoto"]!),
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
                               ),
-                            ),
-                            SizedBox(width: c.width * 0.02),
-                            Expanded(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item["name"]!,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: c.width * 0.035,
+                              SizedBox(width: c.width * 0.02),
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item["name"]!,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: c.width * 0.035,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Image.network(
+                                          themeProvider.isDarkMode ? s111 : s37,
+                                          width: c.width * 0.05,
+                                          height: c.width * 0.05),
+                                      SizedBox(width: c.width * 0.01),
+                                      Text(
+                                        formatLikes(item["likes"]),
+                                      ),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      Image.network(
+                                          themeProvider.isDarkMode ? s108 : s14,
+                                          width: c.width * 0.05,
+                                          height: c.width * 0.05),
+                                      SizedBox(width: c.width * 0.01),
+                                      Text(
+                                        formatLikes(item["vue"]),
+                                      ),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      Image.network(
+                                          themeProvider.isDarkMode ? s112 : s38,
+                                          width: c.width * 0.05,
+                                          height: c.width * 0.05),
+                                      SizedBox(width: c.width * 0.01),
+                                      Text(
+                                        formatLikes(item["comments"]),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                            ),
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Row(
-                                  children: [
-                                    Image.network(s37,
-                                        width: c.width * 0.05,
-                                        height: c.width * 0.05),
-                                    SizedBox(width: c.width * 0.01),
-                                    Text(
-                                      item["likes"].toString(),
-                                    ),
-                                  ],
-                                ),
-                                Row(
-                                  children: [
-                                    Image.network(s14,
-                                        width: c.width * 0.05,
-                                        height: c.width * 0.05),
-                                    SizedBox(width: c.width * 0.01),
-                                    Text(
-                                      item["vue"].toString(),
-                                    ),
-                                  ],
-                                ),
-                                Row(
-                                  children: [
-                                    Image.network(s38,
-                                        width: c.width * 0.05,
-                                        height: c.width * 0.05),
-                                    SizedBox(width: c.width * 0.01),
-                                    Text(
-                                      item["comments"].toString(),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-            ],
-            if (featl == 10) ...[
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.symmetric(vertical: c.width * 0.02),
-                  ),
-                  for (var item in mesPodcasts12)
-                    Container(
-                      margin: EdgeInsets.all(c.width * 0.02),
-                      decoration: BoxDecoration(
-                        //  color: isFirst ? Colors.black12 : Colors.transparent,
-                        color: item["id"] == idpod
-                            ? Colors.black12
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(c.width * 0.04),
-                        border: Border.all(color: Colors.black12),
-                      ),
-                      width: c.width * 0.95,
-                      height: c.width * 0.3,
-                      child: GestureDetector(
-                        onTap: () {
-                          idpod = item["id"];
-                          Navigator.pushReplacementNamed(
-                            context,
-                            '/listen',
-                            arguments: {
-                              'idpod': idpod,
-                              'featl':
-                                  10, // remplace "someValue" par ce que tu veux représenter
-                            },
-                          );
-                        },
-                        child: Row(
-                          children: [
-                            SizedBox(width: c.width * 0.02),
-                            Image.network(s48,
-                                width: c.width * 0.07, height: c.width * 0.07),
-                            SizedBox(width: c.width * 0.02),
-                            Container(
-                              height: c.width * 0.2,
-                              width: c.width * 0.18,
-                              decoration: BoxDecoration(
-                                borderRadius:
-                                    BorderRadius.circular(c.width * 0.04),
-                                image: DecorationImage(
-                                  image: NetworkImage(item["urlPhoto"]!),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: c.width * 0.02),
-                            Expanded(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item["name"]!,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: c.width * 0.035,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Row(
-                                  children: [
-                                    Image.network(s37,
-                                        width: c.width * 0.05,
-                                        height: c.width * 0.05),
-                                    SizedBox(width: c.width * 0.01),
-                                    Text(
-                                      item["likes"].toString(),
-                                    ),
-                                  ],
-                                ),
-                                Row(
-                                  children: [
-                                    Image.network(s14,
-                                        width: c.width * 0.05,
-                                        height: c.width * 0.05),
-                                    SizedBox(width: c.width * 0.01),
-                                    Text(
-                                      item["vue"].toString(),
-                                    ),
-                                  ],
-                                ),
-                                Row(
-                                  children: [
-                                    Image.network(s38,
-                                        width: c.width * 0.05,
-                                        height: c.width * 0.05),
-                                    SizedBox(width: c.width * 0.01),
-                                    Text(
-                                      item["comments"].toString(),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ]),
-        ),
-        body: isLoading
-            ? Center(child: Text(""))
-            : SafeArea(
-                child: Builder(
+                  ],
+                ),
+              ],
+            ]),
+          ),
+          body: SafeArea(
+            child: isLoading
+                ? const Annimationwidjet()
+                : Builder(
                     builder: (context) => Container(
-                          decoration: BoxDecoration(color: Colors.white),
+                          decoration: BoxDecoration(
+                            color: themeProvider.isDarkMode
+                                ? Colors.black
+                                : Colors.white,
+                          ),
                           child: Column(children: [
                             SizedBox(
                                 height: c.height * 0.15,
@@ -2737,7 +2804,7 @@ class _ListenpageState extends State<Listenpage>
                                         }
                                       },
                                       icon: Image.network(
-                                        s18,
+                                        themeProvider.isDarkMode ? s97 : s18,
                                         width: c.width * 0.07,
                                         height: c.width * 0.07,
                                       ),
@@ -2752,7 +2819,10 @@ class _ListenpageState extends State<Listenpage>
                                         onTap: () {
                                           Scaffold.of(context).openEndDrawer();
                                         },
-                                        child: Image.network(s44,
+                                        child: Image.network(
+                                            themeProvider.isDarkMode
+                                                ? s137
+                                                : s44,
                                             width: c.width * 0.06,
                                             height: c.width * 0.06),
                                       ),
@@ -2976,7 +3046,7 @@ class _ListenpageState extends State<Listenpage>
                                                   padding: EdgeInsets.all(
                                                       c.width * 0.02),
                                                   child: Image.network(
-                                                    likeIcon,
+                                                    getlikeIcon(themeProvider1),
                                                     width: c.width * 0.05,
                                                     height: c.width * 0.05,
                                                     // Désactiver le caching pour forcer le rechargement
@@ -2997,7 +3067,8 @@ class _ListenpageState extends State<Listenpage>
                                                   padding: EdgeInsets.all(
                                                       c.width * 0.02),
                                                   child: Image.network(
-                                                    unlikeIcon,
+                                                    getunlikeIcon(
+                                                        themeProvider2),
                                                     width: c.width * 0.05,
                                                     height: c.width * 0.05,
                                                     gaplessPlayback: true,
@@ -3018,7 +3089,9 @@ class _ListenpageState extends State<Listenpage>
                                                   padding: EdgeInsets.all(
                                                       c.width * 0.02),
                                                   child: Image.network(
-                                                    s38,
+                                                    themeProvider.isDarkMode
+                                                        ? s112
+                                                        : s38,
                                                     width: c.width * 0.05,
                                                     height: c.width * 0.05,
                                                   ),
@@ -3038,31 +3111,10 @@ class _ListenpageState extends State<Listenpage>
                                                   padding: EdgeInsets.all(
                                                       c.width * 0.02),
                                                   child: Image.network(
-                                                    saveIcon,
+                                                    getSaveIcon(themeProvider3),
                                                     width: c.width * 0.05,
                                                     height: c.width * 0.05,
                                                     gaplessPlayback: true,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            SizedBox(width: c.width * 0.02),
-                                            // Share button
-                                            Material(
-                                              color: Colors.transparent,
-                                              child: InkWell(
-                                                borderRadius:
-                                                    BorderRadius.circular(30),
-                                                onTap: () {
-                                                  // Action partage
-                                                },
-                                                child: Padding(
-                                                  padding: EdgeInsets.all(
-                                                      c.width * 0.02),
-                                                  child: Image.network(
-                                                    s45,
-                                                    width: c.width * 0.05,
-                                                    height: c.width * 0.05,
                                                   ),
                                                 ),
                                               ),
@@ -3150,7 +3202,10 @@ class _ListenpageState extends State<Listenpage>
                                                 Icon(
                                                   Icons.replay_10,
                                                   size: c.width * 0.08,
-                                                  color: Colors.black,
+                                                  color:
+                                                      themeProvider.isDarkMode
+                                                          ? Colors.white
+                                                          : Colors.black,
                                                 ),
                                               ],
                                             ),
@@ -3191,7 +3246,9 @@ class _ListenpageState extends State<Listenpage>
                                               alignment: Alignment.center,
                                               children: [
                                                 Image.network(
-                                                  s46,
+                                                  themeProvider.isDarkMode
+                                                      ? s138
+                                                      : s46,
                                                   width: c.width *
                                                       0.08, // Adjust size using width/height
                                                   height: c.width * 0.08,
@@ -3258,7 +3315,9 @@ class _ListenpageState extends State<Listenpage>
                                               alignment: Alignment.center,
                                               children: [
                                                 Image.network(
-                                                  s47,
+                                                  themeProvider.isDarkMode
+                                                      ? s139
+                                                      : s47,
                                                   width: c.width *
                                                       0.08, // Adjust size using width/height
                                                   height: c.width * 0.08,
@@ -3284,7 +3343,10 @@ class _ListenpageState extends State<Listenpage>
                                                 Icon(
                                                   Icons.forward_10,
                                                   size: c.width * 0.08,
-                                                  color: Colors.black,
+                                                  color:
+                                                      themeProvider.isDarkMode
+                                                          ? Colors.white
+                                                          : Colors.black,
                                                 ),
                                               ],
                                             ),
@@ -3298,7 +3360,8 @@ class _ListenpageState extends State<Listenpage>
                             ),
                           ]),
                         )),
-              ));
+          ));
+    });
   }
 }
 
