@@ -84,7 +84,6 @@ class _PodcastpageState extends State<Podcastpage>
 
       relatedPodcastsSubscription = podcastStream.listen((snapshot) async {
         if (snapshot.docs.isEmpty) {
-          debugPrint("❌ Aucun podcast trouvé avec l'id $idpod");
           setState(() {
             relatedPodcasts = [];
           });
@@ -93,8 +92,6 @@ class _PodcastpageState extends State<Podcastpage>
 
         final podcastData = snapshot.docs.first.data();
         final String category = (podcastData['category'] ?? '').toString();
-
-        debugPrint("📁 Catégorie du podcast $idpod : $category");
 
         // 2. Rechercher tous les autres podcasts de cette catégorie
         final relatedStream = FirebaseFirestore.instance
@@ -109,8 +106,6 @@ class _PodcastpageState extends State<Podcastpage>
               .map((doc) => doc.data() as Map<String, dynamic>)
               .toList();
 
-          debugPrint(
-              "🎧 Podcasts dans la catégorie '$category' : ${related.length}");
           String idpodASupprimer = idpod;
 
           related.removeWhere((podcast) => podcast['id'] == idpodASupprimer);
@@ -122,7 +117,6 @@ class _PodcastpageState extends State<Podcastpage>
         batchStreamSubscriptions?.add(relatedSubscription);
       });
     } catch (e) {
-      debugPrint("❌ Erreur fetchRelatedPodcastsById : $e");
       setState(() {
         relatedPodcasts = [];
       });
@@ -156,7 +150,6 @@ class _PodcastpageState extends State<Podcastpage>
 
       batchStreamSubscriptions?.add(featuredSubscription);
     } catch (e) {
-      debugPrint('Erreur lors de la récupération des podcasts : $e');
       setState(() {});
     }
   }
@@ -179,7 +172,6 @@ class _PodcastpageState extends State<Podcastpage>
             snapshot.docs.map((doc) => doc.data()['idpod'] as String).toSet();
 
         if (recentIdPods.isEmpty) {
-          debugPrint("❌ Aucun podcast vu récemment.");
           setState(() => ress = []);
           return;
         }
@@ -251,7 +243,6 @@ class _PodcastpageState extends State<Podcastpage>
 
       batchStreamSubscriptions?.add(trendingSubscription);
     } catch (e) {
-      debugPrint("❌ Erreur fetchTrendingPodcasts: $e");
       setState(() => ress = []);
     }
   }
@@ -275,9 +266,6 @@ class _PodcastpageState extends State<Podcastpage>
         List<String> viewedPodcastIds =
             snapshot.docs.map((doc) => doc.data()['idpod'] as String).toList();
 
-        debugPrint(
-            "🔎 Podcasts vus (${viewedPodcastIds.length}) : $viewedPodcastIds");
-
         // 3. Récupérer les catégories à partir des podcasts vus
         Set<String> categories = {};
 
@@ -300,15 +288,12 @@ class _PodcastpageState extends State<Podcastpage>
               }
             }
 
-            debugPrint(
-                "📁 Catégories extraites (${categories.length}) : $categories");
-
             if (categories.isEmpty) {
               setState(() {
                 viewedPodcasts = [];
                 recommendedPodcasts = [];
               });
-              debugPrint("Aucune catégorie trouvée pour les podcasts vus.");
+
               return;
             }
 
@@ -330,9 +315,6 @@ class _PodcastpageState extends State<Podcastpage>
                   tempViewedPodcasts.add(doc.data());
                 }
 
-                debugPrint(
-                    "✅ Détails des podcasts vus récupérés : ${tempViewedPodcasts.length}");
-
                 // 5. Récupérer les podcasts recommandés
                 List<Map<String, dynamic>> tempRecommendedPodcasts = [];
 
@@ -344,27 +326,17 @@ class _PodcastpageState extends State<Podcastpage>
                       .limit(10)
                       .snapshots()
                       .listen((recommendedSnapshot) {
-                    debugPrint(
-                        "📦 Candidats dans '$category' : ${recommendedSnapshot.docs.length}");
-
                     for (var doc in recommendedSnapshot.docs) {
                       final data = doc.data();
                       final id = data['id']?.toString();
                       if (id == null) {
-                        debugPrint("⚠️ Podcast sans ID → ignoré");
                         continue;
                       }
 
                       if (!viewedPodcastIds.contains(id)) {
-                        debugPrint("✅ Ajouté aux recommandations: $id");
                         tempRecommendedPodcasts.add(data);
-                      } else {
-                        debugPrint("⛔ Déjà vu, ignoré: $id");
-                      }
+                      } else {}
                     }
-
-                    debugPrint(
-                        "✨ Podcasts recommandés retenus : ${tempRecommendedPodcasts.length}");
 
                     // 6. Récupérer les infos des channels
                     Set<String> allChannelIds = {};
@@ -414,9 +386,6 @@ class _PodcastpageState extends State<Podcastpage>
                           viewedPodcasts = tempViewedPodcasts;
                           recommendedPodcasts = tempRecommendedPodcasts;
                         });
-
-                        debugPrint(
-                            "🎯 Podcasts vus: ${viewedPodcasts.length}, recommandations: ${recommendedPodcasts.length}");
                       });
                     }
                   });
@@ -431,7 +400,6 @@ class _PodcastpageState extends State<Podcastpage>
 
       batchStreamSubscriptions?.add(recommendedSubscription);
     } catch (e) {
-      debugPrint("❌ Erreur fetchRecommendedPodcasts: $e");
       setState(() {
         viewedPodcasts = [];
         recommendedPodcasts = [];
@@ -458,7 +426,7 @@ class _PodcastpageState extends State<Podcastpage>
         List<Map<String, dynamic>> orderedIdpods = [];
         for (var doc in snapshot.docs) {
           String playlistId = doc.data()['idpod'];
-          Timestamp timevue = doc.data()['timevue'];
+          Timestamp? timevue = doc.data()['timevue'] as Timestamp?;
 
           // Évite les doublons (garde le premier car déjà trié)
           if (!orderedIdpods.any((e) => e['idpod'] == playlistId)) {
@@ -532,8 +500,6 @@ class _PodcastpageState extends State<Podcastpage>
                   setState(() {
                     res = enrichedPlaylists;
                   });
-
-                  debugPrint("Playlists enrichies: ${res.length}");
                 });
               }
             });
@@ -544,13 +510,11 @@ class _PodcastpageState extends State<Podcastpage>
           setState(() {
             res = [];
           });
-          debugPrint("Aucune playlist trouvée pour ce podcast");
         }
       });
 
       batchStreamSubscriptions?.add(recentIdSubscription);
     } catch (e) {
-      debugPrint("Erreur lors de la récupération des playlists: $e");
       setState(() {
         res = [];
       });
@@ -614,8 +578,8 @@ class _PodcastpageState extends State<Podcastpage>
 
               // ⬇️ Tri décroissant sur `dateCreation`
               allPodcasts.sort((a, b) {
-                Timestamp? dateA = a['dateCreation'];
-                Timestamp? dateB = b['dateCreation'];
+                Timestamp? dateA = a['dateCreation'] as Timestamp?;
+                Timestamp? dateB = b['dateCreation'] as Timestamp?;
                 if (dateA == null && dateB == null) return 0;
                 if (dateA == null) return 1;
                 if (dateB == null) return -1;
@@ -629,8 +593,6 @@ class _PodcastpageState extends State<Podcastpage>
                 mesPodcasts = allPodcasts;
                 nbr = allPodcasts.length;
               });
-
-              debugPrint("🎧 Podcasts récupérés et triés : $nbr");
             });
 
             batchStreamSubscriptions?.add(podSubscription);
@@ -640,11 +602,9 @@ class _PodcastpageState extends State<Podcastpage>
             mesPodcasts = [];
             nbr = 0;
           });
-          debugPrint("Aucun podcast trouvé dans la playlist.");
         }
       });
     } catch (e) {
-      debugPrint("Erreur lors de la récupération des podcasts : $e");
       setState(() {
         mesPodcasts = [];
         nbr = 0;
@@ -700,12 +660,8 @@ class _PodcastpageState extends State<Podcastpage>
               .map((doc) => doc.data() as Map<String, dynamic>)
               .toList();
         });
-
-        debugPrint("Podcasts récupérés : ${podcast.length}");
       });
-    } catch (e) {
-      debugPrint("Erreur lors du chargement des podcasts : $e");
-    }
+    } catch (e) {}
   }
 
   Future<void> fetchPodcastvue(String idpod) async {
@@ -722,12 +678,8 @@ class _PodcastpageState extends State<Podcastpage>
               .map((doc) => doc.data() as Map<String, dynamic>)
               .toList();
         });
-
-        debugPrint("Vues de podcast récupérées : ${podvue.length}");
       });
-    } catch (e) {
-      debugPrint("Erreur lors du chargement des vues de podcast : $e");
-    }
+    } catch (e) {}
   }
 
   late TabController _tabController1;
@@ -781,15 +733,10 @@ class _PodcastpageState extends State<Podcastpage>
                   .map((doc) => doc.data() as Map<String, dynamic>)
                   .toList();
             });
-
-            debugPrint(
-                "Chaîne récupérée pour idUser $idUser : ${channel.length}");
           });
         }
       });
-    } catch (e) {
-      debugPrint("Erreur lors de la récupération de la chaîne : $e");
-    }
+    } catch (e) {}
   }
 
   Future<void> fetchPodcastsByUserId(String idpod) async {
@@ -822,16 +769,10 @@ class _PodcastpageState extends State<Podcastpage>
             setState(() {
               userPodcasts = podcasts;
             });
-
-            debugPrint(
-                "Podcasts récupérés pour idUser $idUser : ${userPodcasts.length}");
           });
         }
       });
-    } catch (e) {
-      debugPrint(
-          "Erreur lors de la récupération des podcasts de l'utilisateur : $e");
-    }
+    } catch (e) {}
   }
 
   Future<void> fetchPlaylistsByPodcastId(String idpod) async {
@@ -890,8 +831,6 @@ class _PodcastpageState extends State<Podcastpage>
               setState(() {
                 podcastPlaylists = allPlaylists;
               });
-
-              debugPrint("Playlists récupérées: ${podcastPlaylists.length}");
             });
 
             batchStreamSubscriptions?.add(playlistSubscription);
@@ -900,11 +839,9 @@ class _PodcastpageState extends State<Podcastpage>
           setState(() {
             podcastPlaylists = [];
           });
-          debugPrint("Aucune playlist trouvée pour ce podcast");
         }
       });
     } catch (e) {
-      debugPrint("Erreur lors de la récupération des playlists: $e");
       setState(() {
         podcastPlaylists = [];
       });
@@ -926,14 +863,9 @@ class _PodcastpageState extends State<Podcastpage>
           setState(() {
             isYourPodcast = (currentUserId == idUser);
           });
-
-          debugPrint("Votre podcast ? $isYourPodcast");
         }
       });
-    } catch (e) {
-      debugPrint(
-          "Erreur lors de la vérification du propriétaire du podcast : $e");
-    }
+    } catch (e) {}
   }
 
   Future<void> fetchtoppodcast(String idpod) async {
@@ -998,7 +930,6 @@ class _PodcastpageState extends State<Podcastpage>
 
       batchStreamSubscriptions?.add(topPodcastSubscription);
     } catch (e) {
-      debugPrint("Erreur lors de la récupération des playlists: $e");
       setState(() {
         topl = [];
       });
@@ -1067,7 +998,6 @@ class _PodcastpageState extends State<Podcastpage>
 
       batchStreamSubscriptions?.add(topSeenSubscription);
     } catch (e) {
-      debugPrint('Erreur lors de la récupération des chaînes : $e');
       setState(() {});
     }
   }

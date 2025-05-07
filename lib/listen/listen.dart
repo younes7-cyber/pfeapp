@@ -8,6 +8,7 @@ import 'package:marquee/marquee.dart';
 import 'package:intl/intl.dart';
 import 'package:pfeapp/theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'dart:async'; // Import for StreamSubscription
 
 class Listenpage extends StatefulWidget {
   const Listenpage({super.key});
@@ -22,30 +23,29 @@ class _ListenpageState extends State<Listenpage>
   late int featl = 1;
   String? replyingTo;
   List<Map<String, dynamic>> podcast = [];
+  List<Map<String, dynamic>> comments = [];
   List<Map<String, dynamic>> playlist = [];
   List<Map<String, dynamic>> playinpod = [];
   final TextEditingController _commentController = TextEditingController();
 
   List<Map<String, dynamic>> mesPodcasts12 = [];
+  // List to manage all stream subscriptions
+  final List<StreamSubscription> _streamSubscriptions = [];
+
   String formatLikes(num likes) {
     // Utiliser un pattern personnalisé avec exactement 2 décimales
     final formatter = NumberFormat('#,##0.00', 'fr');
     // Pour les nombres importants, appliquer une logique de compactage manuel
     if (likes >= 1000000000000000) {
-      return formatter
-              .format(likes / 1000000000000000)
-              .replaceAll('\u202f', '') +
-          'P';
+      return '${formatter.format(likes / 1000000000000000).replaceAll('\u202f', '')}P';
     } else if (likes >= 1000000000000) {
-      return formatter.format(likes / 1000000000000).replaceAll('\u202f', '') +
-          'T';
+      return '${formatter.format(likes / 1000000000000).replaceAll('\u202f', '')}T';
     } else if (likes >= 1000000000) {
-      return formatter.format(likes / 1000000000).replaceAll('\u202f', '') +
-          'G';
+      return '${formatter.format(likes / 1000000000).replaceAll('\u202f', '')}G';
     } else if (likes >= 1000000) {
-      return formatter.format(likes / 1000000).replaceAll('\u202f', '') + 'M';
+      return '${formatter.format(likes / 1000000).replaceAll('\u202f', '')}M';
     } else if (likes >= 1000) {
-      return formatter.format(likes / 1000).replaceAll('\u202f', '') + 'k';
+      return '${formatter.format(likes / 1000).replaceAll('\u202f', '')}k';
     } else if (likes <= 999) {
       final formatter1 = NumberFormat('#0', 'fr');
       return formatter1.format(likes);
@@ -58,93 +58,108 @@ class _ListenpageState extends State<Listenpage>
     final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? "";
 
     try {
-      final playinPodSnapshot = await FirebaseFirestore.instance
+      final streamSubscription = FirebaseFirestore.instance
           .collection('myplaylist')
           .where('iduser', isEqualTo: currentUserId)
-          .get();
+          .snapshots()
+          .listen((playinPodSnapshot) async {
+        List<Map<String, dynamic>> myPlayInfos = [];
 
-      List<Map<String, dynamic>> myPlayInfos = [];
-
-      for (var doc in playinPodSnapshot.docs) {
-        final data = doc.data();
-        if (data.containsKey('idpod') && data.containsKey('dateCreation')) {
-          myPlayInfos.add({
-            'idpod': data['idpod'],
-            'dateCreation': data['dateCreation'],
-          });
-        }
-      }
-
-      if (myPlayInfos.isNotEmpty) {
-        List<Map<String, dynamic>> allPodcasts = [];
-
-        List<String> podcastIds =
-            myPlayInfos.map((e) => e['idpod'] as String).toList();
-
-        for (int i = 0; i < podcastIds.length; i += 10) {
-          int end = (i + 10 < podcastIds.length) ? i + 10 : podcastIds.length;
-          List<String> batch = podcastIds.sublist(i, end);
-
-          final podSnapshot = await FirebaseFirestore.instance
-              .collection('podcasts')
-              .where('id', whereIn: batch)
-              .get();
-
-          for (var doc in podSnapshot.docs) {
-            final podcastData = doc.data() as Map<String, dynamic>;
-            final match = myPlayInfos.firstWhere(
-                (e) => e['idpod'] == podcastData['id'],
-                orElse: () => {});
-
-            if (match.isNotEmpty) {
-              podcastData['dateCreation'] = match['dateCreation'];
-            }
-
-            allPodcasts.add(podcastData);
+        for (var doc in playinPodSnapshot.docs) {
+          final data = doc.data();
+          if (data.containsKey('idpod') && data.containsKey('dateCreation')) {
+            myPlayInfos.add({
+              'idpod': data['idpod'],
+              'dateCreation': data['dateCreation'],
+            });
           }
         }
 
-        // ⬇️ Tri décroissant sur `dateCreation`
-        allPodcasts.sort((a, b) {
-          Timestamp? dateA = a['dateCreation'];
-          Timestamp? dateB = b['dateCreation'];
-          if (dateA == null && dateB == null) return 0;
-          if (dateA == null) return 1;
-          if (dateB == null) return -1;
-          return dateB.compareTo(dateA); // Tri décroissant
-        });
+        if (myPlayInfos.isNotEmpty) {
+          List<Map<String, dynamic>> allPodcasts = [];
 
-        setState(() {
-          mesPodcasts12 = allPodcasts;
-        });
-      } else {
+          List<String> podcastIds =
+              myPlayInfos.map((e) => e['idpod'] as String).toList();
+
+          for (int i = 0; i < podcastIds.length; i += 10) {
+            int end = (i + 10 < podcastIds.length) ? i + 10 : podcastIds.length;
+            List<String> batch = podcastIds.sublist(i, end);
+
+            final podSnapshot = await FirebaseFirestore.instance
+                .collection('podcasts')
+                .where('id', whereIn: batch)
+                .get(); // Keep get() for batched whereIn queries
+
+            for (var doc in podSnapshot.docs) {
+              // ignore: unnecessary_cast
+              final podcastData = doc.data() as Map<String, dynamic>;
+              final match = myPlayInfos.firstWhere(
+                  (e) => e['idpod'] == podcastData['id'],
+                  orElse: () => {});
+
+              if (match.isNotEmpty) {
+                podcastData['dateCreation'] = match['dateCreation'];
+              }
+
+              allPodcasts.add(podcastData);
+            }
+          }
+
+          // ⬇️ Tri décroissant sur `dateCreation`
+          allPodcasts.sort((a, b) {
+            Timestamp? dateA = a['dateCreation'] as Timestamp?;
+            Timestamp? dateB = b['dateCreation'] as Timestamp?;
+            if (dateA == null && dateB == null) return 0;
+            if (dateA == null) return 1;
+            if (dateB == null) return -1;
+            return dateB.compareTo(dateA); // Tri décroissant
+          });
+          if (mounted) {
+            setState(() {
+              mesPodcasts12 = allPodcasts;
+            });
+          }
+        } else {
+          if (mounted) {
+            setState(() {
+              mesPodcasts12 = [];
+            });
+          }
+          debugPrint("Aucun podcast trouvé dans la playlist.");
+        }
+      });
+
+      _streamSubscriptions.add(streamSubscription);
+    } catch (e) {
+      debugPrint("Erreur lors de la récupération des podcasts : $e");
+      if (mounted) {
         setState(() {
           mesPodcasts12 = [];
         });
-        debugPrint("Aucun podcast trouvé dans la playlist.");
       }
-    } catch (e) {
-      debugPrint("Erreur lors de la récupération des podcasts : $e");
-      setState(() {
-        mesPodcasts12 = [];
-      });
     }
   }
 
   Future<void> fetchPlaylidtById12(String idplay1) async {
     try {
-      final querySnapshot = await FirebaseFirestore.instance
+      final streamSubscription = FirebaseFirestore.instance
           .collection('playlist')
           .where('id', isEqualTo: idplay1)
-          .get();
+          .snapshots()
+          .listen((querySnapshot) {
+        if (mounted) {
+          setState(() {
+            playlist = querySnapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
 
-      setState(() {
-        playlist = querySnapshot.docs
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
+        debugPrint("Podcasts récupérés : ${playlist.length}");
       });
 
-      debugPrint("Podcasts récupérés : ${playlist.length}");
+      _streamSubscriptions.add(streamSubscription);
     } catch (e) {
       debugPrint("Erreur lors du chargement des podcasts : $e");
     }
@@ -152,110 +167,130 @@ class _ListenpageState extends State<Listenpage>
 
   Future<void> fetchPlaylistsByPodcastId12(String idplay1) async {
     try {
-      final playinPodSnapshot = await FirebaseFirestore.instance
+      final streamSubscription = FirebaseFirestore.instance
           .collection('playinpod')
           .where('playlistId', isEqualTo: idplay1)
-          .orderBy('date',
-              descending: true) // ⬅️ Trie par date DESC de playinpod
-          .get();
+          .orderBy('date', descending: true)
+          .snapshots()
+          .listen((playinPodSnapshot) async {
+        // 🔁 Récupérer les podcasts avec leur date d'ajout
+        List<Map<String, dynamic>> podInfos = [];
 
-      // 🔁 Récupérer les podcasts avec leur date d'ajout
-      List<Map<String, dynamic>> podInfos = [];
+        for (var doc in playinPodSnapshot.docs) {
+          final data = doc.data();
+          final podcastId = data['podcastId'];
+          final date = data['date'];
 
-      for (var doc in playinPodSnapshot.docs) {
-        final data = doc.data();
-        final podcastId = data['podcastId'];
-        final date = data['date'];
-
-        // On garde l’ordre, donc on ne filtre pas les doublons ici
-        podInfos.add({
-          'podcastId': podcastId,
-          'date': date,
-        });
-      }
-
-      if (podInfos.isNotEmpty) {
-        List<Map<String, dynamic>> allPodcasts = [];
-
-        // Regrouper par lot de 10 les IDs de podcasts
-        for (int i = 0; i < podInfos.length; i += 10) {
-          int end = (i + 10 < podInfos.length) ? i + 10 : podInfos.length;
-          List<String> batch = podInfos
-              .sublist(i, end)
-              .map((e) => e['podcastId'] as String)
-              .toList();
-
-          final podcastsSnapshot = await FirebaseFirestore.instance
-              .collection('podcasts')
-              .where('id', whereIn: batch)
-              .get();
-
-          for (var doc in podcastsSnapshot.docs) {
-            final data = doc.data();
-            allPodcasts.add(data);
-          }
+          // On garde l'ordre, donc on ne filtre pas les doublons ici
+          podInfos.add({
+            'podcastId': podcastId,
+            'date': date,
+          });
         }
 
-        // Réassocier la date de playinpod pour trier
-        List<Map<String, dynamic>> sortedPods = [];
+        if (podInfos.isNotEmpty) {
+          List<Map<String, dynamic>> allPodcasts = [];
 
-        for (var info in podInfos) {
-          final match = allPodcasts.firstWhere(
-            (pod) => pod['id'] == info['podcastId'],
-            orElse: () => {},
-          );
+          // Regrouper par lot de 10 les IDs de podcasts
+          for (int i = 0; i < podInfos.length; i += 10) {
+            int end = (i + 10 < podInfos.length) ? i + 10 : podInfos.length;
+            List<String> batch = podInfos
+                .sublist(i, end)
+                .map((e) => e['podcastId'] as String)
+                .toList();
 
-          if (match.isNotEmpty) {
-            match['playinpodDate'] = info['date'];
-            sortedPods.add(match);
+            final podcastsSnapshot = await FirebaseFirestore.instance
+                .collection('podcasts')
+                .where('id', whereIn: batch)
+                .get(); // Keep get() for batched whereIn queries
+
+            for (var doc in podcastsSnapshot.docs) {
+              final data = doc.data();
+              allPodcasts.add(data);
+            }
           }
+
+          // Réassocier la date de playinpod pour trier
+          List<Map<String, dynamic>> sortedPods = [];
+
+          for (var info in podInfos) {
+            final match = allPodcasts.firstWhere(
+              (pod) => pod['id'] == info['podcastId'],
+              orElse: () => {},
+            );
+
+            if (match.isNotEmpty) {
+              match['playinpodDate'] = info['date'];
+              sortedPods.add(match);
+            }
+          }
+
+          // 🔁 Tri décroissant par la date de `playinpod`
+          sortedPods.sort((a, b) {
+            Timestamp? dateA = a['playinpodDate'] as Timestamp?;
+            Timestamp? dateB = b['playinpodDate'] as Timestamp?;
+            if (dateA == null && dateB == null) return 0;
+            if (dateA == null) return 1;
+            if (dateB == null) return -1;
+            return dateB.compareTo(dateA);
+          });
+
+          if (mounted) {
+            if (mounted) {
+              setState(() {
+                podcastPlaylists = sortedPods;
+              });
+            }
+          }
+          debugPrint(
+              "🎧 Podcasts récupérés et triés par date (playinpod) : ${podcastPlaylists.length}");
+        } else {
+          if (mounted) {
+            setState(() {
+              podcastPlaylists = [];
+            });
+          }
+          debugPrint("Aucun podcast trouvé pour cette playlist.");
         }
+      });
 
-        // 🔁 Tri décroissant par la date de `playinpod`
-        sortedPods.sort((a, b) {
-          Timestamp? dateA = a['playinpodDate'];
-          Timestamp? dateB = b['playinpodDate'];
-          if (dateA == null && dateB == null) return 0;
-          if (dateA == null) return 1;
-          if (dateB == null) return -1;
-          return dateB.compareTo(dateA);
-        });
-
-        setState(() {
-          podcastPlaylists = sortedPods;
-        });
-
-        debugPrint(
-            "🎧 Podcasts récupérés et triés par date (playinpod) : ${podcastPlaylists.length}");
-      } else {
+      _streamSubscriptions.add(streamSubscription);
+    } catch (e) {
+      debugPrint("Erreur lors de la récupération des podcasts : $e");
+      if (mounted) {
         setState(() {
           podcastPlaylists = [];
         });
-        debugPrint("Aucun podcast trouvé pour cette playlist.");
       }
-    } catch (e) {
-      debugPrint("Erreur lors de la récupération des podcasts : $e");
-      setState(() {
-        podcastPlaylists = [];
-      });
     }
   }
 
   List<Map<String, dynamic>> podcastPlaylists = [];
   Future<void> fetchPodcastsById(String idpod) async {
     try {
-      final querySnapshot = await FirebaseFirestore.instance
+      final streamSubscription = FirebaseFirestore.instance
           .collection('podcasts')
           .where('id', isEqualTo: idpod)
-          .get();
+          .snapshots()
+          .listen((querySnapshot) {
+        if (mounted) {
+          setState(() {
+            podcast = querySnapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
 
-      setState(() {
-        podcast = querySnapshot.docs
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
+        debugPrint("Podcasts récupérés : ${podcast.length}");
+
+        // Initialize audio player if podcast data is available
+        if (podcast.isNotEmpty && podcast[0]['urlFile'] != null) {
+          _initAudioPlayer();
+        }
       });
 
-      debugPrint("Podcasts récupérés : ${podcast.length}");
+      _streamSubscriptions.add(streamSubscription);
     } catch (e) {
       debugPrint("Erreur lors du chargement des podcasts : $e");
     }
@@ -264,107 +299,48 @@ class _ListenpageState extends State<Listenpage>
   Future<void> fetchPlaylistsByPodcastId(String idpod) async {
     try {
       // 1️⃣ Récupérer les `playlistId` associés au `idpod`
-      final playinPodSnapshot = await FirebaseFirestore.instance
+      final streamSubscription = FirebaseFirestore.instance
           .collection('playinpod')
           .orderBy('date', descending: true)
           .where('podcastId', isEqualTo: idpod)
-          .get();
-      final List<Map<String, dynamic>> playinPodData = playinPodSnapshot.docs
-          .map((doc) => {
-                "podcastId": doc['podcastId'],
-                "playlistId": doc['playlistId'],
-                "date": doc['date'], // Conserver la date pour le tri ultérieur
-              })
-          .toList();
-      final List<String> playlistIds =
-          playinPodData.map((item) => item["playlistId"] as String).toList();
-      debugPrint("Playlists trouvées dans playinpod : $playlistIds");
-
-      if (playlistIds.isNotEmpty) {
-        // 2️⃣ Récupérer les playlists correspondant aux `playlistId`
-        final playlistSnapshot = await FirebaseFirestore.instance
-            .collection('playlist')
-            .where(FieldPath.documentId, whereIn: playlistIds)
-            .get();
-
-        // Créer un Map pour faciliter la récupération des dates de playinpod
-        Map<String, dynamic> playlistDates = {};
-        for (var item in playinPodData) {
-          playlistDates[item["playlistId"]] = item["date"];
-        }
-
-        List<Map<String, dynamic>> loadedPlaylists = playlistSnapshot.docs
+          .snapshots()
+          .listen((playinPodSnapshot) async {
+        final List<Map<String, dynamic>> playinPodData = playinPodSnapshot.docs
             .map((doc) => {
-                  "id": doc.id,
-                  "playinpodDate":
-                      playlistDates[doc.id], // Ajouter la date de playinpod
-                  ...doc.data(),
+                  "podcastId": doc['podcastId'],
+                  "playlistId": doc['playlistId'],
+                  "date":
+                      doc['date'], // Conserver la date pour le tri ultérieur
                 })
             .toList();
+        final List<String> playlistIds =
+            playinPodData.map((item) => item["playlistId"] as String).toList();
+        debugPrint("Playlists trouvées dans playinpod : $playlistIds");
 
-        // Trier les playlists par la date de playinpod
-        loadedPlaylists.sort((a, b) {
-          var dateA = a["playinpodDate"];
-          var dateB = b["playinpodDate"];
-          if (dateA == null) return 1;
-          if (dateB == null) return -1;
-          return dateB.compareTo(dateA); // Ordre décroissant
-        });
+        if (playlistIds.isNotEmpty) {
+          // 2️⃣ Récupérer les playlists correspondant aux `playlistId`
+          final playlistSnapshot = await FirebaseFirestore.instance
+              .collection('playlist')
+              .where(FieldPath.documentId, whereIn: playlistIds)
+              .get(); // Keep get() for batched whereIn queries
 
-        // 3️⃣ Associer les podcasts aux playlists
-        final playinPodSnapshot2 = await FirebaseFirestore.instance
-            .collection('playinpod')
-            .orderBy('date', descending: true)
-            .where('playlistId', whereIn: playlistIds)
-            .get();
-
-        Map<String, List<String>> podcastToPlaylists = {};
-        Map<String, dynamic> podcastDates =
-            {}; // Pour stocker la date la plus récente pour chaque podcast
-
-        for (var doc in playinPodSnapshot2.docs) {
-          String podcastId = doc['podcastId'];
-          String playlistId = doc['playlistId'];
-          var date = doc['date'];
-
-          if (!podcastToPlaylists.containsKey(podcastId)) {
-            podcastToPlaylists[podcastId] = [];
-            podcastDates[podcastId] = date;
-          } else if (date != null &&
-              (podcastDates[podcastId] == null ||
-                  date.compareTo(podcastDates[podcastId]) > 0)) {
-            podcastDates[podcastId] =
-                date; // Mettre à jour avec la date la plus récente
+          // Créer un Map pour faciliter la récupération des dates de playinpod
+          Map<String, dynamic> playlistDates = {};
+          for (var item in playinPodData) {
+            playlistDates[item["playlistId"]] = item["date"];
           }
 
-          podcastToPlaylists[podcastId]!.add(playlistId);
-        }
+          List<Map<String, dynamic>> loadedPlaylists = playlistSnapshot.docs
+              .map((doc) => {
+                    "id": doc.id,
+                    "playinpodDate":
+                        playlistDates[doc.id], // Ajouter la date de playinpod
+                    ...doc.data(),
+                  })
+              .toList();
 
-        final List<String> podcastIds = podcastToPlaylists.keys.toList();
-        debugPrint("Podcasts liés aux playlists trouvés : $podcastIds");
-
-        if (podcastIds.isNotEmpty) {
-          // 4️⃣ Récupérer les podcasts avec `podcastIds`
-          final podcastSnapshot = await FirebaseFirestore.instance
-              .collection('podcasts')
-              .where(FieldPath.documentId, whereIn: podcastIds)
-              .get();
-
-          List<Map<String, dynamic>> loadedPodcasts =
-              podcastSnapshot.docs.map((doc) {
-            final podcastData = doc.data() as Map<String, dynamic>;
-            final podcastId = doc.id;
-            return {
-              "id": podcastId,
-              "playlistIds": podcastToPlaylists[podcastId] ?? [],
-              "playinpodDate":
-                  podcastDates[podcastId], // Ajouter la date de playinpod
-              ...podcastData,
-            };
-          }).toList();
-
-          // Trier les podcasts par date de playinpod
-          loadedPodcasts.sort((a, b) {
+          // Trier les playlists par la date de playinpod
+          loadedPlaylists.sort((a, b) {
             var dateA = a["playinpodDate"];
             var dateB = b["playinpodDate"];
             if (dateA == null) return 1;
@@ -372,13 +348,80 @@ class _ListenpageState extends State<Listenpage>
             return dateB.compareTo(dateA); // Ordre décroissant
           });
 
-          setState(() {
-            playlist = loadedPlaylists;
-            playinpod = loadedPodcasts;
-          });
-          debugPrint("Podcasts finaux récupérés : ${playinpod.length}");
+          // 3️⃣ Associer les podcasts aux playlists
+          final playinPodSnapshot2 = await FirebaseFirestore.instance
+              .collection('playinpod')
+              .orderBy('date', descending: true)
+              .where('playlistId', whereIn: playlistIds)
+              .get(); // Keep get() for batched whereIn queries
+
+          Map<String, List<String>> podcastToPlaylists = {};
+          Map<String, dynamic> podcastDates =
+              {}; // Pour stocker la date la plus récente pour chaque podcast
+
+          for (var doc in playinPodSnapshot2.docs) {
+            String podcastId = doc['podcastId'];
+            String playlistId = doc['playlistId'];
+            var date = doc['date'];
+
+            if (!podcastToPlaylists.containsKey(podcastId)) {
+              podcastToPlaylists[podcastId] = [];
+              podcastDates[podcastId] = date;
+            } else if (date != null &&
+                (podcastDates[podcastId] == null ||
+                    date.compareTo(podcastDates[podcastId]) > 0)) {
+              podcastDates[podcastId] =
+                  date; // Mettre à jour avec la date la plus récente
+            }
+
+            podcastToPlaylists[podcastId]!.add(playlistId);
+          }
+
+          final List<String> podcastIds = podcastToPlaylists.keys.toList();
+          debugPrint("Podcasts liés aux playlists trouvés : $podcastIds");
+
+          if (podcastIds.isNotEmpty) {
+            // 4️⃣ Récupérer les podcasts avec `podcastIds`
+            final podcastSnapshot = await FirebaseFirestore.instance
+                .collection('podcasts')
+                .where(FieldPath.documentId, whereIn: podcastIds)
+                .get(); // Keep get() for batched whereIn queries
+
+            List<Map<String, dynamic>> loadedPodcasts =
+                podcastSnapshot.docs.map((doc) {
+              // ignore: unnecessary_cast
+              final podcastData = doc.data() as Map<String, dynamic>;
+              final podcastId = doc.id;
+              return {
+                "id": podcastId,
+                "playlistIds": podcastToPlaylists[podcastId] ?? [],
+                "playinpodDate":
+                    podcastDates[podcastId], // Ajouter la date de playinpod
+                ...podcastData,
+              };
+            }).toList();
+
+            // Trier les podcasts par date de playinpod
+            loadedPodcasts.sort((a, b) {
+              var dateA = a["playinpodDate"];
+              var dateB = b["playinpodDate"];
+              if (dateA == null) return 1;
+              if (dateB == null) return -1;
+              return dateB.compareTo(dateA); // Ordre décroissant
+            });
+
+            if (mounted) {
+              setState(() {
+                playlist = loadedPlaylists;
+                playinpod = loadedPodcasts;
+              });
+            }
+            debugPrint("Podcasts finaux récupérés : ${playinpod.length}");
+          }
         }
-      }
+      });
+
+      _streamSubscriptions.add(streamSubscription);
     } catch (e) {
       debugPrint("Erreur lors du chargement des playlists : $e");
     }
@@ -400,7 +443,9 @@ class _ListenpageState extends State<Listenpage>
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
 
       final arguments =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
@@ -419,7 +464,6 @@ class _ListenpageState extends State<Listenpage>
         if (idpod != null) {
           await fetchPodcastsById(idpod!);
           await fetchPlaylistsByPodcastId(idpod!);
-          await _initAudioPlayer();
           await _fetchComments();
           await _fetchLikeStatus();
           await _fetchUnlikeStatus();
@@ -431,227 +475,331 @@ class _ListenpageState extends State<Listenpage>
           await fetchPlaylistsByPodcastId12(idplay1!);
         }
       }
-
-      setState(() => isLoading = false);
+      await Future.delayed(const Duration(seconds: 3));
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 
   String? idplay1;
 // First, let's add a specific function to debug a single user ID
+  // ignore: unused_element
   Future<void> _debugUserDocument(String userId) async {
     try {
-      print("Debugging user document: $userId");
-
       // Approach 1: Direct document reference
       final userDocRef =
           FirebaseFirestore.instance.collection('users').doc(userId);
       final userDoc = await userDocRef.get();
 
       if (userDoc.exists) {
-        print("✓ Direct reference: User exists: $userId");
-        print("User data: ${userDoc.data()}");
-      } else {
-        print("✗ Direct reference: User does not exist: $userId");
-      }
+      } else {}
 
       // Approach 2: Query by ID
-      final querySnapshot = await FirebaseFirestore.instance
+      final streamSubscription = FirebaseFirestore.instance
           .collection('users')
           .where(FieldPath.documentId, isEqualTo: userId)
-          .get();
+          .snapshots()
+          .listen((querySnapshot) {
+        if (querySnapshot.docs.isNotEmpty) {
+        } else {}
 
-      if (querySnapshot.docs.isNotEmpty) {
-        print("✓ Query: User exists: $userId");
-        print("User data: ${querySnapshot.docs.first.data()}");
-      } else {
-        print("✗ Query: User does not exist: $userId");
-      }
+        // Optional: Check exact user ID format
+      });
 
-      // Optional: Check exact user ID format
-      print(
-          "User ID hex representation: ${userId.codeUnits.map((u) => u.toRadixString(16).padLeft(2, '0')).join(' ')}");
-      print("User ID length: ${userId.length}");
-    } catch (e) {
-      print("Error debugging user document: $e");
+      _streamSubscriptions.add(streamSubscription);
+      // ignore: empty_catches
+    } catch (e) {}
+  }
+
+  String getlikeIcon(ThemeProvider themeProvider) {
+    if (isLiked) {
+      return themeProvider.isDarkMode ? s135 : s39;
+    } else {
+      return themeProvider.isDarkMode ? s111 : s37;
     }
   }
 
-  late int nbc = 0;
-  Future<List<Map<String, dynamic>>> _fetchComments() async {
-    try {
-      print("Fetching comments for podcast ID: $idpod");
+  String getunlikeIcon(ThemeProvider themeProvider) {
+    if (isUnliked) {
+      return themeProvider.isDarkMode ? s136 : s40;
+    } else {
+      return themeProvider.isDarkMode ? s122 : s41;
+    }
+  }
 
-      // 1️⃣ Récupérer tous les commentaires liés au podcast
-      QuerySnapshot commentSnapshot = await FirebaseFirestore.instance
+  String getSaveIcon(ThemeProvider themeProvider) {
+    if (isSaved) {
+      return themeProvider.isDarkMode ? s121 : s43;
+    } else {
+      return themeProvider.isDarkMode ? s120 : s42;
+    }
+  }
+
+  bool isSaved = false;
+  bool isLiked = false;
+  bool isUnliked = false;
+  final currentUser = FirebaseAuth.instance.currentUser?.uid;
+
+  Future<void> _fetchLikeStatus() async {
+    final streamSubscription = FirebaseFirestore.instance
+        .collection('like')
+        .where('iduser', isEqualTo: currentUser)
+        .where('idpod', isEqualTo: idpod)
+        .snapshots()
+        .listen((likeQuery) {
+      if (mounted) {
+        setState(() {
+          isLiked = likeQuery.docs.isNotEmpty;
+        });
+      }
+    });
+
+    _streamSubscriptions.add(streamSubscription);
+  }
+
+  Future<void> _fetchsaveStatus() async {
+    final streamSubscription = FirebaseFirestore.instance
+        .collection('myplaylist')
+        .where('iduser', isEqualTo: currentUser)
+        .where('idpod', isEqualTo: idpod)
+        .snapshots()
+        .listen((saveQuery) {
+      if (mounted) {
+        setState(() {
+          isSaved = saveQuery.docs.isNotEmpty;
+        });
+      }
+    });
+
+    _streamSubscriptions.add(streamSubscription);
+  }
+
+  Future<void> _fetchUnlikeStatus() async {
+    final streamSubscription = FirebaseFirestore.instance
+        .collection('unlike')
+        .where('iduser', isEqualTo: currentUser)
+        .where('idpod', isEqualTo: idpod)
+        .snapshots()
+        .listen((unlikeQuery) {
+      if (mounted) {
+        setState(() {
+          isUnliked = unlikeQuery.docs.isNotEmpty;
+        });
+      }
+    });
+
+    _streamSubscriptions.add(streamSubscription);
+  }
+
+  bool hasViewed = false;
+  Future<void> _initAudioPlayer() async {
+    try {
+      if (podcast.isNotEmpty && podcast[0]['urlFile'] != null) {
+        String url = podcast[0]['urlFile'];
+        debugPrint("URL du fichier audio : $url");
+        await _audioPlayer.setUrl(url);
+      }
+
+      _audioPlayer.durationStream.listen((duration) {
+        if (duration != null && mounted) {
+          setState(() {
+            totalTime = _formatDuration(duration);
+          });
+        }
+      });
+
+      _audioPlayer.positionStream.listen((position) {
+        if (!mounted) return;
+        final duration = _audioPlayer.duration;
+        if (duration != null) {
+          double percent = position.inMilliseconds / duration.inMilliseconds;
+          if (mounted) {
+            setState(() {
+              currentTime = _formatDuration(position);
+              currentPosition = percent;
+              audioProgressPercent = percent;
+            });
+          }
+
+          // Enregistrement de la vue si > 20%
+          if (percent >= 0.2 && !hasViewed) {
+            hasViewed = true;
+            _registerView(percent);
+          }
+
+          // Mise à jour de la vue si déjà vue
+          if (percent >= 0.2 && hasViewed) {
+            View(percent);
+          }
+        }
+      });
+
+      _audioPlayer.playerStateStream.listen((state) {
+        if (mounted) {
+          setState(() {
+            isPlaying = state.playing;
+          });
+        }
+      });
+      // ignore: empty_catches
+    } catch (e) {}
+  }
+
+  late int nbc = 0;
+  Future<void> _fetchComments() async {
+    try {
+      // Utiliser snapshots() pour obtenir un stream au lieu de get()
+      final streamSubscription = FirebaseFirestore.instance
           .collection('comments')
           .orderBy('date', descending: true)
           .where('idpod', isEqualTo: idpod)
-          .get();
-
-      if (commentSnapshot.docs.isEmpty) return [];
-
-      print("Found ${commentSnapshot.docs.length} comments");
-      nbc = commentSnapshot.docs.length;
-      List<Map<String, dynamic>> comments = [];
-      Set<String> userIds = {}; // Pour stocker les userId uniques
-
-      // 2️⃣ Extraction des userId des commentaires et des réponses
-      for (var doc in commentSnapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-
-        // Ajout de l'auteur du commentaire
-        if (data.containsKey('userid') && data['userid'] is String) {
-          userIds.add(data['userid']);
+          .snapshots()
+          .listen((commentSnapshot) async {
+        if (commentSnapshot.docs.isEmpty) {
+          if (mounted) {
+            setState(() {
+              comments = [];
+              nbc = 0;
+            });
+          }
+          return;
         }
 
-        // Récupération des réponses
-        QuerySnapshot replySnapshot = await doc.reference
-            .collection('reply')
-            .orderBy('date', descending: true)
-            .get();
-        for (var reply in replySnapshot.docs) {
-          Map<String, dynamic> replyData = reply.data() as Map<String, dynamic>;
+        nbc = commentSnapshot.docs.length;
+        List<Map<String, dynamic>> fetchedComments = [];
+        Set<String> userIds = {}; // Pour stocker les userId uniques
 
-          if (replyData.containsKey('userid') &&
-              replyData['userid'] is String) {
-            userIds.add(replyData['userid']);
+        // 2️⃣ Extraction des userId des commentaires et des réponses
+        for (var doc in commentSnapshot.docs) {
+          // ignore: unnecessary_cast
+          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+          // Ajout de l'auteur du commentaire
+          if (data.containsKey('userid') && data['userid'] is String) {
+            userIds.add(data['userid']);
+          }
+
+          // Récupération des réponses
+          QuerySnapshot replySnapshot = await doc.reference
+              .collection('reply')
+              .orderBy('date', descending: true)
+              .get();
+          for (var reply in replySnapshot.docs) {
+            Map<String, dynamic> replyData =
+                reply.data() as Map<String, dynamic>;
+
+            if (replyData.containsKey('userid') &&
+                replyData['userid'] is String) {
+              userIds.add(replyData['userid']);
+            }
           }
         }
-      }
 
-      print("Unique user IDs collected: ${userIds.length}");
+        // 3️⃣ Récupération des données des utilisateurs en batch (10 max par requête Firestore)
+        Map<String, Map<String, dynamic>> userMap = {};
+        List<String> userIdsList = userIds.toList();
 
-      // 3️⃣ Récupération des données des utilisateurs en batch (10 max par requête Firestore)
-      Map<String, Map<String, dynamic>> userMap = {};
-      List<String> userIdsList = userIds.toList();
+        for (int i = 0; i < userIdsList.length; i += 10) {
+          List<String> chunk = userIdsList.sublist(
+              i, i + 10 > userIdsList.length ? userIdsList.length : i + 10);
 
-      for (int i = 0; i < userIdsList.length; i += 10) {
-        List<String> chunk = userIdsList.sublist(
-            i, i + 10 > userIdsList.length ? userIdsList.length : i + 10);
+          // CORRECTION: Query by 'userId' field, not documentId
+          QuerySnapshot userSnapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .where('userId',
+                  whereIn:
+                      chunk) // Use 'userId' field to match with comment's 'userid'
+              .get();
 
-        // CORRECTION: Query by 'userId' field, not documentId
-        QuerySnapshot userSnapshot = await FirebaseFirestore.instance
-            .collection('users')
-            .where('userId',
-                whereIn:
-                    chunk) // Use 'userId' field to match with comment's 'userid'
-            .get();
-
-        print("Found ${userSnapshot.docs.length} users for this chunk");
-
-        for (var userDoc in userSnapshot.docs) {
-          // Store using 'userId' as the key, not document ID
-          Map<String, dynamic> userData =
-              userDoc.data() as Map<String, dynamic>;
-          String userId = userData['userId'] as String;
-          userMap[userId] = userData; // Store with userId as key for lookup
-
-          print("Added user to map: $userId");
-        }
-      }
-
-      print("Users found: ${userMap.length} / ${userIds.length}");
-
-      // 4️⃣ Associer les utilisateurs aux commentaires et récupérer les réponses
-      for (var doc in commentSnapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id;
-
-        // Associer l'utilisateur du commentaire
-        String? userId = data['userid'] as String?;
-        print("Looking up user for comment userId: $userId");
-
-        if (userId != null && userMap.containsKey(userId)) {
-          print("User found for comment!");
-          data['user'] = {
-            'firstName': userMap[userId]?['firstName'] ?? 'Unknown',
-            'lastName': userMap[userId]?['lastName'] ?? 'User',
-            'photoUrl': userMap[userId]?['photoUrl']
-          };
-        } else {
-          print("User NOT found for comment userId: $userId");
-          data['user'] = {
-            'firstName': 'Unknown',
-            'lastName': 'User',
-            'photoUrl': null
-          };
+          for (var userDoc in userSnapshot.docs) {
+            // Store using 'userId' as the key, not document ID
+            Map<String, dynamic> userData =
+                userDoc.data() as Map<String, dynamic>;
+            String userId = userData['userId'] as String;
+            userMap[userId] = userData; // Store with userId as key for lookup
+          }
         }
 
-        // Récupération des réponses avec leur utilisateur
-        List<Map<String, dynamic>> replies = [];
-        QuerySnapshot replySnapshot = await doc.reference
-            .collection('reply')
-            .orderBy('date', descending: true)
-            .get();
+        // 4️⃣ Associer les utilisateurs aux commentaires et récupérer les réponses
+        for (var doc in commentSnapshot.docs) {
+          // ignore: unnecessary_cast
+          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+          data['id'] = doc.id;
 
-        for (var reply in replySnapshot.docs) {
-          Map<String, dynamic> replyData = reply.data() as Map<String, dynamic>;
-          replyData['id'] = reply.id;
+          // Associer l'utilisateur du commentaire
+          String? userId = data['userid'] as String?;
 
-          String? replyUserId = replyData['userid'] as String?;
-          print("Looking up user for reply userId: $replyUserId");
-
-          if (replyUserId != null && userMap.containsKey(replyUserId)) {
-            print("User found for reply!");
-            replyData['user'] = {
-              'firstName': userMap[replyUserId]?['firstName'] ?? 'Unknown',
-              'lastName': userMap[replyUserId]?['lastName'] ?? 'User',
-              'photoUrl': userMap[replyUserId]?['photoUrl']
+          if (userId != null && userMap.containsKey(userId)) {
+            data['user'] = {
+              'firstName': userMap[userId]?['firstName'] ?? 'Unknown',
+              'lastName': userMap[userId]?['lastName'] ?? 'User',
+              'photoUrl': userMap[userId]?['photoUrl']
             };
           } else {
-            print("User NOT found for reply userId: $replyUserId");
-            replyData['user'] = {
+            data['user'] = {
               'firstName': 'Unknown',
               'lastName': 'User',
               'photoUrl': null
             };
           }
 
-          // Add empty list for nested replies
-          replyData['replies'] = [];
-          replies.add(replyData);
+          // Récupération des réponses avec leur utilisateur
+          List<Map<String, dynamic>> replies = [];
+          QuerySnapshot replySnapshot = await doc.reference
+              .collection('reply')
+              .orderBy('date', descending: true)
+              .get();
+
+          for (var reply in replySnapshot.docs) {
+            Map<String, dynamic> replyData =
+                reply.data() as Map<String, dynamic>;
+            replyData['id'] = reply.id;
+
+            String? replyUserId = replyData['userid'] as String?;
+
+            if (replyUserId != null && userMap.containsKey(replyUserId)) {
+              replyData['user'] = {
+                'firstName': userMap[replyUserId]?['firstName'] ?? 'Unknown',
+                'lastName': userMap[replyUserId]?['lastName'] ?? 'User',
+                'photoUrl': userMap[replyUserId]?['photoUrl']
+              };
+            } else {
+              replyData['user'] = {
+                'firstName': 'Unknown',
+                'lastName': 'User',
+                'photoUrl': null
+              };
+            }
+
+            // Add empty list for nested replies
+            replyData['replies'] = [];
+            replies.add(replyData);
+          }
+
+          data['replies'] = replies;
+          fetchedComments.add(data);
         }
 
-        data['replies'] = replies;
-        comments.add(data);
-      }
+        if (mounted) {
+          setState(() {
+            comments = fetchedComments;
+          });
+        }
+      });
 
-      print("Returning ${comments.length} comments with user data");
-      return comments;
+      _streamSubscriptions.add(streamSubscription);
+      // ignore: unused_catch_stack
     } catch (e, stackTrace) {
-      print("Error in _fetchComments: $e");
-      print("Stack trace: $stackTrace");
-      return [];
+      if (mounted) {
+        setState(() {
+          comments = [];
+        });
+      }
     }
   }
 
-  void _addNestedReply(String commentId, String parentReplyId, String text,
-      String replyToUsername) async {
-    await FirebaseFirestore.instance
-        .collection('comments')
-        .doc(commentId)
-        .collection('reply')
-        .add({
-      'userid': FirebaseAuth.instance.currentUser?.uid,
-      'text': text,
-      'date': Timestamp.now(),
-      'parentReplyId': parentReplyId, // Add reference to parent reply
-      'replyToUsername': replyToUsername, // Add the username being replied to
-    });
-    await FirebaseFirestore.instance.collection('podcasts').doc(idpod).update({
-      'comments': FieldValue.increment(1),
-    });
-    await FirebaseFirestore.instance.collection('nofi').add({
-      'user1': FirebaseAuth.instance.currentUser?.uid,
-      'user2': podcast[0]["idUser"],
-      'text': ' replyed Comment',
-      'date': Timestamp.now(),
-      'isviewed': false,
-    });
-    setState(() {});
-  }
-
-  Future<void> _showCommentsModal() async {
+  void _showCommentsModal() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -682,12 +830,12 @@ class _ListenpageState extends State<Listenpage>
                   ),
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Text(formatLikes(podcast[0]["comments"]),
-                        style: TextStyle(
+                        style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Colors.black)),
-                    Text(" "),
-                    Text("Comments",
+                    const Text(" "),
+                    const Text("Comments",
                         style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -695,328 +843,323 @@ class _ListenpageState extends State<Listenpage>
                   ]),
                   const SizedBox(height: 10),
                   Expanded(
-                    child: FutureBuilder(
-                      future: _fetchComments(),
-                      builder: (context,
-                          AsyncSnapshot<List<Map<String, dynamic>>> snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(child: Annimationwidjet());
-                        }
-                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                          return const Center(
-                              child: Text("No comments yet",
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                  )));
-                        }
+                    child: comments.isEmpty
+                        ? const Center(
+                            child: Text("Not Yet",
+                                style: TextStyle(color: Colors.black)))
+                        : ListView.builder(
+                            controller: scrollController,
+                            itemCount: comments.length,
+                            itemBuilder: (context, index) {
+                              final comment = comments[index];
+                              final user = comment['user'];
+                              final replies =
+                                  comment['replies'] as List<dynamic>;
+                              final isCurrentUserComment =
+                                  FirebaseAuth.instance.currentUser?.uid ==
+                                      comment['userid'];
+                              final isCreator =
+                                  comment['userid'] == podcast[0]['idUser'];
 
-                        return ListView.builder(
-                          controller: scrollController,
-                          itemCount: snapshot.data!.length,
-                          itemBuilder: (context, index) {
-                            final comment = snapshot.data![index];
-                            final user = comment['user'];
-                            final replies = comment['replies'] as List<dynamic>;
-                            final isCurrentUserComment =
-                                FirebaseAuth.instance.currentUser?.uid ==
-                                    comment['userid'];
-                            final isCreator =
-                                comment['userid'] == podcast[0]['idUser'];
-
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                ListTile(
-                                  leading: user != null &&
-                                          user.containsKey('photoUrl') &&
-                                          user['photoUrl'] is String &&
-                                          user['photoUrl']!.trim().isNotEmpty
-                                      ? CircleAvatar(
-                                          backgroundImage:
-                                              NetworkImage(user['photoUrl']))
-                                      : CircleAvatar(child: Icon(Icons.person)),
-                                  title: RichText(
-                                    text: TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: comment['user'] != null
-                                              ? "${comment['user']['firstName']} ${comment['user']['lastName']}"
-                                              : "Unknown User",
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.black),
-                                        ),
-                                        if (isCreator)
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ListTile(
+                                    leading: user != null &&
+                                            user.containsKey('photoUrl') &&
+                                            user['photoUrl'] is String &&
+                                            user['photoUrl']!.trim().isNotEmpty
+                                        ? CircleAvatar(
+                                            backgroundImage:
+                                                NetworkImage(user['photoUrl']))
+                                        : const CircleAvatar(
+                                            child: Icon(Icons.person)),
+                                    title: RichText(
+                                      text: TextSpan(
+                                        children: [
                                           TextSpan(
-                                            text: " Creator",
+                                            text: comment['user'] != null
+                                                ? "${comment['user']['firstName']} ${comment['user']['lastName']}"
+                                                : "Unknown User",
                                             style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: Color(0xFF754CEF),
-                                              fontSize: 12,
-                                            ),
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.black),
                                           ),
+                                          if (isCreator)
+                                            const TextSpan(
+                                              text: " Creator",
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF754CEF),
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 4),
+                                        Text(comment['text'] ?? ""),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          comment['date'] != null
+                                              ? DateFormat(
+                                                      'MMM d, yyyy • h:mm a')
+                                                  .format(
+                                                      comment['date'].toDate())
+                                              : "",
+                                          style: const TextStyle(
+                                              fontSize: 12, color: Colors.grey),
+                                        ),
+                                      ],
+                                    ),
+                                    trailing: isCurrentUserComment
+                                        ? IconButton(
+                                            icon: const Icon(Icons.delete,
+                                                color: Colors.red),
+                                            onPressed: () =>
+                                                _showDeleteConfirmation(
+                                              context,
+                                              () =>
+                                                  _deleteComment(comment['id']),
+                                            ),
+                                          )
+                                        : null,
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                        left: 72, bottom: 8),
+                                    child: Row(
+                                      children: [
+                                        TextButton.icon(
+                                          icon:
+                                              const Icon(Icons.reply, size: 16),
+                                          label: const Text("Reply"),
+                                          onPressed: () {
+                                            // Show reply input field with the comment author's name
+                                            String commentUsername = comment[
+                                                        'user'] !=
+                                                    null
+                                                ? "${comment['user']['firstName']} ${comment['user']['lastName']}"
+                                                : "Unknown User";
+                                            _showReplyInput(
+                                                context,
+                                                comment['id'],
+                                                null,
+                                                commentUsername);
+                                          },
+                                        ),
                                       ],
                                     ),
                                   ),
-                                  subtitle: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const SizedBox(height: 4),
-                                      Text(comment['text'] ?? ""),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        comment['date'] != null
-                                            ? DateFormat('MMM d, yyyy • h:mm a')
-                                                .format(
-                                                    comment['date'].toDate())
-                                            : "",
-                                        style: const TextStyle(
-                                            fontSize: 12, color: Colors.grey),
-                                      ),
-                                    ],
-                                  ),
-                                  trailing: isCurrentUserComment
-                                      ? IconButton(
-                                          icon: const Icon(Icons.delete,
-                                              color: Colors.red),
-                                          onPressed: () =>
-                                              _showDeleteConfirmation(
-                                            context,
-                                            () => _deleteComment(comment['id']),
-                                          ),
-                                        )
-                                      : null,
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                      left: 72, bottom: 8),
-                                  child: Row(
-                                    children: [
-                                      TextButton.icon(
-                                        icon: const Icon(Icons.reply, size: 16),
-                                        label: const Text("Reply"),
-                                        onPressed: () {
-                                          // Show reply input field with the comment author's name
-                                          String commentUsername = comment[
-                                                      'user'] !=
-                                                  null
-                                              ? "${comment['user']['firstName']} ${comment['user']['lastName']}"
-                                              : "Unknown User";
-                                          _showReplyInput(
-                                              context,
-                                              comment['id'],
-                                              null,
-                                              commentUsername);
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                // Display replies
-                                if (replies.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                        left: 72, right: 16),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey[50],
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: ListView.builder(
-                                        shrinkWrap: true,
-                                        physics:
-                                            const NeverScrollableScrollPhysics(),
-                                        itemCount: replies.length,
-                                        itemBuilder: (context, replyIndex) {
-                                          final reply = replies[replyIndex];
-                                          final isCurrentUserReply =
-                                              FirebaseAuth.instance.currentUser
-                                                      ?.uid ==
-                                                  reply['userid'];
-                                          final isReplyCreator =
-                                              reply['userid'] ==
-                                                  podcast[0]['idUser'];
+                                  // Display replies
+                                  if (replies.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          left: 72, right: 16),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[50],
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: ListView.builder(
+                                          shrinkWrap: true,
+                                          physics:
+                                              const NeverScrollableScrollPhysics(),
+                                          itemCount: replies.length,
+                                          itemBuilder: (context, replyIndex) {
+                                            final reply = replies[replyIndex];
+                                            final isCurrentUserReply =
+                                                FirebaseAuth.instance
+                                                        .currentUser?.uid ==
+                                                    reply['userid'];
+                                            final isReplyCreator =
+                                                reply['userid'] ==
+                                                    podcast[0]['idUser'];
 
-                                          return Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        vertical: 8,
-                                                        horizontal: 12),
-                                                child: Row(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    CircleAvatar(
-                                                      radius: 16,
-                                                      backgroundImage: reply[
-                                                                      'user'] !=
-                                                                  null &&
-                                                              reply['user'][
-                                                                      'photoUrl'] !=
-                                                                  null
-                                                          ? NetworkImage(
-                                                              reply['user']
-                                                                  ['photoUrl'])
-                                                          : null,
-                                                      child: reply['user'] ==
-                                                                  null ||
-                                                              reply['user'][
-                                                                      'photoUrl'] ==
-                                                                  null
-                                                          ? Icon(Icons.person,
-                                                              size: 16)
-                                                          : null,
-                                                    ),
-                                                    const SizedBox(width: 8),
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Row(
-                                                            children: [
-                                                              Expanded(
-                                                                child: Column(
-                                                                  crossAxisAlignment:
-                                                                      CrossAxisAlignment
-                                                                          .start,
-                                                                  children: [
-                                                                    RichText(
-                                                                      text:
-                                                                          TextSpan(
-                                                                        style:
-                                                                            const TextStyle(
-                                                                          color:
-                                                                              Colors.black,
-                                                                          fontWeight:
-                                                                              FontWeight.bold,
+                                            return Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Padding(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      vertical: 8,
+                                                      horizontal: 12),
+                                                  child: Row(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      CircleAvatar(
+                                                        radius: 16,
+                                                        backgroundImage: reply[
+                                                                        'user'] !=
+                                                                    null &&
+                                                                reply['user'][
+                                                                        'photoUrl'] !=
+                                                                    null
+                                                            ? NetworkImage(
+                                                                reply['user'][
+                                                                    'photoUrl'])
+                                                            : null,
+                                                        child: reply['user'] ==
+                                                                    null ||
+                                                                reply['user'][
+                                                                        'photoUrl'] ==
+                                                                    null
+                                                            ? const Icon(
+                                                                Icons.person,
+                                                                size: 16)
+                                                            : null,
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      Expanded(
+                                                        child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .start,
+                                                          children: [
+                                                            Row(
+                                                              children: [
+                                                                Expanded(
+                                                                  child: Column(
+                                                                    crossAxisAlignment:
+                                                                        CrossAxisAlignment
+                                                                            .start,
+                                                                    children: [
+                                                                      RichText(
+                                                                        text:
+                                                                            TextSpan(
+                                                                          style:
+                                                                              const TextStyle(
+                                                                            color:
+                                                                                Colors.black,
+                                                                            fontWeight:
+                                                                                FontWeight.bold,
+                                                                          ),
+                                                                          children: [
+                                                                            TextSpan(
+                                                                                text: reply['user'] != null ? "${reply['user']['firstName']} ${reply['user']['lastName']}" : "Unknown User",
+                                                                                style: const TextStyle(color: Colors.black)),
+                                                                            if (isReplyCreator)
+                                                                              const TextSpan(
+                                                                                text: " Creator",
+                                                                                style: TextStyle(
+                                                                                  color: Color(0xFF754CEF),
+                                                                                  fontSize: 12,
+                                                                                ),
+                                                                              ),
+                                                                            // Always display @username for all replies
+                                                                            if (reply['replyToUsername'] != null &&
+                                                                                reply['replyToUsername'].isNotEmpty)
+                                                                              TextSpan(
+                                                                                text: " @ ${reply['replyToUsername']}",
+                                                                                style: const TextStyle(
+                                                                                  color: Color(0xFF754CEF),
+                                                                                ),
+                                                                              ),
+                                                                          ],
                                                                         ),
-                                                                        children: [
-                                                                          TextSpan(
-                                                                              text: reply['user'] != null ? "${reply['user']['firstName']} ${reply['user']['lastName']}" : "Unknown User",
-                                                                              style: TextStyle(color: Colors.black)),
-                                                                          if (isReplyCreator)
-                                                                            TextSpan(
-                                                                              text: " Creator",
-                                                                              style: const TextStyle(
-                                                                                color: Color(0xFF754CEF),
-                                                                                fontSize: 12,
-                                                                              ),
-                                                                            ),
-                                                                          // Always display @username for all replies
-                                                                          if (reply['replyToUsername'] != null &&
-                                                                              reply['replyToUsername'].isNotEmpty)
-                                                                            TextSpan(
-                                                                              text: " @ ${reply['replyToUsername']}",
-                                                                              style: const TextStyle(
-                                                                                color: Color(0xFF754CEF),
-                                                                              ),
-                                                                            ),
-                                                                        ],
                                                                       ),
-                                                                    ),
-                                                                    const SizedBox(
-                                                                        height:
-                                                                            4),
-                                                                    // Display the actual reply text separately
-                                                                    Text(
-                                                                      reply['text'] ??
-                                                                          "",
-                                                                      style: TextStyle(
-                                                                          color:
-                                                                              Colors.black),
-                                                                    ),
-                                                                  ],
-                                                                ),
-                                                              ),
-                                                              if (isCurrentUserReply)
-                                                                IconButton(
-                                                                  icon: const Icon(
-                                                                      Icons
-                                                                          .delete,
-                                                                      size: 16,
-                                                                      color: Colors
-                                                                          .red),
-                                                                  onPressed: () =>
-                                                                      _showDeleteConfirmation(
-                                                                    context,
-                                                                    () => _deleteReply(
-                                                                        comment[
-                                                                            'id'],
-                                                                        reply[
-                                                                            'id']),
+                                                                      const SizedBox(
+                                                                          height:
+                                                                              4),
+                                                                      // Display the actual reply text separately
+                                                                      Text(
+                                                                        reply['text'] ??
+                                                                            "",
+                                                                        style: const TextStyle(
+                                                                            color:
+                                                                                Colors.black),
+                                                                      ),
+                                                                    ],
                                                                   ),
                                                                 ),
-                                                            ],
-                                                          ),
-                                                          const SizedBox(
-                                                              height: 4),
-                                                          Text(
-                                                            reply['date'] !=
-                                                                    null
-                                                                ? DateFormat(
-                                                                        'MMM d, yyyy • h:mm a')
-                                                                    .format(reply[
-                                                                            'date']
-                                                                        .toDate())
-                                                                : "",
-                                                            style:
-                                                                const TextStyle(
-                                                                    fontSize:
-                                                                        12,
-                                                                    color: Colors
-                                                                        .grey),
-                                                          ),
-                                                        ],
+                                                                if (isCurrentUserReply)
+                                                                  IconButton(
+                                                                    icon: const Icon(
+                                                                        Icons
+                                                                            .delete,
+                                                                        size:
+                                                                            16,
+                                                                        color: Colors
+                                                                            .red),
+                                                                    onPressed: () =>
+                                                                        _showDeleteConfirmation(
+                                                                      context,
+                                                                      () => _deleteReply(
+                                                                          comment[
+                                                                              'id'],
+                                                                          reply[
+                                                                              'id']),
+                                                                    ),
+                                                                  ),
+                                                              ],
+                                                            ),
+                                                            const SizedBox(
+                                                                height: 4),
+                                                            Text(
+                                                              reply['date'] !=
+                                                                      null
+                                                                  ? DateFormat(
+                                                                          'MMM d, yyyy • h:mm a')
+                                                                      .format(reply[
+                                                                              'date']
+                                                                          .toDate())
+                                                                  : "",
+                                                              style: const TextStyle(
+                                                                  fontSize: 12,
+                                                                  color: Colors
+                                                                      .grey),
+                                                            ),
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
-                                                  ],
+                                                    ],
+                                                  ),
                                                 ),
-                                              ),
-                                              // Reply to reply button
-                                              Padding(
-                                                padding: const EdgeInsets.only(
-                                                    left: 40, bottom: 8),
-                                                child: TextButton.icon(
-                                                  icon: const Icon(Icons.reply,
-                                                      size: 14),
-                                                  label: const Text("Reply",
-                                                      style: TextStyle(
-                                                          fontSize: 12)),
-                                                  onPressed: () {
-                                                    String replyUsername = reply[
-                                                                'user'] !=
-                                                            null
-                                                        ? "${reply['user']['firstName']} ${reply['user']['lastName']}"
-                                                        : "Unknown User";
-                                                    _showReplyInput(
-                                                        context,
-                                                        comment['id'],
-                                                        reply['id'],
-                                                        replyUsername);
-                                                  },
+                                                // Reply to reply button
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          left: 40, bottom: 8),
+                                                  child: TextButton.icon(
+                                                    icon: const Icon(
+                                                        Icons.reply,
+                                                        size: 14),
+                                                    label: const Text("Reply",
+                                                        style: TextStyle(
+                                                            fontSize: 12)),
+                                                    onPressed: () {
+                                                      String replyUsername = reply[
+                                                                  'user'] !=
+                                                              null
+                                                          ? "${reply['user']['firstName']} ${reply['user']['lastName']}"
+                                                          : "Unknown User";
+                                                      _showReplyInput(
+                                                          context,
+                                                          comment['id'],
+                                                          reply['id'],
+                                                          replyUsername);
+                                                    },
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
-                                          );
-                                        },
+                                              ],
+                                            );
+                                          },
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                const Divider(),
-                              ],
-                            );
-                          },
-                        );
-                      },
-                    ),
+                                  const Divider(),
+                                ],
+                              );
+                            },
+                          ),
                   ),
                   Padding(
                     padding: const EdgeInsets.all(8.0),
@@ -1051,7 +1194,7 @@ class _ListenpageState extends State<Listenpage>
     );
   }
 
-// Fonction pour afficher le dialogue de confirmation de suppression
+  // Fonction pour afficher le dialogue de confirmation de suppression
   void _showDeleteConfirmation(
       BuildContext context, Function onDeleteConfirmed) {
     showDialog(
@@ -1097,10 +1240,11 @@ class _ListenpageState extends State<Listenpage>
             parentReplyId == null
                 ? "Reply to comment"
                 : "Reply to ${replyToUsername ?? 'reply'}",
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, color: Colors.black)),
         content: TextField(
           controller: replyController,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             hintText: 'Write your reply...',
             border: OutlineInputBorder(),
           ),
@@ -1109,7 +1253,7 @@ class _ListenpageState extends State<Listenpage>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(
+            child: const Text(
               'Cancel',
             ),
           ),
@@ -1127,14 +1271,59 @@ class _ListenpageState extends State<Listenpage>
                 Navigator.pop(context);
               }
             },
-            child: Text('Reply'),
             style: TextButton.styleFrom(
-              foregroundColor: Color(0xFF754CEF),
+              foregroundColor: const Color(0xFF754CEF),
             ),
+            child: const Text('Reply'),
           ),
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    // Cancel all stream subscriptions
+    for (var subscription in _streamSubscriptions) {
+      subscription.cancel();
+    }
+    _streamSubscriptions.clear(); // Clear the list
+
+    // Dispose the audio player
+    _audioPlayer.dispose();
+
+    // Dispose the comment controller
+    _commentController.dispose();
+
+    super.dispose();
+  }
+
+  void _addNestedReply(String commentId, String parentReplyId, String text,
+      String replyToUsername) async {
+    await FirebaseFirestore.instance
+        .collection('comments')
+        .doc(commentId)
+        .collection('reply')
+        .add({
+      'userid': FirebaseAuth.instance.currentUser?.uid,
+      'text': text,
+      'date': Timestamp.now(),
+      'parentReplyId': parentReplyId, // Add reference to parent reply
+      'replyToUsername': replyToUsername, // Add the username being replied to
+    });
+    await FirebaseFirestore.instance.collection('podcasts').doc(idpod).update({
+      'comments': FieldValue.increment(1),
+    });
+    await FirebaseFirestore.instance.collection('nofi').add({
+      'user1': FirebaseAuth.instance.currentUser?.uid,
+      'user2': podcast[0]["idUser"],
+      'text': ' replyed Comment',
+      'date': Timestamp.now(),
+      'isviewed': false,
+    });
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _addComment() async {
@@ -1159,7 +1348,9 @@ class _ListenpageState extends State<Listenpage>
         'comments': FieldValue.increment(1),
       });
       _commentController.clear();
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -1177,7 +1368,6 @@ class _ListenpageState extends State<Listenpage>
           .get();
 
       if (userDataQuery.docs.isEmpty) {
-        print("No user data found for user: ${user.uid}");
         return;
       }
 
@@ -1214,9 +1404,8 @@ class _ListenpageState extends State<Listenpage>
       });
 
       _commentController.clear();
-    } catch (e) {
-      print('Error adding reply: $e');
-    }
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   void _deleteComment(String commentId) async {
@@ -1246,7 +1435,9 @@ class _ListenpageState extends State<Listenpage>
     await FirebaseFirestore.instance.collection('podcasts').doc(idpod).update({
       'comments': FieldValue.increment(-1),
     });
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _deleteReply(String commentId, String replyId) async {
@@ -1284,7 +1475,9 @@ class _ListenpageState extends State<Listenpage>
       'comments': FieldValue.increment(-deletedCount),
     });
 
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
 // Helper method to recursively delete nested replies
@@ -1314,70 +1507,6 @@ class _ListenpageState extends State<Listenpage>
     return deletedCount;
   }
 
-  String getlikeIcon(ThemeProvider themeProvider) {
-    if (isLiked) {
-      return themeProvider.isDarkMode ? s135 : s39;
-    } else {
-      return themeProvider.isDarkMode ? s111 : s37;
-    }
-  }
-
-  String getunlikeIcon(ThemeProvider themeProvider) {
-    if (isSaved) {
-      return themeProvider.isDarkMode ? s136 : s40;
-    } else {
-      return themeProvider.isDarkMode ? s122 : s41;
-    }
-  }
-
-  String getSaveIcon(ThemeProvider themeProvider) {
-    if (isSaved) {
-      return themeProvider.isDarkMode ? s121 : s43;
-    } else {
-      return themeProvider.isDarkMode ? s120 : s42;
-    }
-  }
-
-  bool isSaved = false;
-  bool isLiked = false;
-  bool isUnliked = false;
-  final currentUser = FirebaseAuth.instance.currentUser?.uid;
-  Future<void> _fetchLikeStatus() async {
-    final likeRef = FirebaseFirestore.instance.collection('like');
-    final likeQuery = await likeRef
-        .where('iduser', isEqualTo: currentUser)
-        .where('idpod', isEqualTo: idpod)
-        .get();
-
-    setState(() {
-      isLiked = likeQuery.docs.isNotEmpty;
-    });
-  }
-
-  Future<void> _fetchsaveStatus() async {
-    final saveRef = FirebaseFirestore.instance.collection('myplaylist');
-    final saveQuery = await saveRef
-        .where('iduser', isEqualTo: currentUser)
-        .where('idpod', isEqualTo: idpod)
-        .get();
-
-    setState(() {
-      isSaved = saveQuery.docs.isNotEmpty;
-    });
-  }
-
-  Future<void> _fetchUnlikeStatus() async {
-    final unlikeRef = FirebaseFirestore.instance.collection('unlike');
-    final unlikeQuery = await unlikeRef
-        .where('iduser', isEqualTo: currentUser)
-        .where('idpod', isEqualTo: idpod)
-        .get();
-
-    setState(() {
-      isUnliked = unlikeQuery.docs.isNotEmpty;
-    });
-  }
-
   void _toggleLike() async {
     final likeRef = FirebaseFirestore.instance.collection('like');
     final unlikeRef = FirebaseFirestore.instance.collection('unlike');
@@ -1402,9 +1531,11 @@ class _ListenpageState extends State<Listenpage>
           .update({
         'likes': FieldValue.increment(1),
       });
-      setState(() {
-        isLiked = true;
-      });
+      if (mounted) {
+        setState(() {
+          isLiked = true;
+        });
+      }
 
       // Supprimer l'unlike s'il existe
       if (isUnliked) {
@@ -1421,9 +1552,11 @@ class _ListenpageState extends State<Listenpage>
             'unlikes': FieldValue.increment(-1),
           });
         }
-        setState(() {
-          isUnliked = false;
-        });
+        if (mounted) {
+          setState(() {
+            isUnliked = false;
+          });
+        }
       }
     } else {
       // Supprimer le like
@@ -1440,9 +1573,11 @@ class _ListenpageState extends State<Listenpage>
           'likes': FieldValue.increment(-1),
         });
       }
-      setState(() {
-        isLiked = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLiked = false;
+        });
+      }
     }
   }
 
@@ -1469,9 +1604,11 @@ class _ListenpageState extends State<Listenpage>
           .update({
         'save': FieldValue.increment(1),
       });
-      setState(() {
-        isSaved = true;
-      });
+      if (mounted) {
+        setState(() {
+          isSaved = true;
+        });
+      }
     } else {
       // Supprimer le like
       final saveQuery = await saveRef
@@ -1487,9 +1624,11 @@ class _ListenpageState extends State<Listenpage>
           'save': FieldValue.increment(-1),
         });
       }
-      setState(() {
-        isSaved = false;
-      });
+      if (mounted) {
+        setState(() {
+          isSaved = false;
+        });
+      }
     }
   }
 
@@ -1517,9 +1656,11 @@ class _ListenpageState extends State<Listenpage>
           .update({
         'unlikes': FieldValue.increment(1),
       });
-      setState(() {
-        isUnliked = true;
-      });
+      if (mounted) {
+        setState(() {
+          isUnliked = true;
+        });
+      }
 
       // Supprimer le like s'il existe
       if (isLiked) {
@@ -1537,9 +1678,11 @@ class _ListenpageState extends State<Listenpage>
             'dateCreation': FieldValue.serverTimestamp(),
           });
         }
-        setState(() {
-          isLiked = false;
-        });
+        if (mounted) {
+          setState(() {
+            isLiked = false;
+          });
+        }
       }
     } else {
       // Supprimer l'unlike
@@ -1557,60 +1700,18 @@ class _ListenpageState extends State<Listenpage>
           'dateCreation': FieldValue.serverTimestamp(),
         });
       }
-      setState(() {
-        isUnliked = false;
-      });
+      if (mounted) {
+        setState(() {
+          isUnliked = false;
+        });
+      }
     }
   }
 
-  bool hasViewed = false;
-  Future<void> _initAudioPlayer() async {
-    try {
-      if (podcast.isNotEmpty && podcast[0]['urlFile'] != null) {
-        String url = podcast[0]['urlFile'];
-        debugPrint("URL du fichier audio : $url");
-        await _audioPlayer.setUrl(url);
-      }
-
-      _audioPlayer.durationStream.listen((duration) {
-        if (duration != null) {
-          setState(() {
-            totalTime = _formatDuration(duration);
-          });
-        }
-      });
-
-      _audioPlayer.positionStream.listen((position) {
-        final duration = _audioPlayer.duration;
-        if (duration != null) {
-          double percent = position.inMilliseconds / duration.inMilliseconds;
-          setState(() {
-            currentTime = _formatDuration(position);
-            currentPosition = percent;
-            audioProgressPercent = percent;
-          });
-
-          // Enregistrement de la vue si > 20%
-          if (percent >= 0.2 && !hasViewed) {
-            hasViewed = true;
-            _registerView(percent);
-          }
-
-          // Mise à jour de la vue si déjà vue
-          if (percent >= 0.2 && hasViewed) {
-            View(percent);
-          }
-        }
-      });
-
-      _audioPlayer.playerStateStream.listen((state) {
-        setState(() {
-          isPlaying = state.playing;
-        });
-      });
-    } catch (e) {
-      print('Error loading audio file: $e');
-    }
+  String _formatDuration(Duration duration) {
+    String minutes = duration.inMinutes.toString();
+    String seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
 
   Future<void> _registerView(double percent) async {
@@ -1646,6 +1747,7 @@ class _ListenpageState extends State<Listenpage>
     }
   }
 
+  // ignore: non_constant_identifier_names
   Future<void> View(double percent) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null || idpod == null) return;
@@ -1675,12 +1777,12 @@ class _ListenpageState extends State<Listenpage>
   }
 
   void _skipBackward() {
-    final position = _audioPlayer.position - Duration(seconds: 10);
+    final position = _audioPlayer.position - const Duration(seconds: 10);
     _audioPlayer.seek(position.isNegative ? Duration.zero : position);
   }
 
   void _skipForward() {
-    final position = _audioPlayer.position + Duration(seconds: 10);
+    final position = _audioPlayer.position + const Duration(seconds: 10);
     _audioPlayer.seek(position);
   }
 
@@ -1690,18 +1792,6 @@ class _ListenpageState extends State<Listenpage>
     } else {
       _audioPlayer.play();
     }
-  }
-
-  @override
-  void dispose() {
-    _audioPlayer.dispose();
-    super.dispose();
-  }
-
-  String _formatDuration(Duration duration) {
-    String minutes = duration.inMinutes.toString();
-    String seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
   }
 
   void handlePreviousPodcast() async {
@@ -2519,9 +2609,11 @@ class _ListenpageState extends State<Listenpage>
                             ),
                           ),
                         );
+                        // ignore: unnecessary_to_list_in_spreads
                       }).toList(),
                     ],
                   );
+                  // ignore: unnecessary_to_list_in_spreads
                 }).toList(),
               if (featl == 11) ...[
                 Column(
@@ -2843,6 +2935,7 @@ class _ListenpageState extends State<Listenpage>
                                           Positioned(
                                             top: c.height * 0.04,
                                             left: c.width * 0.17,
+                                            // ignore: sized_box_for_whitespace
                                             child: Container(
                                               width: c.width * 0.7,
                                               height: c.width *
@@ -2876,19 +2969,21 @@ class _ListenpageState extends State<Listenpage>
                                                     50.0, // Espacement avant la répétition
                                                 velocity:
                                                     30.0, // Vitesse du défilement
-                                                pauseAfterRound: Duration(
+                                                pauseAfterRound: const Duration(
                                                     seconds:
                                                         1), // Pause après un tour
                                                 startPadding:
                                                     10.0, // Espace initial
-                                                accelerationDuration: Duration(
-                                                    seconds:
-                                                        1), // Accélération au démarrage
+                                                accelerationDuration:
+                                                    const Duration(
+                                                        seconds:
+                                                            1), // Accélération au démarrage
                                                 accelerationCurve:
                                                     Curves.easeIn,
-                                                decelerationDuration: Duration(
-                                                    milliseconds:
-                                                        500), // Décélération à la fin
+                                                decelerationDuration:
+                                                    const Duration(
+                                                        milliseconds:
+                                                            500), // Décélération à la fin
                                                 decelerationCurve:
                                                     Curves.easeOut,
                                               ),
@@ -2899,7 +2994,7 @@ class _ListenpageState extends State<Listenpage>
                                           Positioned(
                                             top: c.height * 0.04,
                                             left: c.width * 0.17,
-                                            child: Container(
+                                            child: SizedBox(
                                               width: c.width * 0.7,
                                               height: c.width *
                                                   0.06, // Définit une hauteur pour éviter les bugs d'affichage
@@ -2918,19 +3013,21 @@ class _ListenpageState extends State<Listenpage>
                                                     50.0, // Espacement avant la répétition
                                                 velocity:
                                                     30.0, // Vitesse du défilement
-                                                pauseAfterRound: Duration(
+                                                pauseAfterRound: const Duration(
                                                     seconds:
                                                         1), // Pause après un tour
                                                 startPadding:
                                                     10.0, // Espace initial
-                                                accelerationDuration: Duration(
-                                                    seconds:
-                                                        1), // Accélération au démarrage
+                                                accelerationDuration:
+                                                    const Duration(
+                                                        seconds:
+                                                            1), // Accélération au démarrage
                                                 accelerationCurve:
                                                     Curves.easeIn,
-                                                decelerationDuration: Duration(
-                                                    milliseconds:
-                                                        500), // Décélération à la fin
+                                                decelerationDuration:
+                                                    const Duration(
+                                                        milliseconds:
+                                                            500), // Décélération à la fin
                                                 decelerationCurve:
                                                     Curves.easeOut,
                                               ),
@@ -2941,7 +3038,7 @@ class _ListenpageState extends State<Listenpage>
                                           Positioned(
                                             top: c.height * 0.04,
                                             left: c.width * 0.17,
-                                            child: Container(
+                                            child: SizedBox(
                                               width: c.width * 0.7,
                                               height: c.width *
                                                   0.06, // Définit une hauteur pour éviter les bugs d'affichage
@@ -2960,19 +3057,21 @@ class _ListenpageState extends State<Listenpage>
                                                     50.0, // Espacement avant la répétition
                                                 velocity:
                                                     30.0, // Vitesse du défilement
-                                                pauseAfterRound: Duration(
+                                                pauseAfterRound: const Duration(
                                                     seconds:
                                                         1), // Pause après un tour
                                                 startPadding:
                                                     10.0, // Espace initial
-                                                accelerationDuration: Duration(
-                                                    seconds:
-                                                        1), // Accélération au démarrage
+                                                accelerationDuration:
+                                                    const Duration(
+                                                        seconds:
+                                                            1), // Accélération au démarrage
                                                 accelerationCurve:
                                                     Curves.easeIn,
-                                                decelerationDuration: Duration(
-                                                    milliseconds:
-                                                        500), // Décélération à la fin
+                                                decelerationDuration:
+                                                    const Duration(
+                                                        milliseconds:
+                                                            500), // Décélération à la fin
                                                 decelerationCurve:
                                                     Curves.easeOut,
                                               ),
@@ -3008,7 +3107,7 @@ class _ListenpageState extends State<Listenpage>
                                     left: c.width * 0.05,
                                     child: Column(
                                       children: [
-                                        Container(
+                                        SizedBox(
                                           width: c.width * 0.9,
                                           height: c.height * 0.05,
                                           child: Marquee(
@@ -3021,13 +3120,13 @@ class _ListenpageState extends State<Listenpage>
                                             blankSpace: 20.0,
                                             velocity: 30.0,
                                             pauseAfterRound:
-                                                Duration(seconds: 1),
+                                                const Duration(seconds: 1),
                                             startPadding: 10.0,
                                             accelerationDuration:
-                                                Duration(seconds: 1),
+                                                const Duration(seconds: 1),
                                             accelerationCurve: Curves.linear,
                                             decelerationDuration:
-                                                Duration(seconds: 1),
+                                                const Duration(seconds: 1),
                                             decelerationCurve: Curves.easeOut,
                                           ),
                                         ),
@@ -3153,12 +3252,14 @@ class _ListenpageState extends State<Listenpage>
                                               enabledThumbRadius:
                                                   c.width * 0.02,
                                             ),
-                                            activeTrackColor: Color(0xFF754CEF),
+                                            activeTrackColor:
+                                                const Color(0xFF754CEF),
                                             inactiveTrackColor:
                                                 Colors.grey[300],
-                                            thumbColor: Color(0xFF754CEF),
-                                            overlayColor: Color(0xFF754CEF)
-                                                .withOpacity(0.2),
+                                            thumbColor: const Color(0xFF754CEF),
+                                            overlayColor:
+                                                const Color(0xFF754CEF)
+                                                    .withOpacity(0.2),
                                           ),
                                           child: Slider(
                                             value:
@@ -3261,7 +3362,7 @@ class _ListenpageState extends State<Listenpage>
 
                                       // Play/Pause button
                                       Material(
-                                        color: Color(0xFF754CEF),
+                                        color: const Color(0xFF754CEF),
                                         borderRadius:
                                             BorderRadius.circular(100),
                                         child: InkWell(

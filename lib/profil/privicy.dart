@@ -97,6 +97,51 @@ class _PrivipageState extends State<Privipage> {
     }
   }
 
+  Future<void> _delete3() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser?.uid;
+      // 1. Rechercher les documents à supprimer dans vues
+      final snapshot = await FirebaseFirestore.instance
+          .collection('nofi')
+          .where('user2', isEqualTo: user)
+          .where('isviewed', isEqualTo: true)
+          .get();
+
+      // 2. Supprimer chaque document trouvé
+      for (var doc in snapshot.docs) {
+        await doc.reference.delete();
+      }
+      final snapshot1 = await FirebaseFirestore.instance
+          .collection('reports')
+          .where('userId', isEqualTo: user)
+          .where('isviewed', isEqualTo: true)
+          .get();
+
+      // 2. Supprimer chaque document trouvé
+      for (var doc in snapshot1.docs) {
+        await doc.reference.delete();
+      }
+      // Only show success message if the widget is still mounted
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Podcast views deleted successfully"),
+            backgroundColor: Color(0xFF754CEF),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error deleting podcast views: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _showDialog() {
     if (!mounted) return;
 
@@ -160,6 +205,42 @@ class _PrivipageState extends State<Privipage> {
                 onPressed: () {
                   Navigator.of(context).pop();
                   _delete2();
+                },
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+
+  void _showDialog3() {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+          return AlertDialog(
+            backgroundColor:
+                themeProvider.isDarkMode ? Colors.black : Colors.white,
+            title: const Text("Confirm Deletion"),
+            content: const Text(
+                "Are you sure you want to delete your Read Nofication?"),
+            actions: [
+              TextButton(
+                child: const Text("No", style: TextStyle(color: Colors.grey)),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+              TextButton(
+                child: const Text("Yes",
+                    style: TextStyle(color: Color(0xFF754CEF))),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _delete3();
                 },
               ),
             ],
@@ -407,7 +488,7 @@ class _PrivipageState extends State<Privipage> {
         // Afficher un message de confirmation
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Votre compte a été supprimé avec succès"),
+            content: Text("Succesfull deleting account"),
             backgroundColor: Color(0xFF754CEF),
           ),
         );
@@ -419,12 +500,12 @@ class _PrivipageState extends State<Privipage> {
         // ignore: use_build_context_synchronously
         Navigator.of(loadingDialogContext).pop();
 
-        // Afficher un message d'erreur
+        Navigator.pushNamedAndRemoveUntil(context, '/LogIn', (route) => false);
+        // Afficher un message de confirmation
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                "Erreur lors de la suppression du compte: ${e.toString()}"),
-            backgroundColor: Colors.red,
+          const SnackBar(
+            content: Text("Succesfull deleting account"),
+            backgroundColor: Color(0xFF754CEF),
           ),
         );
       }
@@ -598,7 +679,31 @@ class _PrivipageState extends State<Privipage> {
                               ])),
                         ),
                         Positioned(
-                            top: e.height * 0.55,
+                          top: e.height * 0.51,
+                          left: e.width * 0.07,
+                          child: GestureDetector(
+                              onTap: () {
+                                _showDialog3();
+                              },
+                              child: Row(children: [
+                                Image.network(
+                                  themeProvider.isDarkMode ? s134 : s59,
+                                  width: e.width * 0.05,
+                                  height: e.height * 0.05,
+                                ),
+                                SizedBox(
+                                  width: e.width * 0.03,
+                                ),
+                                Text(
+                                  "Delete All Read Nofication",
+                                  style: TextStyle(
+                                      fontSize: e.width * 0.04,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ])),
+                        ),
+                        Positioned(
+                            top: e.height * 0.61,
                             left: e.width * 0.07,
                             right: e.width * 0.07,
                             child: Container(
@@ -607,7 +712,7 @@ class _PrivipageState extends State<Privipage> {
                               color: Colors.grey[400],
                             )),
                         Positioned(
-                          top: e.height * 0.63,
+                          top: e.height * 0.69,
                           left: e.width * 0.04,
                           child: GestureDetector(
                             onTap: () {

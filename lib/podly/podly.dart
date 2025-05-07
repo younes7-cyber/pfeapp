@@ -2870,7 +2870,7 @@ class _PodlypageState extends State<Podlypage> {
                           )),
                     )),
                 Positioned(
-                  top: x.height * 0.58,
+                  top: x.height * 0.6,
                   left: x.width * 0.03,
                   child: Text(
                     "App Settings",
@@ -2881,7 +2881,7 @@ class _PodlypageState extends State<Podlypage> {
                   ),
                 ),
                 Positioned(
-                  top: x.height * 0.645,
+                  top: x.height * 0.665,
                   right: x.width * 0.1,
                   child: Consumer<ThemeProvider>(
                     builder: (context, themeProvider, child) {
@@ -2898,33 +2898,7 @@ class _PodlypageState extends State<Podlypage> {
                   ),
                 ),
                 Positioned(
-                  top: x.height * 0.74,
-                  left: x.width * 0.03,
-                  child: Image.network(
-                    themeProvider.isDarkMode ? s130 : s131,
-                    width: x.width * 0.07,
-                    height: x.width * 0.07,
-                  ),
-                ),
-                Positioned(
-                  top: x.height * 0.73,
-                  left: x.width * 0.15,
-                  child: Text(
-                    "Load Data",
-                    style: TextStyle(
-                        fontSize: x.width * 0.045, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Positioned(
-                    top: x.height * 0.76,
-                    left: x.width * 0.15,
-                    child: Text(
-                      "Load Your Data From Your Firebase ",
-                      style: TextStyle(
-                          fontSize: x.width * 0.025, color: Colors.grey),
-                    )),
-                Positioned(
-                  top: x.height * 0.66,
+                  top: x.height * 0.68,
                   left: x.width * 0.03,
                   child: Image.network(
                     themeProvider.isDarkMode ? s129 : s92,
@@ -2933,7 +2907,7 @@ class _PodlypageState extends State<Podlypage> {
                   ),
                 ),
                 Positioned(
-                  top: x.height * 0.65,
+                  top: x.height * 0.67,
                   left: x.width * 0.15,
                   child: Text(
                     "Dark Mode",
@@ -2942,7 +2916,7 @@ class _PodlypageState extends State<Podlypage> {
                   ),
                 ),
                 Positioned(
-                    top: x.height * 0.68,
+                    top: x.height * 0.7,
                     left: x.width * 0.15,
                     child: Text(
                       "Change Your Mode Dark Or Ligth",
@@ -2950,7 +2924,7 @@ class _PodlypageState extends State<Podlypage> {
                           fontSize: x.width * 0.025, color: Colors.grey),
                     )),
                 Positioned(
-                  top: x.height * 0.82,
+                  top: x.height * 0.77,
                   left: x.width * 0.04,
                   child: Image.network(
                     s90,
@@ -2959,7 +2933,7 @@ class _PodlypageState extends State<Podlypage> {
                   ),
                 ),
                 Positioned(
-                  top: x.height * 0.815,
+                  top: x.height * 0.77,
                   left: x.width * 0.15,
                   child: GestureDetector(
                     onTap: () async {
@@ -3090,7 +3064,9 @@ class Search extends SearchDelegate<String> {
             .toList();
       });
       // ignore: empty_catches
-    } catch (e) {}
+    } catch (e) {
+      print("Error fetching recent searches: $e"); // Add logging for debugging
+    }
   }
 
   Future<void> fetchFeaturedPodcasts() async {
@@ -3103,14 +3079,24 @@ class Search extends SearchDelegate<String> {
               isGreaterThan: Timestamp.fromDate(sevenDaysAgo))
           .orderBy('dateCreation', descending: true)
           .get();
+
       setState(() {
         feae = recentPodcasts.docs
             // ignore: unnecessary_cast
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
+            .map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          // Add the document ID to each item
+          data['id'] = doc.id;
+          return data;
+        }).toList();
       });
     } catch (e) {
-      setState(() {});
+      print(
+          "Error fetching featured podcasts: $e"); // Add logging for debugging
+      setState(() {
+        // Initialize as empty list instead of null
+        feae = [];
+      });
     }
   }
 
@@ -3172,7 +3158,11 @@ class Search extends SearchDelegate<String> {
   }
 
   Future<void> searchContent(String searchQuery) async {
-    if (searchQuery.isEmpty) return;
+    if (searchQuery.isEmpty) {
+      searchResults = [];
+      suggestions = [];
+      return;
+    }
 
     try {
       final String lowercaseQuery = searchQuery.toLowerCase();

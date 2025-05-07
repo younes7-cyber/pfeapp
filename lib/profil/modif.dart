@@ -35,6 +35,501 @@ class _ModifpageState extends State<Modifpage> {
     return status.isGranted;
   }
 
+  Future<void> _deletechannel(BuildContext contextFromDialog) async {
+    // Close the confirmation dialog first
+    Navigator.of(contextFromDialog).pop();
+
+    // Set deletion flag
+    setState(() {
+      _isDeleting = true;
+    });
+
+    // Show loading dialog - save the context
+    final BuildContext loadingDialogContext = context;
+    showDialog(
+      context: loadingDialogContext,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+          return AlertDialog(
+            backgroundColor:
+                themeProvider.isDarkMode ? Colors.black : Colors.white,
+            content: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Annimationwidjet(),
+                SizedBox(height: 16),
+                Text("Channel deletion in progress..."),
+              ],
+            ),
+          );
+        });
+      },
+    );
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      final currentUserId = currentUser?.uid;
+
+      if (currentUserId == null) {
+        throw Exception("Aucun utilisateur connecté");
+      }
+
+      // Firestore instance
+      final firestore = FirebaseFirestore.instance;
+      final channelsToDelete = await firestore
+          .collection('channels')
+          .where('userId', isEqualTo: currentUserId)
+          .get();
+
+      for (var doc in channelsToDelete.docs) {
+        await doc.reference.delete();
+      }
+      final followsAsAsFollowing = await firestore
+          .collection('follow')
+          .where('idfollowing', isEqualTo: currentUserId)
+          .get();
+
+      // Pour chaque personne suivie, décrémenter son compteur de followers dans channels
+      for (var doc in followsAsAsFollowing.docs) {
+        // Récupérer l'ID de l'utilisateur suivi
+        final idFollowing = doc.data()['idfollowers'];
+
+        // Rechercher le document channel correspondant
+        final channelQuery = await firestore
+            .collection('channels')
+            .where('userId', isEqualTo: idFollowing)
+            .get();
+
+        // Mettre à jour le compteur de followers pour chaque channel trouvé
+        for (var channelDoc in channelQuery.docs) {
+          // Récupérer le compteur actuel de followers
+          final currentFollowers = channelDoc.data()['following'] ?? 0;
+
+          // Décrémenter le compteur (en s'assurant qu'il ne devient pas négatif)
+          final newFollowers = currentFollowers > 0 ? currentFollowers - 1 : 0;
+
+          // Mettre à jour le document
+          await channelDoc.reference.update({'following': newFollowers});
+        }
+
+        // Supprimer la relation follow
+        await doc.reference.delete();
+      }
+      // 3. Gérer les podcasts et références associées
+      final podcastsToDelete = await firestore
+          .collection('podcasts')
+          .where('idUser', isEqualTo: currentUserId)
+          .get();
+
+      for (var podcastDoc in podcastsToDelete.docs) {
+        final podcastId = podcastDoc.id;
+
+        // Récupérer les références dans playinpod
+        final playInPodRefs = await firestore
+            .collection('playinpod')
+            .where('podcastId', isEqualTo: podcastId)
+            .get();
+
+        // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
+        for (var doc in playInPodRefs.docs) {
+          // Récupérer l'ID de la playlist
+          final playlistId = doc.data()['playlistId'];
+
+          if (playlistId != null) {
+            // Récupérer la playlist
+            final playlistDoc =
+                await firestore.collection('playlist').doc(playlistId).get();
+
+            if (playlistDoc.exists) {
+              // Récupérer le compteur actuel de podcasts
+              final currentPodcastCount = playlistDoc.data()?['podcast'] ?? 0;
+
+              // Décrémenter le compteur (en s'assurant qu'il ne devient pas négatif)
+              final newPodcastCount =
+                  currentPodcastCount > 0 ? currentPodcastCount - 1 : 0;
+
+              // Mettre à jour le document
+              await playlistDoc.reference.update({'podcast': newPodcastCount});
+            }
+          }
+
+          // Supprimer la référence dans playinpod
+          await doc.reference.delete();
+        }
+
+        // Supprimer le podcast lui-même
+        await podcastDoc.reference.delete();
+      }
+      // Supprimer les références dans myplaylist pour cet utilisateur
+      final myPlaylistRefs = await firestore
+          .collection('myplaylist')
+          .where('iduser', isEqualTo: currentUserId)
+          .get();
+
+      for (var doc in myPlaylistRefs.docs) {
+        await doc.reference.delete();
+      }
+
+      // 4. Gérer les playlists et références associées
+      // 3. Gérer les podcasts et références associées
+      final playlistToDelete = await firestore
+          .collection('playlist')
+          .where('userId', isEqualTo: currentUserId)
+          .get();
+
+      for (var podcastDoc in playlistToDelete.docs) {
+        final podcastId = podcastDoc.id;
+
+        // Récupérer les références dans playinpod
+        final playInPodRefs = await firestore
+            .collection('playinpod')
+            .where('playlistId', isEqualTo: podcastId)
+            .get();
+
+        // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
+        for (var doc in playInPodRefs.docs) {
+          // Supprimer la référence dans playinpod
+          await doc.reference.delete();
+        }
+
+        // Supprimer le podcast lui-même
+        await podcastDoc.reference.delete();
+      }
+
+      // Supprimer les références dans mesplaylist pour cet utilisateur
+      final mesPlaylistRefs = await firestore
+          .collection('mesplaylist')
+          .where('iduser', isEqualTo: currentUserId)
+          .get();
+
+      for (var doc in mesPlaylistRefs.docs) {
+        await doc.reference.delete();
+      }
+
+      // Check if widget is still mounted before proceeding with navigation
+      if (mounted) {
+        // Fermer la boîte de dialogue de chargement
+        // Using the saved context from earlier to avoid using a potentially destroyed context
+        // ignore: use_build_context_synchronously
+        Navigator.of(loadingDialogContext).pop();
+
+        // Rediriger vers l'écran de connexion après la suppression réussie
+        Navigator.pushNamedAndRemoveUntil(context, '/podly', (route) => false);
+
+        // Afficher un message de confirmation
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("succsuful deleting channel"),
+            backgroundColor: Color(0xFF754CEF),
+          ),
+        );
+      }
+    } catch (e) {
+      // Check if widget is still mounted before showing error
+      if (mounted) {
+        // Fermer la boîte de dialogue de chargement
+        // ignore: use_build_context_synchronously
+        Navigator.of(loadingDialogContext).pop();
+
+        // Afficher un message d'erreur
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                "Erreur lors de la suppression du compte: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      // Reset deletion flag if we're still mounted
+      if (mounted) {
+        setState(() {
+          _isDeleting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _deletepodcast(BuildContext contextFromDialog) async {
+    // Close the confirmation dialog first
+    Navigator.of(contextFromDialog).pop();
+
+    Navigator.pushNamedAndRemoveUntil(context, '/podly', (route) => false);
+    // Afficher un message de confirmation
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Succesfull deleting channel"),
+        backgroundColor: Color(0xFF754CEF),
+      ),
+    );
+    // Set deletion flag
+    setState(() {
+      _isDeleting = true;
+    });
+
+    // Show loading dialog - save the context
+    final BuildContext loadingDialogContext = context;
+    showDialog(
+      context: loadingDialogContext,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+          return AlertDialog(
+            backgroundColor:
+                themeProvider.isDarkMode ? Colors.black : Colors.white,
+            content: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Annimationwidjet(),
+                SizedBox(height: 16),
+                Text("podcast deletion in progress..."),
+              ],
+            ),
+          );
+        });
+      },
+    );
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      final currentUserId = currentUser?.uid;
+
+      if (currentUserId == null) {
+        throw Exception("Aucun utilisateur connecté");
+      }
+
+      // Firestore instance
+      final firestore = FirebaseFirestore.instance;
+
+      // 3. Gérer les podcasts et références associées
+      final podcastsToDelete = await firestore
+          .collection('podcasts')
+          .where('id', isEqualTo: podcast[0]["id"])
+          .get();
+
+      for (var podcastDoc in podcastsToDelete.docs) {
+        final podcastId = podcastDoc.id;
+
+        // Récupérer les références dans playinpod
+        final playInPodRefs = await firestore
+            .collection('playinpod')
+            .where('podcastId', isEqualTo: podcastId)
+            .get();
+
+        // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
+        for (var doc in playInPodRefs.docs) {
+          // Récupérer l'ID de la playlist
+          final playlistId = doc.data()['playlistId'];
+
+          if (playlistId != null) {
+            // Récupérer la playlist
+            final playlistDoc =
+                await firestore.collection('playlist').doc(playlistId).get();
+
+            if (playlistDoc.exists) {
+              // Récupérer le compteur actuel de podcasts
+              final currentPodcastCount = playlistDoc.data()?['podcast'] ?? 0;
+
+              // Décrémenter le compteur (en s'assurant qu'il ne devient pas négatif)
+              final newPodcastCount =
+                  currentPodcastCount > 0 ? currentPodcastCount - 1 : 0;
+
+              // Mettre à jour le document
+              await playlistDoc.reference.update({'podcast': newPodcastCount});
+            }
+          }
+
+          // Supprimer la référence dans playinpod
+          await doc.reference.delete();
+        }
+
+        // Supprimer le podcast lui-même
+        await podcastDoc.reference.delete();
+      }
+      // Supprimer les références dans myplaylist pour cet utilisateur
+      final myPlaylistRefs = await firestore
+          .collection('myplaylist')
+          .where('idpod', isEqualTo: podcast[0]["id"])
+          .get();
+
+      for (var doc in myPlaylistRefs.docs) {
+        await doc.reference.delete();
+      }
+
+      // Check if widget is still mounted before proceeding with navigation
+      if (mounted) {
+        // Fermer la boîte de dialogue de chargement
+        // Using the saved context from earlier to avoid using a potentially destroyed context
+        // ignore: use_build_context_synchronously
+        Navigator.of(loadingDialogContext).pop();
+
+        // Rediriger vers l'écran de connexion après la suppression réussie
+        Navigator.pushNamedAndRemoveUntil(context, '/your', (route) => false);
+
+        // Afficher un message de confirmation
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("succsuful deleting podcast"),
+            backgroundColor: Color(0xFF754CEF),
+          ),
+        );
+      }
+    } catch (e) {
+      // Check if widget is still mounted before showing error
+      if (mounted) {
+        // Fermer la boîte de dialogue de chargement
+        // ignore: use_build_context_synchronously
+        Navigator.of(loadingDialogContext).pop();
+
+        // Afficher un message d'erreur
+
+        Navigator.pushNamedAndRemoveUntil(context, '/your', (route) => false);
+        // Afficher un message de confirmation
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Succesfull deleting podcast"),
+            backgroundColor: Color(0xFF754CEF),
+          ),
+        );
+      }
+    } finally {
+      // Reset deletion flag if we're still mounted
+      if (mounted) {
+        setState(() {
+          _isDeleting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteplaylist(BuildContext contextFromDialog) async {
+    // Close the confirmation dialog first
+    Navigator.of(contextFromDialog).pop();
+
+    // Set deletion flag
+    setState(() {
+      _isDeleting = true;
+    });
+
+    // Show loading dialog - save the context
+    final BuildContext loadingDialogContext = context;
+    showDialog(
+      context: loadingDialogContext,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+          return AlertDialog(
+            backgroundColor:
+                themeProvider.isDarkMode ? Colors.black : Colors.white,
+            content: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Annimationwidjet(),
+                SizedBox(height: 16),
+                Text("playlist deletion in progress..."),
+              ],
+            ),
+          );
+        });
+      },
+    );
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      final currentUserId = currentUser?.uid;
+
+      if (currentUserId == null) {
+        throw Exception("Aucun utilisateur connecté");
+      }
+
+      // Firestore instance
+      final firestore = FirebaseFirestore.instance;
+
+      // 4. Gérer les playlists et références associées
+      // 3. Gérer les podcasts et références associées
+      final playlistToDelete = await firestore
+          .collection('playlist')
+          .where('id', isEqualTo: playlistt[0]["id"])
+          .get();
+
+      for (var podcastDoc in playlistToDelete.docs) {
+        final podcastId = podcastDoc.id;
+
+        // Récupérer les références dans playinpod
+        final playInPodRefs = await firestore
+            .collection('playinpod')
+            .where('playlistId', isEqualTo: podcastId)
+            .get();
+
+        // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
+        for (var doc in playInPodRefs.docs) {
+          // Supprimer la référence dans playinpod
+          await doc.reference.delete();
+        }
+
+        // Supprimer le podcast lui-même
+        await podcastDoc.reference.delete();
+      }
+
+      // Supprimer les références dans mesplaylist pour cet utilisateur
+      final mesPlaylistRefs = await firestore
+          .collection('mesplaylist')
+          .where('idplay', isEqualTo: playlistt[0]["id"])
+          .get();
+
+      for (var doc in mesPlaylistRefs.docs) {
+        await doc.reference.delete();
+      }
+
+      // Check if widget is still mounted before proceeding with navigation
+      if (mounted) {
+        // Fermer la boîte de dialogue de chargement
+        // Using the saved context from earlier to avoid using a potentially destroyed context
+        // ignore: use_build_context_synchronously
+        Navigator.of(loadingDialogContext).pop();
+
+        // Rediriger vers l'écran de connexion après la suppression réussie
+        Navigator.pushNamedAndRemoveUntil(context, '/your', (route) => false);
+
+        // Afficher un message de confirmation
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("succsuful deleting playlist"),
+            backgroundColor: Color(0xFF754CEF),
+          ),
+        );
+      }
+    } catch (e) {
+      // Check if widget is still mounted before showing error
+      if (mounted) {
+        // Fermer la boîte de dialogue de chargement
+        // ignore: use_build_context_synchronously
+        Navigator.of(loadingDialogContext).pop();
+
+        Navigator.pushNamedAndRemoveUntil(context, '/your', (route) => false);
+        // Afficher un message de confirmation
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Succesfull deleting playlist"),
+            backgroundColor: Color(0xFF754CEF),
+          ),
+        ); // Afficher un message d'erreur
+      }
+    } finally {
+      // Reset deletion flag if we're still mounted
+      if (mounted) {
+        setState(() {
+          _isDeleting = false;
+        });
+      }
+    }
+  }
+
+  bool _isDeleting = false;
   Future<void> _pickAndUploadImage1() async {
     final String userId = FirebaseAuth.instance.currentUser?.uid ?? "";
     if (userId.isEmpty) {
@@ -522,7 +1017,7 @@ class _ModifpageState extends State<Modifpage> {
     final Size e = MediaQuery.of(context).size;
     return Scaffold(
         body: SafeArea(
-            child: isLoading
+            child: _isDeleting || isLoading
                 ? const Center(child: Annimationwidjet())
                 : Consumer<ThemeProvider>(
                     builder: (context, themeProvider, child) {
@@ -959,7 +1454,11 @@ class _ModifpageState extends State<Modifpage> {
                                             children: [
                                               Center(
                                                 child: Image.network(
-                                                  channels[0]["photoUrl"],
+                                                  channels.isNotEmpty
+                                                      ? channels[0]
+                                                              ["photoUrl"] ??
+                                                          ''
+                                                      : 'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/output-onlinejpgtools%20(2).jpg',
                                                   fit: BoxFit.contain,
                                                 ),
                                               ),
@@ -998,7 +1497,9 @@ class _ModifpageState extends State<Modifpage> {
                                     ),
                                     child: ClipOval(
                                       child: Image.network(
-                                        channels[0]["photoUrl"],
+                                        channels.isNotEmpty
+                                            ? channels[0]["photoUrl"] ?? ''
+                                            : 'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/output-onlinejpgtools%20(2).jpg',
                                         fit: BoxFit.cover,
                                       ),
                                     ),
@@ -1043,7 +1544,9 @@ class _ModifpageState extends State<Modifpage> {
                                       ),
                                       child: ClipOval(
                                         child: Image.network(
-                                          channels[0]["photoUrl"],
+                                          channels.isNotEmpty
+                                              ? channels[0]["photoUrl"] ?? ''
+                                              : 'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/output-onlinejpgtools%20(2).jpg',
                                           fit: BoxFit.cover,
                                         ),
                                       ),
@@ -1113,7 +1616,9 @@ class _ModifpageState extends State<Modifpage> {
                                       width: e.width * 0.5,
                                       height: e.height * 0.1,
                                       child: Text(
-                                        channels[0]["name"],
+                                        channels.isNotEmpty
+                                            ? channels[0]["name"] ?? ''
+                                            : '',
                                         style: TextStyle(
                                           fontSize: e.width * 0.04,
                                         ),
@@ -1158,7 +1663,9 @@ class _ModifpageState extends State<Modifpage> {
                                       width: e.width * 0.55,
                                       height: e.height * 0.1,
                                       child: Text(
-                                        channels[0]["id"],
+                                        channels.isNotEmpty
+                                            ? channels[0]["id"] ?? ''
+                                            : '',
                                         style: TextStyle(
                                           fontSize: e.width * 0.04,
                                         ),
@@ -1197,343 +1704,52 @@ class _ModifpageState extends State<Modifpage> {
                                 top: e.height * 0.6,
                                 left: e.width * 0.04,
                                 child: GestureDetector(
-                                    onTap: () {
-                                      // Afficher une boîte de dialogue de confirmation
-                                      showDialog(
-                                        context: context,
-                                        builder: (BuildContext context) {
-                                          return AlertDialog(
-                                            backgroundColor:
-                                                themeProvider.isDarkMode
-                                                    ? Colors.black
-                                                    : Colors.white,
-                                            title: const Text("Delete Channel"),
-                                            content: const Text(
-                                              "Are you sure you want to delete your channel? This action is irreversible and all your data will be lost.",
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () async {
-                                                  Navigator.of(context)
-                                                      .pop(); // Fermer la boîte de dialogue
+                                  onTap: () {
+                                    // Capture the current context for the dialog
+                                    final BuildContext currentContext = context;
 
-                                                  // Afficher un indicateur de chargement
-                                                  showDialog(
-                                                    context: context,
-                                                    barrierDismissible: false,
-                                                    builder:
-                                                        (BuildContext context) {
-                                                      return AlertDialog(
-                                                        backgroundColor:
-                                                            themeProvider
-                                                                    .isDarkMode
-                                                                ? Colors.black
-                                                                : Colors.white,
-                                                        content: const Column(
-                                                          mainAxisSize:
-                                                              MainAxisSize.min,
-                                                          children: [
-                                                            Annimationwidjet(),
-                                                            SizedBox(
-                                                                height: 16),
-                                                            Text(
-                                                                "Channel being deleted..."),
-                                                          ],
-                                                        ),
-                                                      );
-                                                    },
-                                                  );
-
-                                                  try {
-                                                    // Récupérer l'utilisateur actuel et son ID
-                                                    final currentUser =
-                                                        FirebaseAuth.instance
-                                                            .currentUser;
-                                                    final currentUserId =
-                                                        currentUser?.uid;
-
-                                                    if (currentUserId == null) {
-                                                      throw Exception(
-                                                          "Aucun utilisateur connecté");
-                                                    }
-
-                                                    // Firestore instance
-                                                    final firestore =
-                                                        FirebaseFirestore
-                                                            .instance;
-
-                                                    final followsAsAsFollowing =
-                                                        await firestore
-                                                            .collection(
-                                                                'follow')
-                                                            .where(
-                                                                'idfollowing',
-                                                                isEqualTo:
-                                                                    currentUserId)
-                                                            .get();
-
-                                                    // Pour chaque personne suivie, décrémenter son compteur de followers dans channels
-                                                    for (var doc
-                                                        in followsAsAsFollowing
-                                                            .docs) {
-                                                      // Récupérer l'ID de l'utilisateur suivi
-                                                      final idFollowing =
-                                                          doc.data()[
-                                                              'idfollowers'];
-
-                                                      // Rechercher le document channel correspondant
-                                                      final channelQuery =
-                                                          await firestore
-                                                              .collection(
-                                                                  'channels')
-                                                              .where('userId',
-                                                                  isEqualTo:
-                                                                      idFollowing)
-                                                              .get();
-
-                                                      // Mettre à jour le compteur de followers pour chaque channel trouvé
-                                                      for (var channelDoc
-                                                          in channelQuery
-                                                              .docs) {
-                                                        // Récupérer le compteur actuel de followers
-                                                        final currentFollowers =
-                                                            channelDoc.data()[
-                                                                    'following'] ??
-                                                                0;
-
-                                                        // Décrémenter le compteur (en s'assurant qu'il ne devient pas négatif)
-                                                        final newFollowers =
-                                                            currentFollowers > 0
-                                                                ? currentFollowers -
-                                                                    1
-                                                                : 0;
-
-                                                        // Mettre à jour le document
-                                                        await channelDoc
-                                                            .reference
-                                                            .update({
-                                                          'following':
-                                                              newFollowers
-                                                        });
-                                                      }
-
-                                                      // Supprimer la relation follow
-                                                      await doc.reference
-                                                          .delete();
-                                                    }
-                                                    // 3. Gérer les podcasts et références associées
-                                                    final podcastsToDelete =
-                                                        await firestore
-                                                            .collection(
-                                                                'podcasts')
-                                                            .where('idUser',
-                                                                isEqualTo:
-                                                                    currentUserId)
-                                                            .get();
-
-                                                    for (var podcastDoc
-                                                        in podcastsToDelete
-                                                            .docs) {
-                                                      final podcastId =
-                                                          podcastDoc.id;
-
-                                                      // Récupérer les références dans playinpod
-                                                      final playInPodRefs =
-                                                          await firestore
-                                                              .collection(
-                                                                  'playinpod')
-                                                              .where(
-                                                                  'podcastId',
-                                                                  isEqualTo:
-                                                                      podcastId)
-                                                              .get();
-
-                                                      // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
-                                                      for (var doc
-                                                          in playInPodRefs
-                                                              .docs) {
-                                                        // Récupérer l'ID de la playlist
-                                                        final playlistId =
-                                                            doc.data()[
-                                                                'playlistId'];
-
-                                                        if (playlistId !=
-                                                            null) {
-                                                          // Récupérer la playlist
-                                                          final playlistDoc =
-                                                              await firestore
-                                                                  .collection(
-                                                                      'playlist')
-                                                                  .doc(
-                                                                      playlistId)
-                                                                  .get();
-
-                                                          if (playlistDoc
-                                                              .exists) {
-                                                            // Récupérer le compteur actuel de podcasts
-                                                            final currentPodcastCount =
-                                                                playlistDoc.data()?[
-                                                                        'podcast'] ??
-                                                                    0;
-
-                                                            // Décrémenter le compteur (en s'assurant qu'il ne devient pas négatif)
-                                                            final newPodcastCount =
-                                                                currentPodcastCount >
-                                                                        0
-                                                                    ? currentPodcastCount -
-                                                                        1
-                                                                    : 0;
-
-                                                            // Mettre à jour le document
-                                                            await playlistDoc
-                                                                .reference
-                                                                .update({
-                                                              'podcast':
-                                                                  newPodcastCount
-                                                            });
-                                                          }
-                                                        }
-
-                                                        // Supprimer la référence dans playinpod
-                                                        await doc.reference
-                                                            .delete();
-                                                      }
-
-                                                      // Supprimer le podcast lui-même
-                                                      await podcastDoc.reference
-                                                          .delete();
-                                                    }
-                                                    // Supprimer les références dans myplaylist pour cet utilisateur
-                                                    final myPlaylistRefs =
-                                                        await firestore
-                                                            .collection(
-                                                                'myplaylist')
-                                                            .where('iduser',
-                                                                isEqualTo:
-                                                                    currentUserId)
-                                                            .get();
-
-                                                    for (var doc
-                                                        in myPlaylistRefs
-                                                            .docs) {
-                                                      await doc.reference
-                                                          .delete();
-                                                    }
-
-                                                    // 4. Gérer les playlists et références associées
-                                                    // 3. Gérer les podcasts et références associées
-                                                    final playlistToDelete =
-                                                        await firestore
-                                                            .collection(
-                                                                'playlist')
-                                                            .where('userId',
-                                                                isEqualTo:
-                                                                    currentUserId)
-                                                            .get();
-
-                                                    for (var podcastDoc
-                                                        in playlistToDelete
-                                                            .docs) {
-                                                      final podcastId =
-                                                          podcastDoc.id;
-
-                                                      // Récupérer les références dans playinpod
-                                                      final playInPodRefs =
-                                                          await firestore
-                                                              .collection(
-                                                                  'playinpod')
-                                                              .where(
-                                                                  'playlistId',
-                                                                  isEqualTo:
-                                                                      podcastId)
-                                                              .get();
-
-                                                      // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
-                                                      for (var doc
-                                                          in playInPodRefs
-                                                              .docs) {
-                                                        // Supprimer la référence dans playinpod
-                                                        await doc.reference
-                                                            .delete();
-                                                      }
-
-                                                      // Supprimer le podcast lui-même
-                                                      await podcastDoc.reference
-                                                          .delete();
-                                                    }
-
-                                                    // Supprimer les références dans mesplaylist pour cet utilisateur
-                                                    final mesPlaylistRefs =
-                                                        await firestore
-                                                            .collection(
-                                                                'mesplaylist')
-                                                            .where('iduser',
-                                                                isEqualTo:
-                                                                    currentUserId)
-                                                            .get();
-
-                                                    for (var doc
-                                                        in mesPlaylistRefs
-                                                            .docs) {
-                                                      await doc.reference
-                                                          .delete();
-                                                    }
-
-                                                    // Enfin, supprimer le compte utilisateur de Firebase Auth
-
-                                                    // Fermer la boîte de dialogue de chargement
-                                                    // ignore: use_build_context_synchronously
-                                                    Navigator.of(context).pop();
-
-                                                    // Rediriger vers l'écran de connexion après la suppression réussie
-                                                    Navigator
-                                                        .pushNamedAndRemoveUntil(
-                                                            // ignore: use_build_context_synchronously
-                                                            context,
-                                                            '/podly',
-                                                            (route) => false);
-
-                                                    // Afficher un message de confirmation
-                                                    ScaffoldMessenger.of(
-                                                        // ignore: use_build_context_synchronously
-                                                        context).showSnackBar(
-                                                      const SnackBar(
-                                                        content: Text(
-                                                            "Your channel has been successfully deleted."),
-                                                        backgroundColor:
-                                                            Color(0xFF754CEF),
-                                                      ),
-                                                    );
-                                                  } catch (e) {
-                                                    // Fermer la boîte de dialogue de chargement
-                                                    // ignore: use_build_context_synchronously
-                                                    Navigator.of(context).pop();
-
-                                                    // Afficher un message d'erreur
-                                                    ScaffoldMessenger.of(
-                                                        // ignore: use_build_context_synchronously
-                                                        context).showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(
-                                                            "Erreur lors de la suppression du compte: ${e.toString()}"),
-                                                        backgroundColor:
-                                                            Colors.red,
-                                                      ),
-                                                    );
-                                                  }
-                                                },
-                                                child: const Text(
-                                                  "Delete",
-                                                  style: TextStyle(
-                                                      color: Colors.red),
-                                                ),
+                                    // Afficher une boîte de dialogue de confirmation
+                                    showDialog(
+                                      context: currentContext,
+                                      builder: (BuildContext dialogContext) {
+                                        return AlertDialog(
+                                          backgroundColor:
+                                              themeProvider.isDarkMode
+                                                  ? Colors.black
+                                                  : Colors.white,
+                                          title: const Text("Delete Channel"),
+                                          content: const Text(
+                                            "Are you sure you want to delete your channel? This action is irreversible and all your data will be lost.",
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () {
+                                                Navigator.of(dialogContext)
+                                                    .pop(); // Just close the dialog
+                                              },
+                                              child: const Text(
+                                                "Cancel",
+                                                style: TextStyle(
+                                                    color: Colors.grey),
                                               ),
-                                            ],
-                                          );
-                                        },
-                                      );
-                                    },
-                                    child: Row(children: [
+                                            ),
+                                            TextButton(
+                                              // Pass the dialog context to the delete function
+                                              onPressed: () =>
+                                                  _deletechannel(dialogContext),
+                                              child: const Text(
+                                                "Delete",
+                                                style: TextStyle(
+                                                    color: Colors.red),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  },
+                                  child: Row(
+                                    children: [
                                       Image.network(
                                         s91,
                                         width: e.width * 0.06,
@@ -1542,11 +1758,14 @@ class _ModifpageState extends State<Modifpage> {
                                       Text(
                                         "Delete Channel",
                                         style: TextStyle(
-                                            fontSize: e.width * 0.045,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.red),
+                                          fontSize: e.width * 0.045,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.red,
+                                        ),
                                       ),
-                                    ])),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ],
                             if (q == 4) ...[
@@ -1609,7 +1828,10 @@ class _ModifpageState extends State<Modifpage> {
                                             e.width * 0.04),
                                         image: DecorationImage(
                                           image: NetworkImage(
-                                              podcast[0]["urlPhoto"]),
+                                            podcast.isNotEmpty
+                                                ? podcast[0]["urlPhoto"] ?? ''
+                                                : 'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/output-onlinejpgtools%20(2).jpg',
+                                          ),
                                           fit: BoxFit.cover,
                                           onError: (exception, stackTrace) {},
                                         ),
@@ -1683,7 +1905,9 @@ class _ModifpageState extends State<Modifpage> {
                                   height: e.height * 0.1,
                                   width: e.width * 0.5,
                                   child: Text(
-                                    podcast[0]["name"],
+                                    podcast.isNotEmpty
+                                        ? podcast[0]["name"] ?? ''
+                                        : '',
                                     style: TextStyle(
                                       fontSize: e.width * 0.04,
                                     ),
@@ -1708,7 +1932,9 @@ class _ModifpageState extends State<Modifpage> {
                                   height: e.height * 0.1,
                                   width: e.width * 0.5,
                                   child: Text(
-                                    podcast[0]["id"],
+                                    podcast.isNotEmpty
+                                        ? podcast[0]["id"] ?? ''
+                                        : '',
                                     style: TextStyle(
                                       fontSize: e.width * 0.04,
                                     ),
@@ -1752,7 +1978,9 @@ class _ModifpageState extends State<Modifpage> {
                                   height: e.height * 0.1,
                                   width: e.width * 0.5,
                                   child: Text(
-                                    podcast[0]["description"],
+                                    podcast.isNotEmpty
+                                        ? podcast[0]["description"] ?? ''
+                                        : '',
                                     style: TextStyle(
                                       fontSize: e.width * 0.04,
                                     ),
@@ -1777,7 +2005,9 @@ class _ModifpageState extends State<Modifpage> {
                                   height: e.height * 0.1,
                                   width: e.width * 0.5,
                                   child: Text(
-                                    podcast[0]["category"],
+                                    podcast.isNotEmpty
+                                        ? podcast[0]["category"] ?? ''
+                                        : '',
                                     style: TextStyle(
                                       fontSize: e.width * 0.04,
                                     ),
@@ -1878,208 +2108,52 @@ class _ModifpageState extends State<Modifpage> {
                                             fontWeight: FontWeight.bold),
                                       ))),
                               Positioned(
+                                  top: e.height * 0.86,
+                                  left: e.width * 0.07,
+                                  right: e.width * 0.07,
+                                  child: Container(
+                                    width: e.width * 0.8,
+                                    height: e.height *
+                                        0.002, // Épaisseur de la ligne
+                                    color: Colors.grey[400],
+                                  )),
+                              Positioned(
                                 top: e.height * 0.81,
                                 left: e.width * 0.04,
                                 child: GestureDetector(
                                   onTap: () {
+                                    // Capture the current context for the dialog
+                                    final BuildContext currentContext = context;
+
                                     // Afficher une boîte de dialogue de confirmation
                                     showDialog(
-                                      context: context,
-                                      builder: (BuildContext context) {
+                                      context: currentContext,
+                                      builder: (BuildContext dialogContext) {
                                         return AlertDialog(
                                           backgroundColor:
                                               themeProvider.isDarkMode
                                                   ? Colors.black
                                                   : Colors.white,
-                                          title: const Text("Delete Podcast"),
+                                          title: const Text("Delete podcast"),
                                           content: const Text(
                                             "Are you sure you want to delete your podcast? This action is irreversible and all your data will be lost.",
                                           ),
                                           actions: [
                                             TextButton(
-                                              onPressed: () async {
-                                                Navigator.of(context)
-                                                    .pop(); // Fermer la boîte de dialogue
-
-                                                // Afficher un indicateur de chargement
-                                                showDialog(
-                                                  context: context,
-                                                  barrierDismissible: false,
-                                                  builder:
-                                                      (BuildContext context) {
-                                                    return AlertDialog(
-                                                      backgroundColor:
-                                                          themeProvider
-                                                                  .isDarkMode
-                                                              ? Colors.black
-                                                              : Colors.white,
-                                                      content: const Column(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          Annimationwidjet(),
-                                                          SizedBox(height: 16),
-                                                          Text(
-                                                              "Deleting the podcast in progress..."),
-                                                        ],
-                                                      ),
-                                                    );
-                                                  },
-                                                );
-
-                                                try {
-                                                  // Récupérer l'utilisateur actuel et son ID
-                                                  final currentUser =
-                                                      FirebaseAuth
-                                                          .instance.currentUser;
-                                                  final currentUserId =
-                                                      currentUser?.uid;
-
-                                                  if (currentUserId == null) {
-                                                    throw Exception(
-                                                        "Aucun utilisateur connecté");
-                                                  }
-
-                                                  // Firestore instance
-                                                  final firestore =
-                                                      FirebaseFirestore
-                                                          .instance;
-
-                                                  // 3. Gérer les podcasts et références associées
-                                                  final podcastsToDelete =
-                                                      await firestore
-                                                          .collection(
-                                                              'podcasts')
-                                                          .where('id',
-                                                              isEqualTo:
-                                                                  podcast[0]
-                                                                      ["id"])
-                                                          .get();
-
-                                                  for (var podcastDoc
-                                                      in podcastsToDelete
-                                                          .docs) {
-                                                    final podcastId =
-                                                        podcastDoc.id;
-
-                                                    // Récupérer les références dans playinpod
-                                                    final playInPodRefs =
-                                                        await firestore
-                                                            .collection(
-                                                                'playinpod')
-                                                            .where('podcastId',
-                                                                isEqualTo:
-                                                                    podcastId)
-                                                            .get();
-
-                                                    // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
-                                                    for (var doc
-                                                        in playInPodRefs.docs) {
-                                                      // Récupérer l'ID de la playlist
-                                                      final playlistId = doc
-                                                          .data()['playlistId'];
-
-                                                      if (playlistId != null) {
-                                                        // Récupérer la playlist
-                                                        final playlistDoc =
-                                                            await firestore
-                                                                .collection(
-                                                                    'playlist')
-                                                                .doc(playlistId)
-                                                                .get();
-
-                                                        if (playlistDoc
-                                                            .exists) {
-                                                          // Récupérer le compteur actuel de podcasts
-                                                          final currentPodcastCount =
-                                                              playlistDoc.data()?[
-                                                                      'podcast'] ??
-                                                                  0;
-
-                                                          // Décrémenter le compteur (en s'assurant qu'il ne devient pas négatif)
-                                                          final newPodcastCount =
-                                                              currentPodcastCount >
-                                                                      0
-                                                                  ? currentPodcastCount -
-                                                                      1
-                                                                  : 0;
-
-                                                          // Mettre à jour le document
-                                                          await playlistDoc
-                                                              .reference
-                                                              .update({
-                                                            'podcast':
-                                                                newPodcastCount
-                                                          });
-                                                        }
-                                                      }
-
-                                                      // Supprimer la référence dans playinpod
-                                                      await doc.reference
-                                                          .delete();
-                                                    }
-
-                                                    // Supprimer le podcast lui-même
-                                                    await podcastDoc.reference
-                                                        .delete();
-                                                  }
-                                                  // Supprimer les références dans myplaylist pour cet utilisateur
-                                                  final myPlaylistRefs =
-                                                      await firestore
-                                                          .collection(
-                                                              'myplaylist')
-                                                          .where('idpod',
-                                                              isEqualTo:
-                                                                  podcast[0]
-                                                                      ["id"])
-                                                          .get();
-
-                                                  for (var doc
-                                                      in myPlaylistRefs.docs) {
-                                                    await doc.reference
-                                                        .delete();
-                                                  }
-
-                                                  // Fermer la boîte de dialogue de chargement
-                                                  // ignore: use_build_context_synchronously
-                                                  Navigator.of(context).pop();
-
-                                                  // Rediriger vers l'écran de connexion après la suppression réussie
-                                                  Navigator.pushNamedAndRemoveUntil(
-                                                      // ignore: use_build_context_synchronously
-                                                      context,
-                                                      '/your',
-                                                      (route) => false);
-
-                                                  // Afficher un message de confirmation
-                                                  ScaffoldMessenger.of(
-                                                      // ignore: use_build_context_synchronously
-                                                      context).showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text(
-                                                          "Your podcast has been successfully deleted"),
-                                                      backgroundColor:
-                                                          Color(0xFF754CEF),
-                                                    ),
-                                                  );
-                                                } catch (e) {
-                                                  // Fermer la boîte de dialogue de chargement
-                                                  // ignore: use_build_context_synchronously
-                                                  Navigator.of(context).pop();
-
-                                                  // Afficher un message d'erreur
-                                                  ScaffoldMessenger.of(
-                                                      // ignore: use_build_context_synchronously
-                                                      context).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text(
-                                                          "Erreur lors de la suppression du compte: ${e.toString()}"),
-                                                      backgroundColor:
-                                                          Colors.red,
-                                                    ),
-                                                  );
-                                                }
+                                              onPressed: () {
+                                                Navigator.of(dialogContext)
+                                                    .pop(); // Just close the dialog
                                               },
+                                              child: const Text(
+                                                "Cancel",
+                                                style: TextStyle(
+                                                    color: Colors.grey),
+                                              ),
+                                            ),
+                                            TextButton(
+                                              // Pass the dialog context to the delete function
+                                              onPressed: () =>
+                                                  _deletepodcast(dialogContext),
                                               child: const Text(
                                                 "Delete",
                                                 style: TextStyle(
@@ -2101,24 +2175,15 @@ class _ModifpageState extends State<Modifpage> {
                                       Text(
                                         "Delete Podcast",
                                         style: TextStyle(
-                                            fontSize: e.width * 0.045,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.red),
+                                          fontSize: e.width * 0.045,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.red,
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
                               ),
-                              Positioned(
-                                  top: e.height * 0.86,
-                                  left: e.width * 0.07,
-                                  right: e.width * 0.07,
-                                  child: Container(
-                                    width: e.width * 0.8,
-                                    height: e.height *
-                                        0.002, // Épaisseur de la ligne
-                                    color: Colors.grey[400],
-                                  )),
                             ],
                             if (q == 5) ...[
                               Positioned(
@@ -2413,171 +2478,52 @@ class _ModifpageState extends State<Modifpage> {
                                 ),
                               ),
                               Positioned(
+                                  top: e.height * 0.83,
+                                  left: e.width * 0.07,
+                                  right: e.width * 0.07,
+                                  child: Container(
+                                    width: e.width * 0.8,
+                                    height: e.height *
+                                        0.002, // Épaisseur de la ligne
+                                    color: Colors.grey[400],
+                                  )),
+                              Positioned(
                                 top: e.height * 0.77,
                                 left: e.width * 0.04,
                                 child: GestureDetector(
                                   onTap: () {
+                                    // Capture the current context for the dialog
+                                    final BuildContext currentContext = context;
+
                                     // Afficher une boîte de dialogue de confirmation
                                     showDialog(
-                                      context: context,
-                                      builder: (BuildContext context) {
+                                      context: currentContext,
+                                      builder: (BuildContext dialogContext) {
                                         return AlertDialog(
                                           backgroundColor:
                                               themeProvider.isDarkMode
                                                   ? Colors.black
                                                   : Colors.white,
-                                          title: const Text("Delete Playlist"),
+                                          title: const Text("Delete playlist"),
                                           content: const Text(
                                             "Are you sure you want to delete your playlist? This action is irreversible and all your data will be lost.",
                                           ),
                                           actions: [
                                             TextButton(
-                                              onPressed: () async {
-                                                Navigator.of(context)
-                                                    .pop(); // Fermer la boîte de dialogue
-
-                                                // Afficher un indicateur de chargement
-                                                showDialog(
-                                                  context: context,
-                                                  barrierDismissible: false,
-                                                  builder:
-                                                      (BuildContext context) {
-                                                    return AlertDialog(
-                                                      backgroundColor:
-                                                          themeProvider
-                                                                  .isDarkMode
-                                                              ? Colors.black
-                                                              : Colors.white,
-                                                      content: const Column(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          Annimationwidjet(),
-                                                          SizedBox(height: 16),
-                                                          Text(
-                                                              "Delete Playlist In Progress"),
-                                                        ],
-                                                      ),
-                                                    );
-                                                  },
-                                                );
-
-                                                try {
-                                                  // Récupérer l'utilisateur actuel et son ID
-                                                  final currentUser =
-                                                      FirebaseAuth
-                                                          .instance.currentUser;
-                                                  final currentUserId =
-                                                      currentUser?.uid;
-
-                                                  if (currentUserId == null) {
-                                                    throw Exception(
-                                                        "Aucun utilisateur connecté");
-                                                  }
-
-                                                  // Firestore instance
-                                                  final firestore =
-                                                      FirebaseFirestore
-                                                          .instance;
-
-                                                  // 4. Gérer les playlists et références associées
-                                                  // 3. Gérer les podcasts et références associées
-                                                  final playlistToDelete =
-                                                      await firestore
-                                                          .collection(
-                                                              'playlist')
-                                                          .where('id',
-                                                              isEqualTo:
-                                                                  playlistt[0]
-                                                                      ["id"])
-                                                          .get();
-
-                                                  for (var podcastDoc
-                                                      in playlistToDelete
-                                                          .docs) {
-                                                    final podcastId =
-                                                        podcastDoc.id;
-
-                                                    // Récupérer les références dans playinpod
-                                                    final playInPodRefs =
-                                                        await firestore
-                                                            .collection(
-                                                                'playinpod')
-                                                            .where('playlistId',
-                                                                isEqualTo:
-                                                                    podcastId)
-                                                            .get();
-
-                                                    // Pour chaque référence, récupérer et mettre à jour la playlist correspondante
-                                                    for (var doc
-                                                        in playInPodRefs.docs) {
-                                                      // Supprimer la référence dans playinpod
-                                                      await doc.reference
-                                                          .delete();
-                                                    }
-
-                                                    // Supprimer le podcast lui-même
-                                                    await podcastDoc.reference
-                                                        .delete();
-                                                  }
-
-                                                  // Supprimer les références dans mesplaylist pour cet utilisateur
-                                                  final mesPlaylistRefs =
-                                                      await firestore
-                                                          .collection(
-                                                              'mesplaylist')
-                                                          .where('idplay',
-                                                              isEqualTo:
-                                                                  playlistt[0]
-                                                                      ["id"])
-                                                          .get();
-
-                                                  for (var doc
-                                                      in mesPlaylistRefs.docs) {
-                                                    await doc.reference
-                                                        .delete();
-                                                  }
-
-                                                  // Enfin, supprimer le compte utilisateur de Firebase Auth
-                                                  await currentUser?.delete();
-                                                  if (mounted) {
-                                                    // Fermer la boîte de dialogue de chargement
-                                                    // ignore: use_build_context_synchronously
-                                                    Navigator.of(context).pop();
-
-                                                    // Rediriger vers l'écran de connexion après la suppression réussie
-                                                    Navigator
-                                                        .pushNamedAndRemoveUntil(
-                                                            // ignore: use_build_context_synchronously
-                                                            context,
-                                                            '/your',
-                                                            (route) => false);
-
-                                                    ScaffoldMessenger.of(
-                                                        // ignore: use_build_context_synchronously
-                                                        context).showSnackBar(
-                                                      const SnackBar(
-                                                        content: Text(
-                                                            "Your playlist has been successfully deleted"),
-                                                        backgroundColor:
-                                                            Color(0xFF754CEF),
-                                                      ),
-                                                    );
-                                                  }
-                                                } catch (e) {
-                                                  if (mounted) {
-                                                    Navigator.of(context)
-                                                        .pop(); // Fermer le loader
-                                                    ScaffoldMessenger.of(
-                                                            context)
-                                                        .showSnackBar(
-                                                      SnackBar(
-                                                          content: Text(
-                                                              "Error: $e")),
-                                                    );
-                                                  }
-                                                }
+                                              onPressed: () {
+                                                Navigator.of(dialogContext)
+                                                    .pop(); // Just close the dialog
                                               },
+                                              child: const Text(
+                                                "Cancel",
+                                                style: TextStyle(
+                                                    color: Colors.grey),
+                                              ),
+                                            ),
+                                            TextButton(
+                                              // Pass the dialog context to the delete function
+                                              onPressed: () => _deleteplaylist(
+                                                  dialogContext),
                                               child: const Text(
                                                 "Delete",
                                                 style: TextStyle(
@@ -2597,26 +2543,17 @@ class _ModifpageState extends State<Modifpage> {
                                         height: e.width * 0.06,
                                       ),
                                       Text(
-                                        "Delete Playlist",
+                                        "Delete Playist",
                                         style: TextStyle(
-                                            fontSize: e.width * 0.045,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.red),
+                                          fontSize: e.width * 0.045,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.red,
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
                               ),
-                              Positioned(
-                                  top: e.height * 0.83,
-                                  left: e.width * 0.07,
-                                  right: e.width * 0.07,
-                                  child: Container(
-                                    width: e.width * 0.8,
-                                    height: e.height *
-                                        0.002, // Épaisseur de la ligne
-                                    color: Colors.grey[400],
-                                  )),
                             ],
                           ],
                         ));
