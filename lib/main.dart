@@ -1,6 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Add this import for rootBundle
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:googleapis_auth/auth_io.dart';
+import 'dart:async';
+
+// Import des pages existantes
 import 'package:pfeapp/profil/privicy.dart';
 import 'package:pfeapp/profil/your_playlist.dart';
 import 'package:pfeapp/succes.dart';
@@ -10,8 +20,8 @@ import 'package:pfeapp/sucess1.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import 'theme_provider.dart';
-import 'network_service.dart'; // Nouvelle importation
-import 'network_wrapper.dart'; // Nouvelle importation
+import 'network_service.dart';
+import 'network_wrapper.dart';
 import 'signuppage/sign_up_page.dart';
 import 'signuppage/verif.dart';
 import 'loginpage/log_in_page.dart';
@@ -33,8 +43,27 @@ import 'package:pfeapp/profil/modif1.dart';
 import 'package:pfeapp/profil/stat.dart';
 import 'package:pfeapp/profil/your_chaine.dart';
 import 'package:pfeapp/forgotpass/reset.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pfeapp/homepage/homepage.dart';
+
+// Gérer les notifications en arrière-plan
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print("Handling a background message: ${message.messageId}");
+  // Vous pouvez ajouter une logique supplémentaire ici si nécessaire
+}
+
+// Canal de notification Android
+const AndroidNotificationChannel channel = AndroidNotificationChannel(
+  'high_importance_channel',
+  'High Importance Notifications',
+  description: 'This channel is used for important notifications.',
+  importance: Importance.high,
+);
+
+// Plugin de notifications locales
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,12 +78,27 @@ void main() async {
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pZ3dicWJ0Znpzem9wdmhkenJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5MjI3OTgsImV4cCI6MjA1NzQ5ODc5OH0.78NEfAWjrlWsjo_l9ZBLuKzNv13ikUWCBqE0DyCeZSA',
   );
 
+  // Configurer le gestionnaire de messages en arrière-plan
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // Créer le canal de notification pour Android
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(channel);
+
+  // Configurer les paramètres d'initialisation pour iOS
+  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(
-            create: (_) => NetworkService()), // Remplacé par NetworkService
+        ChangeNotifierProvider(create: (_) => NetworkService()),
       ],
       child: const MyApp(),
     ),
@@ -74,6 +118,8 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+
+    // Surveiller l'état d'authentification
     firebase_auth.FirebaseAuth.instance
         .authStateChanges()
         .listen((firebase_auth.User? user) {
@@ -81,10 +127,104 @@ class _MyAppState extends State<MyApp> {
         print('User is currently signed out!');
       } else {
         print('User is signed in!');
+        // L'utilisateur est connecté, nous pouvons configurer ses sujets FCM
+        _setupMessaging();
       }
     });
 
     checkAutoLogin();
+
+    // Initialiser le plugin de notifications locales
+    _initializeNotifications();
+
+    // Configurer la gestion des notifications
+    _setupNotificationHandlers();
+  }
+
+  // Initialiser les notifications locales
+  Future<void> _initializeNotifications() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    // Correction ici - nous utilisons la nouvelle façon de configurer iOS
+    final DarwinInitializationSettings initializationSettingsIOS =
+        DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+      // onDidReceiveLocalNotification n'est plus nécessaire dans les versions récentes
+    );
+
+    final InitializationSettings initializationSettings =
+        InitializationSettings(
+      android: initializationSettingsAndroid,
+      iOS: initializationSettingsIOS,
+    );
+
+    await flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        // Naviguer vers la page de notifications quand on clique sur la notification
+        Navigator.pushNamed(navigatorKey.currentContext!, '/nofi');
+      },
+    );
+  }
+
+  // Configurer la gestion des notifications
+  Future<void> _setupNotificationHandlers() async {
+    // Gérer les notifications lorsque l'application est en premier plan
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      RemoteNotification? notification = message.notification;
+      AndroidNotification? android = message.notification?.android;
+
+      // Afficher une notification locale lorsqu'une notification est reçue en premier plan
+      if (notification != null && android != null) {
+        flutterLocalNotificationsPlugin.show(
+          notification.hashCode,
+          notification.title,
+          notification.body,
+          NotificationDetails(
+            android: AndroidNotificationDetails(
+              channel.id,
+              channel.name,
+              channelDescription: channel.description,
+              icon: android.smallIcon,
+            ),
+          ),
+          payload: message.data['route'],
+        );
+      }
+    });
+
+    // Gérer les notifications lorsque l'application est ouverte à partir d'une notification
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print('A notification has been clicked on: ${message.messageId}');
+
+      // Naviguer vers la page de notifications
+      if (message.data['route'] == '/nofi') {
+        Navigator.pushNamed(navigatorKey.currentContext!, '/nofi');
+      }
+    });
+  }
+
+  // Configurer la messagerie pour l'utilisateur connecté
+  Future<void> _setupMessaging() async {
+    final currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      // Demander l'autorisation pour les notifications
+      NotificationSettings settings =
+          await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      print('User granted permission: ${settings.authorizationStatus}');
+
+      // S'abonner au sujet correspondant à l'ID de l'utilisateur
+      await FirebaseMessaging.instance.subscribeToTopic(currentUser.uid);
+      print('Subscribed to topic: ${currentUser.uid}');
+    }
   }
 
   Future<void> checkAutoLogin() async {
@@ -98,16 +238,21 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  // Clé de navigation globale pour accéder au contexte
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
+          navigatorKey:
+              navigatorKey, // Utilisé pour la navigation depuis les notifications
           builder: (context, child) {
             // On applique le wrapper de connectivité réseau à tous les écrans
-            return NetworkWrapper(
-                child: child!); // Utilisation de NetworkWrapper
+            return NetworkWrapper(child: child!);
           },
           home: _initialScreen,
           theme: ThemeData(
@@ -117,9 +262,7 @@ class _MyAppState extends State<MyApp> {
             scaffoldBackgroundColor: Colors.white,
             textTheme: const TextTheme(
               bodyMedium: TextStyle(color: Colors.black),
-              // Ajoutez d'autres styles de texte selon vos besoins
             ),
-            // Personnaliser d'autres éléments du thème selon vos besoins
             appBarTheme: const AppBarTheme(
               backgroundColor: Colors.white,
               foregroundColor: Colors.black,
@@ -138,9 +281,7 @@ class _MyAppState extends State<MyApp> {
             scaffoldBackgroundColor: Colors.black,
             textTheme: const TextTheme(
               bodyMedium: TextStyle(color: Colors.white),
-              // Ajoutez d'autres styles de texte selon vos besoins
             ),
-            // Personnaliser d'autres éléments du thème sombre
             appBarTheme: const AppBarTheme(
               backgroundColor: Colors.black,
               foregroundColor: Colors.white,
@@ -187,5 +328,81 @@ class _MyAppState extends State<MyApp> {
         );
       },
     );
+  }
+}
+
+// Service FCM pour l'envoi de notifications
+class FCMService {
+  static Future<String> _getAccessToken() async {
+    try {
+      // Utilisation correcte de rootBundle nécessite l'import de 'package:flutter/services.dart'
+      final serviceAccountJson = await rootBundle
+          .loadString('assests/noficationkeys/fir-317ff-06a0b45e2f26.json');
+      final credentials =
+          ServiceAccountCredentials.fromJson(serviceAccountJson);
+
+      final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
+      final client = await clientViaServiceAccount(credentials, scopes);
+
+      return client.credentials.accessToken.data;
+    } catch (e) {
+      print('Error getting access token: $e');
+      rethrow;
+    }
+  }
+
+  static Future<bool> sendNotification({
+    required String topic,
+    required String title,
+    required String body,
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      final accessToken = await _getAccessToken();
+      final url = Uri.parse(
+          'https://fcm.googleapis.com/v1/projects/fir-317ff/messages:send');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode({
+          'message': {
+            'topic': topic,
+            'notification': {
+              'title': title,
+              'body': body,
+            },
+            'data': data ?? {'route': '/nofi'},
+            'android': {
+              'notification': {
+                'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+                'channel_id': 'high_importance_channel',
+              },
+            },
+            'apns': {
+              'payload': {
+                'aps': {
+                  'category': 'NEW_MESSAGE_CATEGORY',
+                },
+              },
+            },
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('Notification sent successfully');
+        return true;
+      } else {
+        print('Failed to send notification: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('Error sending notification: $e');
+      return false;
+    }
   }
 }

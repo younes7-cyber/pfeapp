@@ -6,6 +6,7 @@ import 'package:pfeapp/annimation.dart';
 import 'package:pfeapp/constants.dart';
 import 'package:marquee/marquee.dart';
 import 'package:intl/intl.dart';
+import 'package:pfeapp/main.dart';
 import 'package:pfeapp/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'dart:async'; // Import for StreamSubscription
@@ -803,7 +804,8 @@ class _ListenpageState extends State<Listenpage>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context)
+          .scaffoldBackgroundColor, // Utilise la couleur de fond selon le thème
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -814,380 +816,413 @@ class _ListenpageState extends State<Listenpage>
           maxChildSize: 0.9,
           expand: false,
           builder: (context, scrollController) {
-            return Padding(
-              padding: EdgeInsets.only(
-                  top: 16.0, bottom: MediaQuery.of(context).viewInsets.bottom),
-              child: Column(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 5,
-                    margin: const EdgeInsets.only(bottom: 10),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      color: Colors.grey[300],
+            return Consumer<ThemeProvider>(
+                builder: (context, themeProvider, child) {
+              return Padding(
+                padding: EdgeInsets.only(
+                    top: 16.0,
+                    bottom: MediaQuery.of(context).viewInsets.bottom),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 5,
+                      margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: Colors.grey[300],
+                      ),
                     ),
-                  ),
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Text(formatLikes(podcast[0]["comments"]),
-                        style: const TextStyle(
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Text(formatLikes(podcast[0]["comments"]),
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black)),
-                    const Text(" "),
-                    const Text("Comments",
-                        style: TextStyle(
+                            color: themeProvider.isDarkMode
+                                ? Colors.white
+                                : Colors.black,
+                          )),
+                      const Text(" "),
+                      Text("Comments",
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black)),
-                  ]),
-                  const SizedBox(height: 10),
-                  Expanded(
-                    child: comments.isEmpty
-                        ? const Center(
-                            child: Text("Not Yet",
-                                style: TextStyle(color: Colors.black)))
-                        : ListView.builder(
-                            controller: scrollController,
-                            itemCount: comments.length,
-                            itemBuilder: (context, index) {
-                              final comment = comments[index];
-                              final user = comment['user'];
-                              final replies =
-                                  comment['replies'] as List<dynamic>;
-                              final isCurrentUserComment =
-                                  FirebaseAuth.instance.currentUser?.uid ==
-                                      comment['userid'];
-                              final isCreator =
-                                  comment['userid'] == podcast[0]['idUser'];
+                            color: themeProvider.isDarkMode
+                                ? Colors.white
+                                : Colors.black,
+                          )),
+                    ]),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: comments.isEmpty
+                          ? Center(
+                              child: Text("Not Yet",
+                                  style: TextStyle(
+                                    color: themeProvider.isDarkMode
+                                        ? Colors.white
+                                        : Colors.black,
+                                  )))
+                          : ListView.builder(
+                              controller: scrollController,
+                              itemCount: comments.length,
+                              itemBuilder: (context, index) {
+                                final comment = comments[index];
+                                final user = comment['user'];
+                                final replies =
+                                    comment['replies'] as List<dynamic>;
+                                final isCurrentUserComment =
+                                    FirebaseAuth.instance.currentUser?.uid ==
+                                        comment['userid'];
+                                final isCreator =
+                                    comment['userid'] == podcast[0]['idUser'];
 
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  ListTile(
-                                    leading: user != null &&
-                                            user.containsKey('photoUrl') &&
-                                            user['photoUrl'] is String &&
-                                            user['photoUrl']!.trim().isNotEmpty
-                                        ? CircleAvatar(
-                                            backgroundImage:
-                                                NetworkImage(user['photoUrl']))
-                                        : const CircleAvatar(
-                                            child: Icon(Icons.person)),
-                                    title: RichText(
-                                      text: TextSpan(
-                                        children: [
-                                          TextSpan(
-                                            text: comment['user'] != null
-                                                ? "${comment['user']['firstName']} ${comment['user']['lastName']}"
-                                                : "Unknown User",
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.black),
-                                          ),
-                                          if (isCreator)
-                                            const TextSpan(
-                                              text: " Creator",
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ListTile(
+                                      leading: user != null &&
+                                              user.containsKey('photoUrl') &&
+                                              user['photoUrl'] is String &&
+                                              user['photoUrl']!
+                                                  .trim()
+                                                  .isNotEmpty
+                                          ? CircleAvatar(
+                                              backgroundImage: NetworkImage(
+                                                  user['photoUrl']))
+                                          : const CircleAvatar(
+                                              child: Icon(Icons.person)),
+                                      title: RichText(
+                                        text: TextSpan(
+                                          children: [
+                                            TextSpan(
+                                              text: comment['user'] != null
+                                                  ? "${comment['user']['firstName']} ${comment['user']['lastName']}"
+                                                  : "Unknown User",
                                               style: TextStyle(
                                                 fontWeight: FontWeight.bold,
-                                                color: Color(0xFF754CEF),
-                                                fontSize: 12,
+                                                color: themeProvider.isDarkMode
+                                                    ? Colors.white
+                                                    : Colors.black,
                                               ),
                                             ),
+                                            if (isCreator)
+                                              const TextSpan(
+                                                text: " Creator",
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF754CEF),
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                      subtitle: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            comment['text'] ?? "",
+                                            style: TextStyle(
+                                              color: themeProvider.isDarkMode
+                                                  ? Colors.white
+                                                  : Colors.black,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            comment['date'] != null
+                                                ? DateFormat(
+                                                        'MMM d, yyyy • h:mm a')
+                                                    .format(comment['date']
+                                                        .toDate())
+                                                : "",
+                                            style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey),
+                                          ),
+                                        ],
+                                      ),
+                                      trailing: isCurrentUserComment
+                                          ? IconButton(
+                                              icon: const Icon(Icons.delete,
+                                                  color: Colors.red),
+                                              onPressed: () =>
+                                                  _showDeleteConfirmation(
+                                                context,
+                                                () => _deleteComment(
+                                                    comment['id']),
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          left: 72, bottom: 8),
+                                      child: Row(
+                                        children: [
+                                          TextButton.icon(
+                                            icon: const Icon(Icons.reply,
+                                                size: 16),
+                                            label: const Text("Reply"),
+                                            onPressed: () {
+                                              // Show reply input field with the comment author's name
+                                              String commentUsername = comment[
+                                                          'user'] !=
+                                                      null
+                                                  ? "${comment['user']['firstName']} ${comment['user']['lastName']}"
+                                                  : "Unknown User";
+                                              _showReplyInput(
+                                                  context,
+                                                  comment['id'],
+                                                  null,
+                                                  commentUsername);
+                                            },
+                                          ),
                                         ],
                                       ),
                                     ),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const SizedBox(height: 4),
-                                        Text(comment['text'] ?? ""),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          comment['date'] != null
-                                              ? DateFormat(
-                                                      'MMM d, yyyy • h:mm a')
-                                                  .format(
-                                                      comment['date'].toDate())
-                                              : "",
-                                          style: const TextStyle(
-                                              fontSize: 12, color: Colors.grey),
-                                        ),
-                                      ],
-                                    ),
-                                    trailing: isCurrentUserComment
-                                        ? IconButton(
-                                            icon: const Icon(Icons.delete,
-                                                color: Colors.red),
-                                            onPressed: () =>
-                                                _showDeleteConfirmation(
-                                              context,
-                                              () =>
-                                                  _deleteComment(comment['id']),
-                                            ),
-                                          )
-                                        : null,
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                        left: 72, bottom: 8),
-                                    child: Row(
-                                      children: [
-                                        TextButton.icon(
-                                          icon:
-                                              const Icon(Icons.reply, size: 16),
-                                          label: const Text("Reply"),
-                                          onPressed: () {
-                                            // Show reply input field with the comment author's name
-                                            String commentUsername = comment[
-                                                        'user'] !=
-                                                    null
-                                                ? "${comment['user']['firstName']} ${comment['user']['lastName']}"
-                                                : "Unknown User";
-                                            _showReplyInput(
-                                                context,
-                                                comment['id'],
-                                                null,
-                                                commentUsername);
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Display replies
-                                  if (replies.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                          left: 72, right: 16),
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey[50],
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        child: ListView.builder(
-                                          shrinkWrap: true,
-                                          physics:
-                                              const NeverScrollableScrollPhysics(),
-                                          itemCount: replies.length,
-                                          itemBuilder: (context, replyIndex) {
-                                            final reply = replies[replyIndex];
-                                            final isCurrentUserReply =
-                                                FirebaseAuth.instance
-                                                        .currentUser?.uid ==
-                                                    reply['userid'];
-                                            final isReplyCreator =
-                                                reply['userid'] ==
-                                                    podcast[0]['idUser'];
+                                    // Display replies
+                                    if (replies.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                            left: 72, right: 16),
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: themeProvider.isDarkMode
+                                                ? Colors.black
+                                                : Colors.white,
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: ListView.builder(
+                                            shrinkWrap: true,
+                                            physics:
+                                                const NeverScrollableScrollPhysics(),
+                                            itemCount: replies.length,
+                                            itemBuilder: (context, replyIndex) {
+                                              final reply = replies[replyIndex];
+                                              final isCurrentUserReply =
+                                                  FirebaseAuth.instance
+                                                          .currentUser?.uid ==
+                                                      reply['userid'];
+                                              final isReplyCreator =
+                                                  reply['userid'] ==
+                                                      podcast[0]['idUser'];
 
-                                            return Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Padding(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      vertical: 8,
-                                                      horizontal: 12),
-                                                  child: Row(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      CircleAvatar(
-                                                        radius: 16,
-                                                        backgroundImage: reply[
-                                                                        'user'] !=
-                                                                    null &&
-                                                                reply['user'][
-                                                                        'photoUrl'] !=
-                                                                    null
-                                                            ? NetworkImage(
-                                                                reply['user'][
-                                                                    'photoUrl'])
-                                                            : null,
-                                                        child: reply['user'] ==
-                                                                    null ||
-                                                                reply['user'][
-                                                                        'photoUrl'] ==
-                                                                    null
-                                                            ? const Icon(
-                                                                Icons.person,
-                                                                size: 16)
-                                                            : null,
-                                                      ),
-                                                      const SizedBox(width: 8),
-                                                      Expanded(
-                                                        child: Column(
-                                                          crossAxisAlignment:
-                                                              CrossAxisAlignment
-                                                                  .start,
-                                                          children: [
-                                                            Row(
-                                                              children: [
-                                                                Expanded(
-                                                                  child: Column(
-                                                                    crossAxisAlignment:
-                                                                        CrossAxisAlignment
-                                                                            .start,
-                                                                    children: [
-                                                                      RichText(
-                                                                        text:
-                                                                            TextSpan(
-                                                                          style:
-                                                                              const TextStyle(
-                                                                            color:
-                                                                                Colors.black,
-                                                                            fontWeight:
-                                                                                FontWeight.bold,
-                                                                          ),
-                                                                          children: [
-                                                                            TextSpan(
-                                                                                text: reply['user'] != null ? "${reply['user']['firstName']} ${reply['user']['lastName']}" : "Unknown User",
-                                                                                style: const TextStyle(color: Colors.black)),
-                                                                            if (isReplyCreator)
-                                                                              const TextSpan(
-                                                                                text: " Creator",
-                                                                                style: TextStyle(
-                                                                                  color: Color(0xFF754CEF),
-                                                                                  fontSize: 12,
-                                                                                ),
-                                                                              ),
-                                                                            // Always display @username for all replies
-                                                                            if (reply['replyToUsername'] != null &&
-                                                                                reply['replyToUsername'].isNotEmpty)
+                                              return Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Padding(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        vertical: 8,
+                                                        horizontal: 12),
+                                                    child: Row(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        CircleAvatar(
+                                                          radius: 16,
+                                                          backgroundImage: reply[
+                                                                          'user'] !=
+                                                                      null &&
+                                                                  reply['user'][
+                                                                          'photoUrl'] !=
+                                                                      null
+                                                              ? NetworkImage(
+                                                                  reply['user'][
+                                                                      'photoUrl'])
+                                                              : null,
+                                                          child: reply['user'] ==
+                                                                      null ||
+                                                                  reply['user'][
+                                                                          'photoUrl'] ==
+                                                                      null
+                                                              ? const Icon(
+                                                                  Icons.person,
+                                                                  size: 16)
+                                                              : null,
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 8),
+                                                        Expanded(
+                                                          child: Column(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            children: [
+                                                              Row(
+                                                                children: [
+                                                                  Expanded(
+                                                                    child:
+                                                                        Column(
+                                                                      crossAxisAlignment:
+                                                                          CrossAxisAlignment
+                                                                              .start,
+                                                                      children: [
+                                                                        RichText(
+                                                                          text:
                                                                               TextSpan(
-                                                                                text: " @ ${reply['replyToUsername']}",
-                                                                                style: const TextStyle(
-                                                                                  color: Color(0xFF754CEF),
+                                                                            style:
+                                                                                TextStyle(
+                                                                              color: themeProvider.isDarkMode ? Colors.white : Colors.black,
+                                                                              fontWeight: FontWeight.bold,
+                                                                            ),
+                                                                            children: [
+                                                                              TextSpan(
+                                                                                  text: reply['user'] != null ? "${reply['user']['firstName']} ${reply['user']['lastName']}" : "Unknown User",
+                                                                                  style: TextStyle(
+                                                                                    color: themeProvider.isDarkMode ? Colors.white : Colors.black,
+                                                                                  )),
+                                                                              if (isReplyCreator)
+                                                                                const TextSpan(
+                                                                                  text: " Creator",
+                                                                                  style: TextStyle(
+                                                                                    color: Color(0xFF754CEF),
+                                                                                    fontSize: 12,
+                                                                                  ),
                                                                                 ),
-                                                                              ),
-                                                                          ],
+                                                                              // Always display @username for all replies
+                                                                              if (reply['replyToUsername'] != null && reply['replyToUsername'].isNotEmpty)
+                                                                                TextSpan(
+                                                                                  text: " @ ${reply['replyToUsername']}",
+                                                                                  style: const TextStyle(
+                                                                                    color: Color(0xFF754CEF),
+                                                                                  ),
+                                                                                ),
+                                                                            ],
+                                                                          ),
                                                                         ),
-                                                                      ),
-                                                                      const SizedBox(
-                                                                          height:
-                                                                              4),
-                                                                      // Display the actual reply text separately
-                                                                      Text(
-                                                                        reply['text'] ??
-                                                                            "",
-                                                                        style: const TextStyle(
-                                                                            color:
-                                                                                Colors.black),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                ),
-                                                                if (isCurrentUserReply)
-                                                                  IconButton(
-                                                                    icon: const Icon(
-                                                                        Icons
-                                                                            .delete,
-                                                                        size:
-                                                                            16,
-                                                                        color: Colors
-                                                                            .red),
-                                                                    onPressed: () =>
-                                                                        _showDeleteConfirmation(
-                                                                      context,
-                                                                      () => _deleteReply(
-                                                                          comment[
-                                                                              'id'],
-                                                                          reply[
-                                                                              'id']),
+                                                                        const SizedBox(
+                                                                            height:
+                                                                                4),
+                                                                        // Display the actual reply text separately
+                                                                        Text(
+                                                                          reply['text'] ??
+                                                                              "",
+                                                                          style:
+                                                                              TextStyle(
+                                                                            color: themeProvider.isDarkMode
+                                                                                ? Colors.white
+                                                                                : Colors.black,
+                                                                          ),
+                                                                        ),
+                                                                      ],
                                                                     ),
                                                                   ),
-                                                              ],
-                                                            ),
-                                                            const SizedBox(
-                                                                height: 4),
-                                                            Text(
-                                                              reply['date'] !=
-                                                                      null
-                                                                  ? DateFormat(
-                                                                          'MMM d, yyyy • h:mm a')
-                                                                      .format(reply[
-                                                                              'date']
-                                                                          .toDate())
-                                                                  : "",
-                                                              style: const TextStyle(
-                                                                  fontSize: 12,
-                                                                  color: Colors
-                                                                      .grey),
-                                                            ),
-                                                          ],
+                                                                  if (isCurrentUserReply)
+                                                                    IconButton(
+                                                                      icon: const Icon(
+                                                                          Icons
+                                                                              .delete,
+                                                                          size:
+                                                                              16,
+                                                                          color:
+                                                                              Colors.red),
+                                                                      onPressed:
+                                                                          () =>
+                                                                              _showDeleteConfirmation(
+                                                                        context,
+                                                                        () => _deleteReply(
+                                                                            comment['id'],
+                                                                            reply['id']),
+                                                                      ),
+                                                                    ),
+                                                                ],
+                                                              ),
+                                                              const SizedBox(
+                                                                  height: 4),
+                                                              Text(
+                                                                reply['date'] !=
+                                                                        null
+                                                                    ? DateFormat(
+                                                                            'MMM d, yyyy • h:mm a')
+                                                                        .format(
+                                                                            reply['date'].toDate())
+                                                                    : "",
+                                                                style: const TextStyle(
+                                                                    fontSize:
+                                                                        12,
+                                                                    color: Colors
+                                                                        .grey),
+                                                              ),
+                                                            ],
+                                                          ),
                                                         ),
-                                                      ),
-                                                    ],
+                                                      ],
+                                                    ),
                                                   ),
-                                                ),
-                                                // Reply to reply button
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          left: 40, bottom: 8),
-                                                  child: TextButton.icon(
-                                                    icon: const Icon(
-                                                        Icons.reply,
-                                                        size: 14),
-                                                    label: const Text("Reply",
-                                                        style: TextStyle(
-                                                            fontSize: 12)),
-                                                    onPressed: () {
-                                                      String replyUsername = reply[
-                                                                  'user'] !=
-                                                              null
-                                                          ? "${reply['user']['firstName']} ${reply['user']['lastName']}"
-                                                          : "Unknown User";
-                                                      _showReplyInput(
-                                                          context,
-                                                          comment['id'],
-                                                          reply['id'],
-                                                          replyUsername);
-                                                    },
+                                                  // Reply to reply button
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                            left: 40,
+                                                            bottom: 8),
+                                                    child: TextButton.icon(
+                                                      icon: const Icon(
+                                                          Icons.reply,
+                                                          size: 14),
+                                                      label: const Text("Reply",
+                                                          style: TextStyle(
+                                                              fontSize: 12)),
+                                                      onPressed: () {
+                                                        String replyUsername =
+                                                            reply['user'] !=
+                                                                    null
+                                                                ? "${reply['user']['firstName']} ${reply['user']['lastName']}"
+                                                                : "Unknown User";
+                                                        _showReplyInput(
+                                                            context,
+                                                            comment['id'],
+                                                            reply['id'],
+                                                            replyUsername);
+                                                      },
+                                                    ),
                                                   ),
-                                                ),
-                                              ],
-                                            );
-                                          },
+                                                ],
+                                              );
+                                            },
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  const Divider(),
-                                ],
-                              );
-                            },
-                          ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _commentController,
-                            decoration: const InputDecoration(
-                              hintText: "Write a comment",
-                              border: OutlineInputBorder(),
+                                    const Divider(),
+                                  ],
+                                );
+                              },
+                            ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _commentController,
+                              decoration: const InputDecoration(
+                                hintText: "Write a comment",
+                                border: OutlineInputBorder(),
+                              ),
                             ),
                           ),
-                        ),
-                        IconButton(
-                          icon:
-                              const Icon(Icons.send, color: Color(0xFF754CEF)),
-                          onPressed: () {
-                            _addComment();
-                            FocusScope.of(context).unfocus();
-                          },
-                        )
-                      ],
+                          IconButton(
+                            icon: const Icon(Icons.send,
+                                color: Color(0xFF754CEF)),
+                            onPressed: () {
+                              _addComment();
+                              FocusScope.of(context).unfocus();
+                            },
+                          )
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            );
+                  ],
+                ),
+              );
+            });
           },
         );
       },
@@ -1234,51 +1269,60 @@ class _ListenpageState extends State<Listenpage>
     final TextEditingController replyController = TextEditingController();
 
     showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-            parentReplyId == null
-                ? "Reply to comment"
-                : "Reply to ${replyToUsername ?? 'reply'}",
-            style: const TextStyle(
-                fontWeight: FontWeight.bold, color: Colors.black)),
-        content: TextField(
-          controller: replyController,
-          decoration: const InputDecoration(
-            hintText: 'Write your reply...',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancel',
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              if (replyController.text.isNotEmpty) {
-                if (parentReplyId == null) {
-                  // Fix: Pass parentReplyId instead of undefined replyId
-                  _addReply(commentId, null, replyController.text,
-                      replyToUsername ?? '');
-                } else {
-                  _addNestedReply(commentId, parentReplyId,
-                      replyController.text, replyToUsername ?? '');
-                }
-                Navigator.pop(context);
-              }
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF754CEF),
-            ),
-            child: const Text('Reply'),
-          ),
-        ],
-      ),
-    );
+        context: context,
+        builder: (BuildContext context) {
+          return Consumer<ThemeProvider>(
+              builder: (context, themeProvider, child) {
+            return AlertDialog(
+              backgroundColor: Theme.of(context)
+                  .scaffoldBackgroundColor, // Utilise la couleur de fond selon le thème
+              title: Text(
+                  parentReplyId == null
+                      ? "Reply to comment"
+                      : "Reply to ${replyToUsername ?? 'reply'}",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color:
+                        themeProvider.isDarkMode ? Colors.white : Colors.black,
+                  )),
+              content: TextField(
+                controller: replyController,
+                decoration: const InputDecoration(
+                  hintText: 'Write your reply...',
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Cancel',
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (replyController.text.isNotEmpty) {
+                      if (parentReplyId == null) {
+                        // Fix: Pass parentReplyId instead of undefined replyId
+                        _addReply(commentId, null, replyController.text,
+                            replyToUsername ?? '');
+                      } else {
+                        _addNestedReply(commentId, parentReplyId,
+                            replyController.text, replyToUsername ?? '');
+                      }
+                      Navigator.pop(context);
+                    }
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF754CEF),
+                  ),
+                  child: const Text('Reply'),
+                ),
+              ],
+            );
+          });
+        });
   }
 
   @override
@@ -1321,6 +1365,35 @@ class _ListenpageState extends State<Listenpage>
       'date': Timestamp.now(),
       'isviewed': false,
     });
+    final QuerySnapshot userSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('userId', isEqualTo: currentUser)
+        .get();
+
+    if (userSnapshot.docs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User information not found')),
+      );
+      return;
+    }
+
+    // Extraire firstName et lastName
+    final userData = userSnapshot.docs.first.data() as Map<String, dynamic>;
+    final String firstName = userData['firstName'] ?? '';
+    final String lastName = userData['lastName'] ?? '';
+    final String fullName = '$firstName $lastName';
+    try {
+      print(
+          'Attempting to send FCM notification to topic: $podcast[0]["idUser"]');
+      await FCMService.sendNotification(
+        topic: podcast[0]["idUser"],
+        title: 'New Comment',
+        body: '$fullName has  Replyed to your podcast',
+      );
+      print('FCM notification sent successfully');
+    } catch (e) {
+      print('Error sending FCM notification: $e');
+    }
     if (mounted) {
       setState(() {});
     }
@@ -1347,6 +1420,35 @@ class _ListenpageState extends State<Listenpage>
           .update({
         'comments': FieldValue.increment(1),
       });
+      final QuerySnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('userId', isEqualTo: currentUser)
+          .get();
+
+      if (userSnapshot.docs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User information not found')),
+        );
+        return;
+      }
+
+      // Extraire firstName et lastName
+      final userData = userSnapshot.docs.first.data() as Map<String, dynamic>;
+      final String firstName = userData['firstName'] ?? '';
+      final String lastName = userData['lastName'] ?? '';
+      final String fullName = '$firstName $lastName';
+      try {
+        print(
+            'Attempting to send FCM notification to topic: $podcast[0]["idUser"]');
+        await FCMService.sendNotification(
+          topic: podcast[0]["idUser"],
+          title: 'New Comment',
+          body: '$fullName has commented to your podcast',
+        );
+        print('FCM notification sent successfully');
+      } catch (e) {
+        print('Error sending FCM notification: $e');
+      }
       _commentController.clear();
       if (mounted) {
         setState(() {});
@@ -1402,7 +1504,35 @@ class _ListenpageState extends State<Listenpage>
         'date': Timestamp.now(),
         'isviewed': false,
       });
+      final QuerySnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('userId', isEqualTo: currentUser)
+          .get();
 
+      if (userSnapshot.docs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User information not found')),
+        );
+        return;
+      }
+
+      // Extraire firstName et lastName
+      final userData1 = userSnapshot.docs.first.data() as Map<String, dynamic>;
+      final String firstName = userData1['firstName'] ?? '';
+      final String lastName = userData1['lastName'] ?? '';
+      final String fullName = '$firstName $lastName';
+      try {
+        print(
+            'Attempting to send FCM notification to topic: $podcast[0]["idUser"]');
+        await FCMService.sendNotification(
+          topic: podcast[0]["idUser"],
+          title: 'New Comment',
+          body: '$fullName has  Replyed to your podcast',
+        );
+        print('FCM notification sent successfully');
+      } catch (e) {
+        print('Error sending FCM notification: $e');
+      }
       _commentController.clear();
       // ignore: empty_catches
     } catch (e) {}
@@ -1531,6 +1661,36 @@ class _ListenpageState extends State<Listenpage>
           .update({
         'likes': FieldValue.increment(1),
       });
+      final QuerySnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('userId', isEqualTo: currentUser)
+          .get();
+
+      if (userSnapshot.docs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User information not found')),
+        );
+        return;
+      }
+
+      // Extraire firstName et lastName
+      final userData = userSnapshot.docs.first.data() as Map<String, dynamic>;
+      final String firstName = userData['firstName'] ?? '';
+      final String lastName = userData['lastName'] ?? '';
+      final String fullName = '$firstName $lastName';
+      try {
+        print(
+            'Attempting to send FCM notification to topic: $podcast[0]["idUser"]');
+        await FCMService.sendNotification(
+          topic: podcast[0]["idUser"],
+          title: 'New Like',
+          body: '$fullName has Liked to your podcast',
+        );
+        print('FCM notification sent successfully');
+      } catch (e) {
+        print('Error sending FCM notification: $e');
+      }
+
       if (mounted) {
         setState(() {
           isLiked = true;
@@ -1604,6 +1764,35 @@ class _ListenpageState extends State<Listenpage>
           .update({
         'save': FieldValue.increment(1),
       });
+      final QuerySnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('userId', isEqualTo: currentUser)
+          .get();
+
+      if (userSnapshot.docs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User information not found')),
+        );
+        return;
+      }
+
+      // Extraire firstName et lastName
+      final userData = userSnapshot.docs.first.data() as Map<String, dynamic>;
+      final String firstName = userData['firstName'] ?? '';
+      final String lastName = userData['lastName'] ?? '';
+      final String fullName = '$firstName $lastName';
+      try {
+        print(
+            'Attempting to send FCM notification to topic: $podcast[0]["idUser"]');
+        await FCMService.sendNotification(
+          topic: podcast[0]["idUser"],
+          title: 'New Save',
+          body: '$fullName has Saved to your podcast',
+        );
+        print('FCM notification sent successfully');
+      } catch (e) {
+        print('Error sending FCM notification: $e');
+      }
       if (mounted) {
         setState(() {
           isSaved = true;
@@ -1744,6 +1933,35 @@ class _ListenpageState extends State<Listenpage>
           .update({
         'vue': FieldValue.increment(1),
       });
+      final QuerySnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('userId', isEqualTo: currentUser)
+          .get();
+
+      if (userSnapshot.docs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User information not found')),
+        );
+        return;
+      }
+
+      // Extraire firstName et lastName
+      final userData = userSnapshot.docs.first.data() as Map<String, dynamic>;
+      final String firstName = userData['firstName'] ?? '';
+      final String lastName = userData['lastName'] ?? '';
+      final String fullName = '$firstName $lastName';
+      try {
+        print(
+            'Attempting to send FCM notification to topic: $podcast[0]["idUser"]');
+        await FCMService.sendNotification(
+          topic: podcast[0]["idUser"],
+          title: 'New Vue',
+          body: '$fullName has viewed to your podcast',
+        );
+        print('FCM notification sent successfully');
+      } catch (e) {
+        print('Error sending FCM notification: $e');
+      }
     }
   }
 

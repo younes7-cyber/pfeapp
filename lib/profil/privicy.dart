@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:pfeapp/annimation.dart';
 import 'package:pfeapp/constants.dart';
@@ -471,7 +472,7 @@ class _PrivipageState extends State<Privipage> {
       for (var doc in mesPlaylistRefs.docs) {
         await doc.reference.delete();
       }
-
+      await FirebaseMessaging.instance.unsubscribeFromTopic(currentUserId);
       // 9. Enfin, supprimer le compte utilisateur de Firebase Auth
       await currentUser?.delete();
 

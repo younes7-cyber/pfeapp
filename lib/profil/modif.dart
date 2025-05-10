@@ -1164,7 +1164,9 @@ class _ModifpageState extends State<Modifpage> {
                                       ),
                                       child: ClipOval(
                                         child: Image.network(
-                                          user[0]["photoUrl"],
+                                          user.isNotEmpty
+                                              ? user[0]["photoUrl"] ?? ''
+                                              : 'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/output-onlinejpgtools%20(2).jpg',
                                           fit: BoxFit.cover,
                                         ),
                                       ),

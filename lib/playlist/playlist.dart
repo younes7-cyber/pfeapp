@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pfeapp/annimation.dart';
+import 'package:pfeapp/main.dart';
 import 'package:pfeapp/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:readmore/readmore.dart';
@@ -448,6 +449,23 @@ class _PlaylistpageState extends State<Playlistpage>
       });
 
       if (isFollowing) {
+        final QuerySnapshot userSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .where('userId', isEqualTo: user)
+            .get();
+
+        if (userSnapshot.docs.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('User information not found')),
+          );
+          return;
+        }
+
+        // Extraire firstName et lastName
+        final userData = userSnapshot.docs.first.data() as Map<String, dynamic>;
+        final String firstName = userData['firstName'] ?? '';
+        final String lastName = userData['lastName'] ?? '';
+        final String fullName = '$firstName $lastName';
         // Ajouter à la collection follow
         await FirebaseFirestore.instance.collection('follow').add({
           'idfollowers': user,
@@ -499,6 +517,18 @@ class _PlaylistpageState extends State<Playlistpage>
               .update({
             'following': FieldValue.increment(1),
           });
+          // Envoyer une notification push (facultatif - nécessite d'utiliser FCMService du main.dart)
+          try {
+            print('Attempting to send FCM notification to topic: $playUserId');
+            await FCMService.sendNotification(
+              topic: playUserId,
+              title: 'New Subscriber',
+              body: '$fullName has subscribed to you',
+            );
+            print('FCM notification sent successfully');
+          } catch (e) {
+            print('Error sending FCM notification: $e');
+          }
         }
       } else {
         // Supprimer de la collection follow
@@ -637,6 +667,35 @@ class _PlaylistpageState extends State<Playlistpage>
           .update({
         'save': FieldValue.increment(1),
       });
+      final QuerySnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('userId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+          .get();
+
+      if (userSnapshot.docs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User information not found')),
+        );
+        return;
+      }
+
+      // Extraire firstName et lastName
+      final userData = userSnapshot.docs.first.data() as Map<String, dynamic>;
+      final String firstName = userData['firstName'] ?? '';
+      final String lastName = userData['lastName'] ?? '';
+      final String fullName = '$firstName $lastName';
+      try {
+        print(
+            'Attempting to send FCM notification to topic: $playlist[0]["userId"]');
+        await FCMService.sendNotification(
+          topic: playlist[0]["userId"],
+          title: 'New Save',
+          body: '$fullName has Saved to your playlist',
+        );
+        print('FCM notification sent successfully');
+      } catch (e) {
+        print('Error sending FCM notification: $e');
+      }
       setState(() {
         isSaved = true;
       });

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:pfeapp/annimation.dart';
 import 'package:pfeapp/constants.dart';
@@ -75,7 +76,11 @@ class _SignUppageState extends State<SignUppage> {
 
       // Get current user ID
       final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
+      await FirebaseMessaging.instance.subscribeToTopic(currentUserId);
+      print('User subscribed to topic: $currentUserId');
 
+      // Get FCM token
+      String? fcmToken = await FirebaseMessaging.instance.getToken();
       // Add user data to Firestore
       await FirebaseFirestore.instance.collection('users').add({
         'email': googleUser.email,
@@ -88,6 +93,8 @@ class _SignUppageState extends State<SignUppage> {
         'photoUrl':
             'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/ano.jpg', // Utilise l'URL finale
         'createdAt': FieldValue.serverTimestamp(),
+        'fcmToken': fcmToken, // Store FCM token
+        'notificationTopic': currentUserId,
       });
 
       // Send verification email
@@ -537,7 +544,16 @@ class _SignUppageState extends State<SignUppage> {
                                       // Get current user ID after creation
                                       final String currentUserId = FirebaseAuth
                                           .instance.currentUser!.uid;
+                                      // Subscribe to FCM topic with user's ID
+                                      await FirebaseMessaging.instance
+                                          .subscribeToTopic(currentUserId);
+                                      print(
+                                          'User subscribed to topic: $currentUserId');
 
+                                      // Get FCM token
+                                      String? fcmToken = await FirebaseMessaging
+                                          .instance
+                                          .getToken();
                                       // Add user data to Firestore
                                       await FirebaseFirestore.instance
                                           .collection('users')
@@ -553,6 +569,9 @@ class _SignUppageState extends State<SignUppage> {
                                             'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/ano.jpg', // Utilise l'URL finale
                                         'createdAt':
                                             FieldValue.serverTimestamp(),
+                                        'fcmToken': fcmToken, // Store FCM token
+                                        'notificationTopic':
+                                            currentUserId, // Store notification topic
                                       });
 
                                       // Send verification email

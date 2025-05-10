@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pfeapp/ZoomPhotoPage.dart';
@@ -72,6 +73,12 @@ class _PodlypageState extends State<Podlypage> {
   }
 
   Future<void> logout() async {
+    final currentUser = await FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      // Désabonner du topic avant la déconnexion
+      await FirebaseMessaging.instance.unsubscribeFromTopic(currentUser.uid);
+      print('Unsubscribed from topic: ${currentUser.uid}');
+    }
     await FirebaseAuth.instance.signOut();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('email'); // Supprime l'utilisateur sauvegardé
@@ -956,66 +963,114 @@ class _PodlypageState extends State<Podlypage> {
   late int ch = 1;
   void _showBottomSheet() {
     showModalBottomSheet(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context)
+          .scaffoldBackgroundColor, // Utilise la couleur de fond selon le thème
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Image.network(s29, width: 25, height: 25),
-                title: const Text("Create Channel",
-                    style: TextStyle(color: Colors.black)),
-                onTap: () {
-                  if (channel111.isNotEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('You Have Alredy')),
-                    );
-                  }
-                  if (channel111.isEmpty) {
-                    Navigator.pushNamed(context, '/ch', arguments: 2);
-                  }
-
-                  // Ajouter navigation ou logique ici
-                },
+        return Consumer<ThemeProvider>(
+          builder: (context, themeProvider, child) {
+            return Container(
+              decoration: BoxDecoration(
+                color:
+                    themeProvider.isDarkMode ? Colors.grey[900] : Colors.white,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
               ),
-              ListTile(
-                leading: Image.network(s30, width: 25, height: 25),
-                title: const Text("Upload Podcast",
-                    style: TextStyle(color: Colors.black)),
-                onTap: () {
-                  if (channel111.isNotEmpty) {
-                    Navigator.pushNamed(context, '/po', arguments: 2);
-                  }
-                  if (channel111.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('You Must Create Channel')));
-                  }
-                  // Ajouter navigation ou logique ici
-                },
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: Image.network(
+                      themeProvider.isDarkMode ? s140 : s29,
+                      width: 25,
+                      height: 25,
+                      color: themeProvider.isDarkMode
+                          ? Colors.white
+                          : Colors.black,
+                    ),
+                    title: Text(
+                      "Create Channel",
+                      style: TextStyle(
+                        color: themeProvider.isDarkMode
+                            ? Colors.white
+                            : Colors.black,
+                      ),
+                    ),
+                    onTap: () {
+                      if (channel111.isNotEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('You Have Alredy')),
+                        );
+                      }
+                      if (channel111.isEmpty) {
+                        Navigator.pushNamed(context, '/ch', arguments: 2);
+                      }
+                    },
+                  ),
+                  ListTile(
+                    leading: Image.network(
+                      themeProvider.isDarkMode ? s110 : s30,
+                      width: 25,
+                      height: 25,
+                      color: themeProvider.isDarkMode
+                          ? Colors.white
+                          : Colors.black,
+                    ),
+                    title: Text(
+                      "Upload Podcast",
+                      style: TextStyle(
+                        color: themeProvider.isDarkMode
+                            ? Colors.white
+                            : Colors.black,
+                      ),
+                    ),
+                    onTap: () {
+                      if (channel111.isNotEmpty) {
+                        Navigator.pushNamed(context, '/po', arguments: 2);
+                      }
+                      if (channel111.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('You Must Create Channel')));
+                      }
+                    },
+                  ),
+                  ListTile(
+                    leading: Image.network(
+                      themeProvider.isDarkMode ? s115 : s33,
+                      width: 25,
+                      height: 25,
+                      color: themeProvider.isDarkMode
+                          ? Colors.white
+                          : Colors.black,
+                    ),
+                    title: Text(
+                      "Create Playlist",
+                      style: TextStyle(
+                        color: themeProvider.isDarkMode
+                            ? Colors.white
+                            : Colors.black,
+                      ),
+                    ),
+                    onTap: () {
+                      if (channel111.isNotEmpty) {
+                        Navigator.pushNamed(context, '/pl', arguments: 2);
+                      }
+                      if (channel111.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('You Must Create Channel')));
+                      }
+                    },
+                  ),
+                ],
               ),
-              ListTile(
-                leading: Image.network(s33, width: 25, height: 25),
-                title: const Text("Create Playlist",
-                    style: TextStyle(color: Colors.black)),
-                onTap: () {
-                  if (channel111.isNotEmpty) {
-                    Navigator.pushNamed(context, '/pl', arguments: 2);
-                  }
-                  if (channel111.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('You Must Create Channel')));
-                  }
-                  // Ajouter navigation ou logique ici
-                },
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -2598,7 +2653,9 @@ class _PodlypageState extends State<Podlypage> {
                           borderRadius:
                               const BorderRadius.all(Radius.circular(50)),
                           image: DecorationImage(
-                            image: NetworkImage(user[0]["photoUrl"]),
+                            image: NetworkImage(user.isNotEmpty
+                                ? user[0]["photoUrl"] ?? ''
+                                : 'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/output-onlinejpgtools%20(2).jpg'),
                             fit: BoxFit.cover,
                             onError: (exception, stackTrace) {},
                           ),
@@ -2617,7 +2674,9 @@ class _PodlypageState extends State<Podlypage> {
                     child: Column(
                       children: [
                         Text(
-                          "${user[0]["firstName"]} ${user[0]["lastName"]}",
+                          user.isNotEmpty
+                              ? "${user[0]["firstName"]} ${user[0]["lastName"]}"
+                              : "",
                           style: TextStyle(
                             fontSize: x.width * 0.04,
                             fontWeight: FontWeight.bold,
@@ -2626,7 +2685,7 @@ class _PodlypageState extends State<Podlypage> {
                           maxLines: 2,
                         ),
                         Text(
-                          user[0]['email'],
+                          user.isNotEmpty ? user[0]["email"] ?? '' : '',
                           style: TextStyle(
                               color: Colors.white,
                               // fontWeight: FontWeight.bold,
@@ -3414,13 +3473,17 @@ class Search extends SearchDelegate<String> {
         }
       }
 
-      searchResults = results;
-      suggestions = results
-          .map((result) => result['name'] as String? ?? 'Sans nom')
-          .toList();
+      setState(() {
+        searchResults = results;
+        suggestions = results
+            .map((result) => result['name'] as String? ?? 'Sans nom')
+            .toList();
+      });
 
       // ignore: empty_catches
-    } catch (e) {}
+    } catch (e) {
+      print("Error in searchContent: $e");
+    }
   }
 
   List<Map<String, dynamic>> feae = [];
@@ -3440,56 +3503,65 @@ class Search extends SearchDelegate<String> {
 
   @override
   ThemeData appBarTheme(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    const double fontSize = 16.0; // petite taille de texte
-    return theme.copyWith(
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
-        iconTheme: IconThemeData(color: Colors.black),
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final bool isDarkMode = themeProvider.isDarkMode;
+    const double fontSize = 16.0;
+
+    return Theme.of(context).copyWith(
+      appBarTheme: AppBarTheme(
+        backgroundColor: isDarkMode ? Colors.black : Colors.white,
+        iconTheme:
+            IconThemeData(color: isDarkMode ? Colors.white : Colors.black),
       ),
-      textSelectionTheme: const TextSelectionThemeData(
-        cursorColor: Colors.black,
-        selectionColor: Colors.black,
-        selectionHandleColor: Colors.black,
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: isDarkMode ? Colors.white : Colors.black,
+        selectionColor: isDarkMode ? Colors.white54 : Colors.black12,
+        selectionHandleColor: isDarkMode ? Colors.white : Colors.black,
       ),
       inputDecorationTheme: InputDecorationTheme(
-        // ✅ Cette ligne garantit que le texte saisi est en noir
-        labelStyle: const TextStyle(color: Colors.black),
-        // ✅ Et ceci aussi pour le style de saisie
-        floatingLabelStyle: const TextStyle(color: Colors.black),
+        labelStyle: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
+        floatingLabelStyle:
+            TextStyle(color: isDarkMode ? Colors.white : Colors.black),
         isDense: true,
         contentPadding: EdgeInsets.symmetric(
           horizontal: MediaQuery.of(context).size.width * 0.02,
           vertical: MediaQuery.of(context).size.width * 0.025,
         ),
-        hintStyle: const TextStyle(color: Colors.grey, fontSize: fontSize),
-        filled: true,
-        fillColor: const Color(0xFFD9D9D9),
-        enabledBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(20)),
-          borderSide: BorderSide(color: Color(0xFFD9D9D9)),
-        ),
-        focusedBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(20)),
-          borderSide: BorderSide(color: Color(0xFFD9D9D9)),
-        ),
-      ),
-      textTheme: theme.textTheme.copyWith(
-        titleLarge: const TextStyle(
+        hintStyle: TextStyle(
+          color: isDarkMode ? Colors.grey[400] : Colors.grey,
           fontSize: fontSize,
-          height: 1.2, // espace entre lignes, utile pour le curseur aussi
+        ),
+        filled: true,
+        fillColor: isDarkMode ? Colors.grey[800] : const Color(0xFFD9D9D9),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+          borderSide: BorderSide(
+              color: isDarkMode ? Colors.grey[700]! : const Color(0xFFD9D9D9)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+          borderSide: BorderSide(
+              color: isDarkMode ? Colors.grey[700]! : const Color(0xFFD9D9D9)),
         ),
       ),
+      textTheme: Theme.of(context).textTheme.copyWith(
+            titleLarge: TextStyle(
+              fontSize: fontSize,
+              height: 1.2,
+              color: isDarkMode ? Colors.white : Colors.black,
+            ),
+          ),
     );
   }
 
   @override
   List<Widget> buildActions(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
     return [
       IconButton(
-        icon: const Icon(
+        icon: Icon(
           Icons.refresh,
-          color: Colors.black,
+          color: themeProvider.isDarkMode ? Colors.white : Colors.black,
         ),
         onPressed: () {
           query = '';
@@ -3501,9 +3573,10 @@ class Search extends SearchDelegate<String> {
 
   @override
   Widget buildLeading(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
     return IconButton(
       icon: Image.network(
-        s18,
+        themeProvider.isDarkMode ? s97 : s18,
         width: MediaQuery.of(context).size.width * 0.06,
         height: MediaQuery.of(context).size.width * 0.06,
       ),
@@ -3517,26 +3590,13 @@ class Search extends SearchDelegate<String> {
   Widget buildResults(BuildContext context) {
     // Perform search and save query
     if (query.isNotEmpty) {
+      // Save the query first
       saveSearchQuery(query);
 
-      // This should be done in a way that updates the UI when complete
-      searchContent(query);
-
-      // Navigate after current frame is complete
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        // Close the search delegate
-        close(context, query);
-
-        // Navigate to results page
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => SearchResultsPage(
-              query: query,
-              results: searchResults,
-            ),
-          ),
-        );
-      });
+      // Show loading animation while searching
+      return const Center(
+        child: Annimationwidjet(),
+      );
     }
 
     // Show loading indicator while waiting
@@ -3545,8 +3605,42 @@ class Search extends SearchDelegate<String> {
     );
   }
 
+  // FIXED: Removed _searchAndNavigate method and integrated its functionality directly in buildResults
+
+  @override
+  void showResults(BuildContext context) {
+    // Override showResults to execute our search and navigation
+    if (query.isNotEmpty) {
+      // First, perform the database query
+      searchContent(query).then((_) {
+        // Make a copy of the results to prevent any issues with state management
+        final String searchQuery = query;
+        final List<Map<String, dynamic>> results = List.from(searchResults);
+
+        // Close the search delegate properly first
+        close(context, searchQuery);
+
+        // Then navigate to results page after the search delegate is closed
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => SearchResultsPage(
+                query: searchQuery,
+                results: results,
+              ),
+            ),
+          );
+        });
+      });
+    } else {
+      super.showResults(context);
+    }
+  }
+
   @override
   Widget buildSuggestions(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final bool isDarkMode = themeProvider.isDarkMode;
     // Show search results if query is not empty and we have results
     if (query.isNotEmpty) {
       // Recherche en direct pendant que l'utilisateur tape
@@ -3554,7 +3648,7 @@ class Search extends SearchDelegate<String> {
 
       // Afficher les résultats de recherche avec l'icône de recherche
       return Container(
-        color: Colors.white,
+        color: isDarkMode ? Colors.black : Colors.white,
         child: ListView.builder(
           itemCount: searchResults.length,
           itemBuilder: (context, index) {
@@ -3562,10 +3656,12 @@ class Search extends SearchDelegate<String> {
             final itemName = item['name'] as String? ?? 'Sans nom';
 
             return ListTile(
-              leading: const Icon(Icons.search, color: Colors.black),
+              leading: Icon(Icons.search,
+                  color: isDarkMode ? Colors.white : Colors.black),
               title: Text(
                 itemName,
-                style: const TextStyle(color: Colors.black),
+                style:
+                    TextStyle(color: isDarkMode ? Colors.white : Colors.black),
               ),
               onTap: () {
                 query = itemName;
@@ -3591,7 +3687,7 @@ class Search extends SearchDelegate<String> {
     }
 
     return Container(
-      color: Colors.white,
+      color: isDarkMode ? Colors.black : Colors.white,
       child: ListView.builder(
         itemCount: displayList.length,
         itemBuilder: (context, index) {
@@ -3601,20 +3697,22 @@ class Search extends SearchDelegate<String> {
           if (showingRecentSearches) {
             final searchText = item as String;
             return ListTile(
-              leading: const Icon(Icons.history, color: Colors.black),
+              leading: Icon(Icons.history,
+                  color: isDarkMode ? Colors.white : Colors.black),
               title: Text(
                 searchText,
-                style: const TextStyle(color: Colors.black),
+                style:
+                    TextStyle(color: isDarkMode ? Colors.white : Colors.black),
               ),
               trailing: IconButton(
-                icon: const Icon(Icons.clear, color: Colors.black),
+                icon: Icon(Icons.clear,
+                    color: isDarkMode ? Colors.white : Colors.black),
                 onPressed: () async {
                   await deleteRecentSearch(searchText);
                 },
               ),
-              onTap: () {
+              onTap: () async {
                 query = searchText;
-
                 showResults(context);
               },
             );
@@ -3626,10 +3724,12 @@ class Search extends SearchDelegate<String> {
                 podcast['name'] as String? ?? 'Podcast sans nom';
 
             return ListTile(
-              leading: const Icon(Icons.arrow_forward, color: Colors.black),
+              leading: Icon(Icons.arrow_forward,
+                  color: isDarkMode ? Colors.white : Colors.black),
               title: Text(
                 podcastName,
-                style: const TextStyle(color: Colors.black),
+                style:
+                    TextStyle(color: isDarkMode ? Colors.white : Colors.black),
               ),
               onTap: () {
                 query = podcastName;
@@ -4207,7 +4307,7 @@ class _SearchResultsPageState extends State<SearchResultsPage>
     final q = MediaQuery.of(context).size;
 
     showModalBottomSheet(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       context: context,
       isScrollControlled: true,
       shape: RoundedRectangleBorder(
@@ -4218,210 +4318,223 @@ class _SearchResultsPageState extends State<SearchResultsPage>
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setStateModal) {
-            return Container(
-              padding: EdgeInsets.symmetric(
-                vertical: q.height * 0.025,
-                horizontal: q.width * 0.04,
-              ),
-              // Utiliser une hauteur relative pour le bottom sheet
-              height: q.height * 0.6,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: q.width * 0.1,
-                      height: q.height * 0.005,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(q.width * 0.005),
-                      ),
-                      margin: EdgeInsets.only(bottom: q.height * 0.02),
-                    ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Filter Results',
-                        style: TextStyle(
-                          fontSize: q.width * 0.05,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
+            return Consumer<ThemeProvider>(
+                builder: (context, themeProvider, child) {
+              return Container(
+                padding: EdgeInsets.symmetric(
+                  vertical: q.height * 0.025,
+                  horizontal: q.width * 0.04,
+                ),
+                // Utiliser une hauteur relative pour le bottom sheet
+                height: q.height * 0.6,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: q.width * 0.1,
+                        height: q.height * 0.005,
+                        decoration: BoxDecoration(
+                          color: themeProvider.isDarkMode
+                              ? Colors.black
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(q.width * 0.005),
                         ),
+                        margin: EdgeInsets.only(bottom: q.height * 0.02),
                       ),
-                      if (activeFilters.isNotEmpty)
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            _resetFilters();
-                          },
-                          child: Text(
-                            'Reset',
-                            style: TextStyle(
-                              color: const Color(0xFF754CEF),
-                              fontSize: q.width * 0.035,
-                            ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Filter Results',
+                          style: TextStyle(
+                            fontSize: q.width * 0.05,
+                            fontWeight: FontWeight.bold,
+                            color: themeProvider.isDarkMode
+                                ? Colors.white
+                                : Colors.black,
                           ),
                         ),
-                    ],
-                  ),
-                  SizedBox(height: q.height * 0.02),
-
-                  // Filtres par durée
-                  Text(
-                    'Duration',
-                    style: TextStyle(
-                      fontSize: q.width * 0.04,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
-                    ),
-                  ),
-                  SizedBox(height: q.height * 0.012),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _buildFilterChip(
-                          '< 10 min',
-                          () {
-                            setStateModal(() {
-                              _toggleFilter('duration', 'less10');
-                            });
-                          },
-                          isActive: activeFilters['duration'] == 'less10',
-                        ),
-                        SizedBox(width: q.width * 0.02),
-                        _buildFilterChip(
-                          '10-20 min',
-                          () {
-                            setStateModal(() {
-                              _toggleFilter('duration', '10to20');
-                            });
-                          },
-                          isActive: activeFilters['duration'] == '10to20',
-                        ),
-                        SizedBox(width: q.width * 0.02),
-                        _buildFilterChip(
-                          '> 20 min',
-                          () {
-                            setStateModal(() {
-                              _toggleFilter('duration', 'more20');
-                            });
-                          },
-                          isActive: activeFilters['duration'] == 'more20',
-                        ),
+                        if (activeFilters.isNotEmpty)
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _resetFilters();
+                            },
+                            child: Text(
+                              'Reset',
+                              style: TextStyle(
+                                color: const Color(0xFF754CEF),
+                                fontSize: q.width * 0.035,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
-                  ),
-                  SizedBox(height: q.height * 0.025),
+                    SizedBox(height: q.height * 0.02),
 
-                  // Tri par date
-                  Text(
-                    'Date',
-                    style: TextStyle(
-                      fontSize: q.width * 0.04,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
-                    ),
-                  ),
-                  SizedBox(height: q.height * 0.012),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _buildFilterChip(
-                          'Most Recent',
-                          () {
-                            setStateModal(() {
-                              _toggleFilter('sort', 'recent');
-                            });
-                          },
-                          isActive: activeFilters['sort'] == 'recent',
-                        ),
-                        SizedBox(width: q.width * 0.02),
-                        _buildFilterChip(
-                          'Older',
-                          () {
-                            setStateModal(() {
-                              _toggleFilter('sort', 'oldest');
-                            });
-                          },
-                          isActive: activeFilters['sort'] == 'oldest',
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: q.height * 0.025),
-
-                  // Tri par popularité
-                  Text(
-                    'Popularity',
-                    style: TextStyle(
-                      fontSize: q.width * 0.04,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
-                    ),
-                  ),
-                  SizedBox(height: q.height * 0.012),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _buildFilterChip(
-                          'Most Viewed',
-                          () {
-                            setStateModal(() {
-                              _toggleFilter('popularity', 'views');
-                            });
-                          },
-                          isActive: activeFilters['popularity'] == 'views',
-                        ),
-                        SizedBox(width: q.width * 0.02),
-                        _buildFilterChip(
-                          'Most Liked',
-                          () {
-                            setStateModal(() {
-                              _toggleFilter('popularity', 'likes');
-                            });
-                          },
-                          isActive: activeFilters['popularity'] == 'likes',
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const Spacer(),
-
-                  // Bouton pour appliquer les filtres
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _applyFilters();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF754CEF),
-                        foregroundColor: Colors.white,
-                        minimumSize: Size(q.width * 0.8, q.height * 0.05),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(q.width * 0.05),
-                        ),
-                      ),
-                      child: Text(
-                        'Apply Filters',
-                        style: TextStyle(
-                          fontSize: q.width * 0.04,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    // Filtres par durée
+                    Text(
+                      'Duration',
+                      style: TextStyle(
+                        fontSize: q.width * 0.04,
+                        fontWeight: FontWeight.w500,
+                        color: themeProvider.isDarkMode
+                            ? Colors.white
+                            : Colors.black,
                       ),
                     ),
-                  ),
-                  SizedBox(height: q.height * 0.02),
-                ],
-              ),
-            );
+                    SizedBox(height: q.height * 0.012),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildFilterChip(
+                            '< 10 min',
+                            () {
+                              setStateModal(() {
+                                _toggleFilter('duration', 'less10');
+                              });
+                            },
+                            isActive: activeFilters['duration'] == 'less10',
+                          ),
+                          SizedBox(width: q.width * 0.02),
+                          _buildFilterChip(
+                            '10-20 min',
+                            () {
+                              setStateModal(() {
+                                _toggleFilter('duration', '10to20');
+                              });
+                            },
+                            isActive: activeFilters['duration'] == '10to20',
+                          ),
+                          SizedBox(width: q.width * 0.02),
+                          _buildFilterChip(
+                            '> 20 min',
+                            () {
+                              setStateModal(() {
+                                _toggleFilter('duration', 'more20');
+                              });
+                            },
+                            isActive: activeFilters['duration'] == 'more20',
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: q.height * 0.025),
+
+                    // Tri par date
+                    Text(
+                      'Date',
+                      style: TextStyle(
+                        fontSize: q.width * 0.04,
+                        fontWeight: FontWeight.w500,
+                        color: themeProvider.isDarkMode
+                            ? Colors.white
+                            : Colors.black,
+                      ),
+                    ),
+                    SizedBox(height: q.height * 0.012),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildFilterChip(
+                            'Most Recent',
+                            () {
+                              setStateModal(() {
+                                _toggleFilter('sort', 'recent');
+                              });
+                            },
+                            isActive: activeFilters['sort'] == 'recent',
+                          ),
+                          SizedBox(width: q.width * 0.02),
+                          _buildFilterChip(
+                            'Older',
+                            () {
+                              setStateModal(() {
+                                _toggleFilter('sort', 'oldest');
+                              });
+                            },
+                            isActive: activeFilters['sort'] == 'oldest',
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: q.height * 0.025),
+
+                    // Tri par popularité
+                    Text(
+                      'Popularity',
+                      style: TextStyle(
+                        fontSize: q.width * 0.04,
+                        fontWeight: FontWeight.w500,
+                        color: themeProvider.isDarkMode
+                            ? Colors.white
+                            : Colors.black,
+                      ),
+                    ),
+                    SizedBox(height: q.height * 0.012),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildFilterChip(
+                            'Most Viewed',
+                            () {
+                              setStateModal(() {
+                                _toggleFilter('popularity', 'views');
+                              });
+                            },
+                            isActive: activeFilters['popularity'] == 'views',
+                          ),
+                          SizedBox(width: q.width * 0.02),
+                          _buildFilterChip(
+                            'Most Liked',
+                            () {
+                              setStateModal(() {
+                                _toggleFilter('popularity', 'likes');
+                              });
+                            },
+                            isActive: activeFilters['popularity'] == 'likes',
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const Spacer(),
+
+                    // Bouton pour appliquer les filtres
+                    Center(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _applyFilters();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF754CEF),
+                          foregroundColor: Colors.white,
+                          minimumSize: Size(q.width * 0.8, q.height * 0.05),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(q.width * 0.05),
+                          ),
+                        ),
+                        child: Text(
+                          'Apply Filters',
+                          style: TextStyle(
+                            fontSize: q.width * 0.04,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: q.height * 0.02),
+                  ],
+                ),
+              );
+            });
           },
         );
       },

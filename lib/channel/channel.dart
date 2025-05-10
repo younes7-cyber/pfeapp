@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:pfeapp/ZoomPhotoPage.dart';
 import 'package:pfeapp/annimation.dart';
 import 'package:pfeapp/constants.dart';
+import 'package:pfeapp/main.dart';
 import 'package:pfeapp/theme_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -283,6 +284,23 @@ class _ChannelpageState extends State<Channelpage>
       });
 
       if (isFollowing) {
+        final QuerySnapshot userSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .where('userId', isEqualTo: user)
+            .get();
+
+        if (userSnapshot.docs.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('User information not found')),
+          );
+          return;
+        }
+
+        // Extraire firstName et lastName
+        final userData = userSnapshot.docs.first.data() as Map<String, dynamic>;
+        final String firstName = userData['firstName'] ?? '';
+        final String lastName = userData['lastName'] ?? '';
+        final String fullName = '$firstName $lastName';
         // Ajouter à la collection follow
         await FirebaseFirestore.instance.collection('follow').add({
           'idfollowers': user,
@@ -336,6 +354,18 @@ class _ChannelpageState extends State<Channelpage>
               .update({
             'following': FieldValue.increment(1),
           });
+          try {
+            print(
+                'Attempting to send FCM notification to topic: $podcastUserId');
+            await FCMService.sendNotification(
+              topic: podcastUserId,
+              title: 'New Subscriber',
+              body: '$fullName has subscribed to you',
+            );
+            print('FCM notification sent successfully');
+          } catch (e) {
+            print('Error sending FCM notification: $e');
+          }
         }
       } else {
         // Supprimer de la collection follow

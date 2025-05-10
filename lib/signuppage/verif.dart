@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pfeapp/annimation.dart';
@@ -169,6 +170,8 @@ class _VerifpageState extends State<Verifpage> {
                                     if (user != null) {
                                       await user
                                           .delete(); //  Supprime le compte
+                                      await FirebaseMessaging.instance
+                                          .unsubscribeFromTopic(user.uid);
                                       final firestore =
                                           FirebaseFirestore.instance;
 
