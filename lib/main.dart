@@ -49,7 +49,7 @@ import 'package:pfeapp/homepage/homepage.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print("Handling a background message: ${message.messageId}");
+
   // Vous pouvez ajouter une logique supplémentaire ici si nécessaire
 }
 
@@ -109,6 +109,7 @@ class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _MyAppState createState() => _MyAppState();
 }
 
@@ -124,9 +125,7 @@ class _MyAppState extends State<MyApp> {
         .authStateChanges()
         .listen((firebase_auth.User? user) {
       if (user == null) {
-        print('User is currently signed out!');
       } else {
-        print('User is signed in!');
         // L'utilisateur est connecté, nous pouvons configurer ses sujets FCM
         _setupMessaging();
       }
@@ -198,8 +197,6 @@ class _MyAppState extends State<MyApp> {
 
     // Gérer les notifications lorsque l'application est ouverte à partir d'une notification
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('A notification has been clicked on: ${message.messageId}');
-
       // Naviguer vers la page de notifications
       if (message.data['route'] == '/nofi') {
         Navigator.pushNamed(navigatorKey.currentContext!, '/nofi');
@@ -212,6 +209,7 @@ class _MyAppState extends State<MyApp> {
     final currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
       // Demander l'autorisation pour les notifications
+      // ignore: unused_local_variable
       NotificationSettings settings =
           await FirebaseMessaging.instance.requestPermission(
         alert: true,
@@ -219,11 +217,8 @@ class _MyAppState extends State<MyApp> {
         sound: true,
       );
 
-      print('User granted permission: ${settings.authorizationStatus}');
-
       // S'abonner au sujet correspondant à l'ID de l'utilisateur
       await FirebaseMessaging.instance.subscribeToTopic(currentUser.uid);
-      print('Subscribed to topic: ${currentUser.uid}');
     }
   }
 
@@ -346,7 +341,6 @@ class FCMService {
 
       return client.credentials.accessToken.data;
     } catch (e) {
-      print('Error getting access token: $e');
       rethrow;
     }
   }
@@ -394,14 +388,11 @@ class FCMService {
       );
 
       if (response.statusCode == 200) {
-        print('Notification sent successfully');
         return true;
       } else {
-        print('Failed to send notification: ${response.body}');
         return false;
       }
     } catch (e) {
-      print('Error sending notification: $e');
       return false;
     }
   }

@@ -1,8 +1,11 @@
+// ignore_for_file: file_names
+
 import 'package:flutter/material.dart';
 
 class ZoomPhotoPage extends StatelessWidget {
   final String imageUrl;
 
+  // ignore: use_super_parameters
   const ZoomPhotoPage({Key? key, required this.imageUrl}) : super(key: key);
 
   @override

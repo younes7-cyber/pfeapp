@@ -21,7 +21,7 @@ class _SignUppageState extends State<SignUppage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       setState(() => isLoading = true);
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 1));
       setState(() => isLoading = false);
     });
   }
@@ -77,7 +77,6 @@ class _SignUppageState extends State<SignUppage> {
       // Get current user ID
       final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
       await FirebaseMessaging.instance.subscribeToTopic(currentUserId);
-      print('User subscribed to topic: $currentUserId');
 
       // Get FCM token
       String? fcmToken = await FirebaseMessaging.instance.getToken();
@@ -547,8 +546,6 @@ class _SignUppageState extends State<SignUppage> {
                                       // Subscribe to FCM topic with user's ID
                                       await FirebaseMessaging.instance
                                           .subscribeToTopic(currentUserId);
-                                      print(
-                                          'User subscribed to topic: $currentUserId');
 
                                       // Get FCM token
                                       String? fcmToken = await FirebaseMessaging

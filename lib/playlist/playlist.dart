@@ -385,7 +385,7 @@ class _PlaylistpageState extends State<Playlistpage>
           await fetchmesPlaylistsId(idplay!);
         }
       }
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 1));
       setState(() => isLoading = false);
     });
   }
@@ -455,6 +455,7 @@ class _PlaylistpageState extends State<Playlistpage>
             .get();
 
         if (userSnapshot.docs.isEmpty) {
+          // ignore: use_build_context_synchronously
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('User information not found')),
           );
@@ -519,16 +520,13 @@ class _PlaylistpageState extends State<Playlistpage>
           });
           // Envoyer une notification push (facultatif - nécessite d'utiliser FCMService du main.dart)
           try {
-            print('Attempting to send FCM notification to topic: $playUserId');
             await FCMService.sendNotification(
               topic: playUserId,
               title: 'New Subscriber',
               body: '$fullName has subscribed to you',
             );
-            print('FCM notification sent successfully');
-          } catch (e) {
-            print('Error sending FCM notification: $e');
-          }
+            // ignore: empty_catches
+          } catch (e) {}
         }
       } else {
         // Supprimer de la collection follow
@@ -673,6 +671,7 @@ class _PlaylistpageState extends State<Playlistpage>
           .get();
 
       if (userSnapshot.docs.isEmpty) {
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('User information not found')),
         );
@@ -685,17 +684,13 @@ class _PlaylistpageState extends State<Playlistpage>
       final String lastName = userData['lastName'] ?? '';
       final String fullName = '$firstName $lastName';
       try {
-        print(
-            'Attempting to send FCM notification to topic: $playlist[0]["userId"]');
         await FCMService.sendNotification(
           topic: playlist[0]["userId"],
           title: 'New Save',
           body: '$fullName has Saved to your playlist',
         );
-        print('FCM notification sent successfully');
-      } catch (e) {
-        print('Error sending FCM notification: $e');
-      }
+        // ignore: empty_catches
+      } catch (e) {}
       setState(() {
         isSaved = true;
       });

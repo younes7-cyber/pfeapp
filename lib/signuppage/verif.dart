@@ -27,7 +27,7 @@ class _VerifpageState extends State<Verifpage> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       setState(() => isLoading = true);
       _checkEmailVerification();
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 1));
       setState(() => isLoading = false);
     });
   }

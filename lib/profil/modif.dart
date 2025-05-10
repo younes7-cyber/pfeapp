@@ -973,7 +973,7 @@ class _ModifpageState extends State<Modifpage> {
         await fetchuser();
         await fetchChannels();
       }
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 1));
       setState(() => isLoading = false);
     });
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
 class NoConnectionWidget extends StatefulWidget {
+  // ignore: use_super_parameters
   const NoConnectionWidget({Key? key}) : super(key: key);
 
   @override

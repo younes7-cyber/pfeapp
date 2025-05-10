@@ -1106,7 +1106,7 @@ class _SeeAllpagepageState extends State<SeeAllpage>
         await fetchpodcasts();
         await fetchplaylists();
       }
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 1));
       setState(() => isLoading = false);
     });
   }

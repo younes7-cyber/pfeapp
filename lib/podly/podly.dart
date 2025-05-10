@@ -67,17 +67,17 @@ class _PodlypageState extends State<Podlypage> {
           });
         }
       });
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 1));
       setState(() => isLoading = false);
     });
   }
 
   Future<void> logout() async {
+    // ignore: await_only_futures
     final currentUser = await FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
       // Désabonner du topic avant la déconnexion
       await FirebaseMessaging.instance.unsubscribeFromTopic(currentUser.uid);
-      print('Unsubscribed from topic: ${currentUser.uid}');
     }
     await FirebaseAuth.instance.signOut();
     final prefs = await SharedPreferences.getInstance();
@@ -3124,7 +3124,7 @@ class Search extends SearchDelegate<String> {
       });
       // ignore: empty_catches
     } catch (e) {
-      print("Error fetching recent searches: $e"); // Add logging for debugging
+      // Add logging for debugging
     }
   }
 
@@ -3143,6 +3143,7 @@ class Search extends SearchDelegate<String> {
         feae = recentPodcasts.docs
             // ignore: unnecessary_cast
             .map((doc) {
+          // ignore: unnecessary_cast
           final data = doc.data() as Map<String, dynamic>;
           // Add the document ID to each item
           data['id'] = doc.id;
@@ -3150,8 +3151,7 @@ class Search extends SearchDelegate<String> {
         }).toList();
       });
     } catch (e) {
-      print(
-          "Error fetching featured podcasts: $e"); // Add logging for debugging
+      // Add logging for debugging
       setState(() {
         // Initialize as empty list instead of null
         feae = [];
@@ -3481,9 +3481,7 @@ class Search extends SearchDelegate<String> {
       });
 
       // ignore: empty_catches
-    } catch (e) {
-      print("Error in searchContent: $e");
-    }
+    } catch (e) {}
   }
 
   List<Map<String, dynamic>> feae = [];
@@ -3618,6 +3616,7 @@ class Search extends SearchDelegate<String> {
         final List<Map<String, dynamic>> results = List.from(searchResults);
 
         // Close the search delegate properly first
+        // ignore: use_build_context_synchronously
         close(context, searchQuery);
 
         // Then navigate to results page after the search delegate is closed

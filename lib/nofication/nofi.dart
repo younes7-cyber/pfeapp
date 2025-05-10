@@ -23,7 +23,7 @@ class _NotificationPageState extends State<NotificationPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       setState(() => isLoading = true);
       _currentFilter = 'all';
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 1));
       setState(() => isLoading = false);
     });
   }

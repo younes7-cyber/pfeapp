@@ -126,13 +126,11 @@ class _ListenpageState extends State<Listenpage>
               mesPodcasts12 = [];
             });
           }
-          debugPrint("Aucun podcast trouvé dans la playlist.");
         }
       });
 
       _streamSubscriptions.add(streamSubscription);
     } catch (e) {
-      debugPrint("Erreur lors de la récupération des podcasts : $e");
       if (mounted) {
         setState(() {
           mesPodcasts12 = [];
@@ -156,14 +154,11 @@ class _ListenpageState extends State<Listenpage>
                 .toList();
           });
         }
-
-        debugPrint("Podcasts récupérés : ${playlist.length}");
       });
 
       _streamSubscriptions.add(streamSubscription);
-    } catch (e) {
-      debugPrint("Erreur lors du chargement des podcasts : $e");
-    }
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   Future<void> fetchPlaylistsByPodcastId12(String idplay1) async {
@@ -243,21 +238,17 @@ class _ListenpageState extends State<Listenpage>
               });
             }
           }
-          debugPrint(
-              "🎧 Podcasts récupérés et triés par date (playinpod) : ${podcastPlaylists.length}");
         } else {
           if (mounted) {
             setState(() {
               podcastPlaylists = [];
             });
           }
-          debugPrint("Aucun podcast trouvé pour cette playlist.");
         }
       });
 
       _streamSubscriptions.add(streamSubscription);
     } catch (e) {
-      debugPrint("Erreur lors de la récupération des podcasts : $e");
       if (mounted) {
         setState(() {
           podcastPlaylists = [];
@@ -283,8 +274,6 @@ class _ListenpageState extends State<Listenpage>
           });
         }
 
-        debugPrint("Podcasts récupérés : ${podcast.length}");
-
         // Initialize audio player if podcast data is available
         if (podcast.isNotEmpty && podcast[0]['urlFile'] != null) {
           _initAudioPlayer();
@@ -292,9 +281,8 @@ class _ListenpageState extends State<Listenpage>
       });
 
       _streamSubscriptions.add(streamSubscription);
-    } catch (e) {
-      debugPrint("Erreur lors du chargement des podcasts : $e");
-    }
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   Future<void> fetchPlaylistsByPodcastId(String idpod) async {
@@ -316,7 +304,6 @@ class _ListenpageState extends State<Listenpage>
             .toList();
         final List<String> playlistIds =
             playinPodData.map((item) => item["playlistId"] as String).toList();
-        debugPrint("Playlists trouvées dans playinpod : $playlistIds");
 
         if (playlistIds.isNotEmpty) {
           // 2️⃣ Récupérer les playlists correspondant aux `playlistId`
@@ -379,7 +366,6 @@ class _ListenpageState extends State<Listenpage>
           }
 
           final List<String> podcastIds = podcastToPlaylists.keys.toList();
-          debugPrint("Podcasts liés aux playlists trouvés : $podcastIds");
 
           if (podcastIds.isNotEmpty) {
             // 4️⃣ Récupérer les podcasts avec `podcastIds`
@@ -417,15 +403,13 @@ class _ListenpageState extends State<Listenpage>
                 playinpod = loadedPodcasts;
               });
             }
-            debugPrint("Podcasts finaux récupérés : ${playinpod.length}");
           }
         }
       });
 
       _streamSubscriptions.add(streamSubscription);
-    } catch (e) {
-      debugPrint("Erreur lors du chargement des playlists : $e");
-    }
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   /* Map<String, List<Map<String, dynamic>>> podcastsByPlaylist = {};
@@ -476,7 +460,7 @@ class _ListenpageState extends State<Listenpage>
           await fetchPlaylistsByPodcastId12(idplay1!);
         }
       }
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 1));
       if (mounted) {
         setState(() => isLoading = false);
       }
@@ -598,7 +582,7 @@ class _ListenpageState extends State<Listenpage>
     try {
       if (podcast.isNotEmpty && podcast[0]['urlFile'] != null) {
         String url = podcast[0]['urlFile'];
-        debugPrint("URL du fichier audio : $url");
+
         await _audioPlayer.setUrl(url);
       }
 
@@ -1371,6 +1355,7 @@ class _ListenpageState extends State<Listenpage>
         .get();
 
     if (userSnapshot.docs.isEmpty) {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('User information not found')),
       );
@@ -1383,17 +1368,13 @@ class _ListenpageState extends State<Listenpage>
     final String lastName = userData['lastName'] ?? '';
     final String fullName = '$firstName $lastName';
     try {
-      print(
-          'Attempting to send FCM notification to topic: $podcast[0]["idUser"]');
       await FCMService.sendNotification(
         topic: podcast[0]["idUser"],
         title: 'New Comment',
         body: '$fullName has  Replyed to your podcast',
       );
-      print('FCM notification sent successfully');
-    } catch (e) {
-      print('Error sending FCM notification: $e');
-    }
+      // ignore: empty_catches
+    } catch (e) {}
     if (mounted) {
       setState(() {});
     }
@@ -1426,6 +1407,7 @@ class _ListenpageState extends State<Listenpage>
           .get();
 
       if (userSnapshot.docs.isEmpty) {
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('User information not found')),
         );
@@ -1438,17 +1420,13 @@ class _ListenpageState extends State<Listenpage>
       final String lastName = userData['lastName'] ?? '';
       final String fullName = '$firstName $lastName';
       try {
-        print(
-            'Attempting to send FCM notification to topic: $podcast[0]["idUser"]');
         await FCMService.sendNotification(
           topic: podcast[0]["idUser"],
           title: 'New Comment',
           body: '$fullName has commented to your podcast',
         );
-        print('FCM notification sent successfully');
-      } catch (e) {
-        print('Error sending FCM notification: $e');
-      }
+        // ignore: empty_catches
+      } catch (e) {}
       _commentController.clear();
       if (mounted) {
         setState(() {});
@@ -1510,6 +1488,7 @@ class _ListenpageState extends State<Listenpage>
           .get();
 
       if (userSnapshot.docs.isEmpty) {
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('User information not found')),
         );
@@ -1522,17 +1501,13 @@ class _ListenpageState extends State<Listenpage>
       final String lastName = userData1['lastName'] ?? '';
       final String fullName = '$firstName $lastName';
       try {
-        print(
-            'Attempting to send FCM notification to topic: $podcast[0]["idUser"]');
         await FCMService.sendNotification(
           topic: podcast[0]["idUser"],
           title: 'New Comment',
           body: '$fullName has  Replyed to your podcast',
         );
-        print('FCM notification sent successfully');
-      } catch (e) {
-        print('Error sending FCM notification: $e');
-      }
+        // ignore: empty_catches
+      } catch (e) {}
       _commentController.clear();
       // ignore: empty_catches
     } catch (e) {}
@@ -1667,6 +1642,7 @@ class _ListenpageState extends State<Listenpage>
           .get();
 
       if (userSnapshot.docs.isEmpty) {
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('User information not found')),
         );
@@ -1679,17 +1655,13 @@ class _ListenpageState extends State<Listenpage>
       final String lastName = userData['lastName'] ?? '';
       final String fullName = '$firstName $lastName';
       try {
-        print(
-            'Attempting to send FCM notification to topic: $podcast[0]["idUser"]');
         await FCMService.sendNotification(
           topic: podcast[0]["idUser"],
           title: 'New Like',
           body: '$fullName has Liked to your podcast',
         );
-        print('FCM notification sent successfully');
-      } catch (e) {
-        print('Error sending FCM notification: $e');
-      }
+        // ignore: empty_catches
+      } catch (e) {}
 
       if (mounted) {
         setState(() {
@@ -1770,6 +1742,7 @@ class _ListenpageState extends State<Listenpage>
           .get();
 
       if (userSnapshot.docs.isEmpty) {
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('User information not found')),
         );
@@ -1782,17 +1755,13 @@ class _ListenpageState extends State<Listenpage>
       final String lastName = userData['lastName'] ?? '';
       final String fullName = '$firstName $lastName';
       try {
-        print(
-            'Attempting to send FCM notification to topic: $podcast[0]["idUser"]');
         await FCMService.sendNotification(
           topic: podcast[0]["idUser"],
           title: 'New Save',
           body: '$fullName has Saved to your podcast',
         );
-        print('FCM notification sent successfully');
-      } catch (e) {
-        print('Error sending FCM notification: $e');
-      }
+        // ignore: empty_catches
+      } catch (e) {}
       if (mounted) {
         setState(() {
           isSaved = true;
@@ -1939,6 +1908,7 @@ class _ListenpageState extends State<Listenpage>
           .get();
 
       if (userSnapshot.docs.isEmpty) {
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('User information not found')),
         );
@@ -1951,17 +1921,13 @@ class _ListenpageState extends State<Listenpage>
       final String lastName = userData['lastName'] ?? '';
       final String fullName = '$firstName $lastName';
       try {
-        print(
-            'Attempting to send FCM notification to topic: $podcast[0]["idUser"]');
         await FCMService.sendNotification(
           topic: podcast[0]["idUser"],
           title: 'New Vue',
           body: '$fullName has viewed to your podcast',
         );
-        print('FCM notification sent successfully');
-      } catch (e) {
-        print('Error sending FCM notification: $e');
-      }
+        // ignore: empty_catches
+      } catch (e) {}
     }
   }
 
@@ -2452,7 +2418,6 @@ class _ListenpageState extends State<Listenpage>
 
   void handlePreviousPodcast1() {
     if (podcastPlaylists.isEmpty) {
-      debugPrint("Aucun podcast disponible dans cette playlist");
       // Revenir au début du podcast actuel
       _audioPlayer.seek(Duration.zero);
       _audioPlayer.play();
@@ -2464,7 +2429,6 @@ class _ListenpageState extends State<Listenpage>
         podcastPlaylists.indexWhere((podcast) => podcast["id"] == idpod);
 
     if (currentIndex == -1) {
-      debugPrint("Podcast actuel non trouvé dans la playlist");
       _audioPlayer.seek(Duration.zero);
       _audioPlayer.play();
       return;
@@ -2473,8 +2437,6 @@ class _ListenpageState extends State<Listenpage>
     if (currentIndex > 0) {
       // Il y a un podcast précédent dans la playlist
       String previousPodcastId = podcastPlaylists[currentIndex - 1]["id"];
-      debugPrint(
-          "Navigation vers le podcast précédent: ${podcastPlaylists[currentIndex - 1]["title"]}");
 
       Navigator.pushReplacementNamed(
         context,
@@ -2487,7 +2449,7 @@ class _ListenpageState extends State<Listenpage>
       );
     } else {
       // C'est le premier podcast de la playlist, revenir au début
-      debugPrint("Premier podcast de la playlist, retour au début");
+
       _audioPlayer.seek(Duration.zero);
       _audioPlayer.play();
     }
@@ -2496,7 +2458,6 @@ class _ListenpageState extends State<Listenpage>
 // Fonction pour naviguer au podcast suivant dans la playlist actuelle
   void handleNextPodcast1() {
     if (podcastPlaylists.isEmpty) {
-      debugPrint("Aucun podcast disponible dans cette playlist");
       return;
     }
 
@@ -2505,15 +2466,12 @@ class _ListenpageState extends State<Listenpage>
         podcastPlaylists.indexWhere((podcast) => podcast["id"] == idpod);
 
     if (currentIndex == -1) {
-      debugPrint("Podcast actuel non trouvé dans la playlist");
       return;
     }
 
     if (currentIndex < podcastPlaylists.length - 1) {
       // Il y a un podcast suivant dans la playlist
       String nextPodcastId = podcastPlaylists[currentIndex + 1]["id"];
-      debugPrint(
-          "Navigation vers le podcast suivant: ${podcastPlaylists[currentIndex + 1]["title"]}");
 
       Navigator.pushReplacementNamed(
         context,
@@ -2526,13 +2484,11 @@ class _ListenpageState extends State<Listenpage>
       );
     } else {
       // C'est le dernier podcast de la playlist, laisser se terminer naturellement
-      debugPrint("Dernier podcast de la playlist, aucune action");
     }
   }
 
   void handlePreviousPodcast2() {
     if (mesPodcasts12.isEmpty) {
-      debugPrint("Aucun podcast disponible dans cette playlist");
       // Revenir au début du podcast actuel
       _audioPlayer.seek(Duration.zero);
       _audioPlayer.play();
@@ -2544,7 +2500,6 @@ class _ListenpageState extends State<Listenpage>
         mesPodcasts12.indexWhere((podcast) => podcast["id"] == idpod);
 
     if (currentIndex == -1) {
-      debugPrint("Podcast actuel non trouvé dans la playlist");
       _audioPlayer.seek(Duration.zero);
       _audioPlayer.play();
       return;
@@ -2564,7 +2519,7 @@ class _ListenpageState extends State<Listenpage>
       );
     } else {
       // C'est le premier podcast de la playlist, revenir au début
-      debugPrint("Premier podcast de la playlist, retour au début");
+
       _audioPlayer.seek(Duration.zero);
       _audioPlayer.play();
     }
@@ -2573,7 +2528,6 @@ class _ListenpageState extends State<Listenpage>
 // Fonction pour naviguer au podcast suivant dans la playlist actuelle
   void handleNextPodcast2() {
     if (mesPodcasts12.isEmpty) {
-      debugPrint("Aucun podcast disponible dans cette playlist");
       return;
     }
 
@@ -2582,7 +2536,6 @@ class _ListenpageState extends State<Listenpage>
         mesPodcasts12.indexWhere((podcast) => podcast["id"] == idpod);
 
     if (currentIndex == -1) {
-      debugPrint("Podcast actuel non trouvé dans la playlist");
       return;
     }
 
@@ -2600,7 +2553,6 @@ class _ListenpageState extends State<Listenpage>
       );
     } else {
       // C'est le dernier podcast de la playlist, laisser se terminer naturellement
-      debugPrint("Dernier podcast de la playlist, aucune action");
     }
   }
 

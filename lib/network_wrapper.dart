@@ -6,6 +6,7 @@ import 'no_connection_widget.dart';
 class NetworkWrapper extends StatefulWidget {
   final Widget child;
 
+  // ignore: use_super_parameters
   const NetworkWrapper({
     Key? key,
     required this.child,

@@ -1068,6 +1068,7 @@ class _PodcastpageState extends State<Podcastpage>
             .get();
 
         if (userSnapshot.docs.isEmpty) {
+          // ignore: use_build_context_synchronously
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('User information not found')),
           );
@@ -1131,17 +1132,12 @@ class _PodcastpageState extends State<Podcastpage>
           });
           // Envoyer une notification push (facultatif - nécessite d'utiliser FCMService du main.dart)
           try {
-            print(
-                'Attempting to send FCM notification to topic: $podcastUserId');
             await FCMService.sendNotification(
               topic: podcastUserId,
               title: 'New Subscriber',
               body: '$fullName has subscribed to you',
             );
-            print('FCM notification sent successfully');
-          } catch (e) {
-            print('Error sending FCM notification: $e');
-          }
+          } catch (e) {}
         }
       } else {
         // Supprimer de la collection follow
@@ -1249,7 +1245,7 @@ class _PodcastpageState extends State<Podcastpage>
           await nbrpodId(idpod!);
         }
       }
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 1));
       setState(() => isLoading = false);
     });
   }

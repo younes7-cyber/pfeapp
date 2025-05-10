@@ -59,7 +59,7 @@ class _Modif1pageState extends State<Modif1page> {
           await _loadPlaylist1(idpp!);
         }
       }
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 1));
       setState(() => isLoading = false);
     });
   }

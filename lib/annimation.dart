@@ -5,6 +5,7 @@ import 'package:pfeapp/theme_provider.dart';
 import 'package:provider/provider.dart';
 
 class Annimationwidjet extends StatefulWidget {
+  // ignore: use_super_parameters
   const Annimationwidjet({Key? key}) : super(key: key);
 
   @override

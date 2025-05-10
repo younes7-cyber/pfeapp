@@ -35,7 +35,7 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       setState(() => isLoading = true);
       _loadPlaylists();
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 1));
       setState(() => isLoading = false);
     });
   }

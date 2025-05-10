@@ -37,7 +37,7 @@ class _CompletepageState extends State<Completepage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       setState(() => isLoading = true);
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 1));
       setState(() => isLoading = false);
     });
   }

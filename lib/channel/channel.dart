@@ -290,6 +290,7 @@ class _ChannelpageState extends State<Channelpage>
             .get();
 
         if (userSnapshot.docs.isEmpty) {
+          // ignore: use_build_context_synchronously
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('User information not found')),
           );
@@ -355,17 +356,13 @@ class _ChannelpageState extends State<Channelpage>
             'following': FieldValue.increment(1),
           });
           try {
-            print(
-                'Attempting to send FCM notification to topic: $podcastUserId');
             await FCMService.sendNotification(
               topic: podcastUserId,
               title: 'New Subscriber',
               body: '$fullName has subscribed to you',
             );
-            print('FCM notification sent successfully');
-          } catch (e) {
-            print('Error sending FCM notification: $e');
-          }
+            // ignore: empty_catches
+          } catch (e) {}
         }
       } else {
         // Supprimer de la collection follow
@@ -465,7 +462,7 @@ class _ChannelpageState extends State<Channelpage>
           await listenToFollowStatus();
         }
       }
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 1));
       setState(() => isLoading = false);
     });
   }
