@@ -233,12 +233,13 @@ class _ModifpageState extends State<Modifpage> {
         // ignore: use_build_context_synchronously
         Navigator.of(loadingDialogContext).pop();
 
-        // Afficher un message d'erreur
+        Navigator.pushNamedAndRemoveUntil(context, '/podly', (route) => false);
+
+        // Afficher un message de confirmation
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                "Erreur lors de la suppression du compte: ${e.toString()}"),
-            backgroundColor: Colors.red,
+          const SnackBar(
+            content: Text("succsuful deleting channel"),
+            backgroundColor: Color(0xFF754CEF),
           ),
         );
       }

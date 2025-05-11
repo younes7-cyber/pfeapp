@@ -472,10 +472,10 @@ class _PrivipageState extends State<Privipage> {
       for (var doc in mesPlaylistRefs.docs) {
         await doc.reference.delete();
       }
-      await FirebaseMessaging.instance.unsubscribeFromTopic(currentUserId);
+
       // 9. Enfin, supprimer le compte utilisateur de Firebase Auth
       await currentUser?.delete();
-
+      await FirebaseMessaging.instance.unsubscribeFromTopic(currentUserId);
       // Check if widget is still mounted before proceeding with navigation
       if (mounted) {
         // Fermer la boîte de dialogue de chargement
