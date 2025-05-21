@@ -67,7 +67,9 @@ class _YourChainepageState extends State<YourChainepage>
     _tabController1 = TabController(length: 2, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
 
       // Configurer les écouteurs pour charger les données
       _setupStreamListeners();
@@ -93,16 +95,20 @@ class _YourChainepageState extends State<YourChainepage>
         .where('userId', isEqualTo: currentUserId)
         .snapshots()
         .listen((snapshot) {
-      setState(() {
-        channels = snapshot.docs
-            // ignore: unnecessary_cast
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
+      if (mounted) {
+        setState(() {
+          channels = snapshot.docs
+              // ignore: unnecessary_cast
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList();
 
-        _checkDataLoadingComplete();
-      });
+          _checkDataLoadingComplete();
+        });
+      }
     }, onError: (e) {
-      setState(() => hasError = true);
+      if (mounted) {
+        setState(() => hasError = true);
+      }
       _checkDataLoadingComplete();
     });
 
@@ -112,16 +118,20 @@ class _YourChainepageState extends State<YourChainepage>
         .where('userId', isEqualTo: currentUserId)
         .snapshots()
         .listen((snapshot) {
-      setState(() {
-        user = snapshot.docs
-            // ignore: unnecessary_cast
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
+      if (mounted) {
+        setState(() {
+          user = snapshot.docs
+              // ignore: unnecessary_cast
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList();
 
-        _checkDataLoadingComplete();
-      });
+          _checkDataLoadingComplete();
+        });
+      }
     }, onError: (e) {
-      setState(() => hasError = true);
+      if (mounted) {
+        setState(() => hasError = true);
+      }
       _checkDataLoadingComplete();
     });
 
@@ -132,18 +142,22 @@ class _YourChainepageState extends State<YourChainepage>
         .where('idUser', isEqualTo: currentUserId)
         .snapshots()
         .listen((snapshot) {
-      setState(() {
-        podcast = snapshot.docs
-            // ignore: unnecessary_cast
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
-        // ignore: avoid_types_as_parameter_names
-        s = podcast.fold(0, (sum, item) => sum + (item["likes"] ?? 0) as int);
+      if (mounted) {
+        setState(() {
+          podcast = snapshot.docs
+              // ignore: unnecessary_cast
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList();
+          // ignore: avoid_types_as_parameter_names
+          s = podcast.fold(0, (sum, item) => sum + (item["likes"] ?? 0) as int);
 
-        _checkDataLoadingComplete();
-      });
+          _checkDataLoadingComplete();
+        });
+      }
     }, onError: (e) {
-      setState(() => hasError = true);
+      if (mounted) {
+        setState(() => hasError = true);
+      }
       _checkDataLoadingComplete();
     });
 
@@ -154,16 +168,20 @@ class _YourChainepageState extends State<YourChainepage>
         .where('userId', isEqualTo: currentUserId)
         .snapshots()
         .listen((snapshot) {
-      setState(() {
-        playlist = snapshot.docs
-            // ignore: unnecessary_cast
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
+      if (mounted) {
+        setState(() {
+          playlist = snapshot.docs
+              // ignore: unnecessary_cast
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList();
 
-        _checkDataLoadingComplete();
-      });
+          _checkDataLoadingComplete();
+        });
+      }
     }, onError: (e) {
-      setState(() => hasError = true);
+      if (mounted) {
+        setState(() => hasError = true);
+      }
       _checkDataLoadingComplete();
     });
 
@@ -186,7 +204,9 @@ class _YourChainepageState extends State<YourChainepage>
       final elapsedMilliseconds =
           DateTime.now().millisecondsSinceEpoch - _startTimeMillis;
       if (elapsedMilliseconds >= 3000) {
-        setState(() => isLoading = false);
+        if (mounted) {
+          setState(() => isLoading = false);
+        }
       }
     }
   }

@@ -59,10 +59,14 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
       _loadPlaylists();
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 
@@ -100,9 +104,11 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
         );
       }).toList();
 
-      setState(() {
-        play.addAll(fetchedPlaylists);
-      });
+      if (mounted) {
+        setState(() {
+          play.addAll(fetchedPlaylists);
+        });
+      }
       // ignore: empty_catches
     } catch (e) {}
   }
@@ -125,9 +131,11 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
     if (await _requestPermission()) {
       final result = await FilePicker.platform.pickFiles(type: FileType.image);
       if (result != null && result.files.isNotEmpty) {
-        setState(() {
-          _selectedImagePath = result.files.single.path;
-        });
+        if (mounted) {
+          setState(() {
+            _selectedImagePath = result.files.single.path;
+          });
+        }
       }
     }
   }
@@ -136,9 +144,11 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
     if (await _requestPermission()) {
       final result = await FilePicker.platform.pickFiles(type: FileType.audio);
       if (result != null && result.files.isNotEmpty) {
-        setState(() {
-          _selectedAudioPath = result.files.single.path;
-        });
+        if (mounted) {
+          setState(() {
+            _selectedAudioPath = result.files.single.path;
+          });
+        }
       }
     }
   }
@@ -271,39 +281,49 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
     bool isValid = true;
 
     // Reset all errors first
-    setState(() {
-      nameError = null;
-      descError = null;
-      categoryError = null;
-      fileError = null;
-    });
+    if (mounted) {
+      setState(() {
+        nameError = null;
+        descError = null;
+        categoryError = null;
+        fileError = null;
+      });
+    }
 
     // Check each field
     if (_nameController.text.trim().isEmpty) {
-      setState(() {
-        nameError = "Name must not be empty";
-      });
+      if (mounted) {
+        setState(() {
+          nameError = "Name must not be empty";
+        });
+      }
       isValid = false;
     }
 
     if (_descriptionController.text.trim().isEmpty) {
-      setState(() {
-        descError = "Description must not be empty";
-      });
+      if (mounted) {
+        setState(() {
+          descError = "Description must not be empty";
+        });
+      }
       isValid = false;
     }
 
     if (_categoryController.text.trim().isEmpty) {
-      setState(() {
-        categoryError = "Category must not be empty";
-      });
+      if (mounted) {
+        setState(() {
+          categoryError = "Category must not be empty";
+        });
+      }
       isValid = false;
     }
 
     if (_selectedAudioPath == null) {
-      setState(() {
-        fileError = "Audio file must not be empty";
-      });
+      if (mounted) {
+        setState(() {
+          fileError = "Audio file must not be empty";
+        });
+      }
       isValid = false;
     }
 
@@ -322,9 +342,11 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
       final currentUser = FirebaseAuth.instance.currentUser?.uid;
       //final userId = currentUser?.uid ??
       // Show loading indicator
-      setState(() {
-        isLoading = true;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = true;
+        });
+      }
 
       // Téléverser la photo (ou utiliser l'URL par défaut)
       final photoUrl = _selectedImagePath != null
@@ -340,9 +362,11 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
 
       // Vérifier si le téléversement audio a échoué
       if (audioUrl.isEmpty) {
-        setState(() {
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
         // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -404,18 +428,22 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
       }
 
       // Hide loading indicator
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
 
       // Navigate to success page
       // ignore: use_build_context_synchronously
       Navigator.pushNamed(context, '/succes2');
     } catch (e) {
       // Hide loading indicator
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
 
       // Gestion des erreurs
 
@@ -509,9 +537,11 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
                               return null;
                             },
                             onChanged: (value) {
-                              setState(() {
-                                nameError = null;
-                              });
+                              if (mounted) {
+                                setState(() {
+                                  nameError = null;
+                                });
+                              }
                             },
                             style: const TextStyle(
                               color: Colors.black,
@@ -610,9 +640,11 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
                               return null;
                             },
                             onChanged: (value) {
-                              setState(() {
-                                descError = null;
-                              });
+                              if (mounted) {
+                                setState(() {
+                                  descError = null;
+                                });
+                              }
                             },
                             style: const TextStyle(
                               color: Colors.black,
@@ -920,9 +952,11 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
             return null;
           },
           onChanged: (value) {
-            setState(() {
-              categoryError = null;
-            });
+            if (mounted) {
+              setState(() {
+                categoryError = null;
+              });
+            }
           },
           style: const TextStyle(
             color: Colors.black,
@@ -979,9 +1013,11 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
                   if (selectedItems.isNotEmpty) {
                     final selectedItem =
                         selectedItems.first as SelectedListItem<String>;
-                    setState(() {
-                      controller.text = selectedItem.data;
-                    });
+                    if (mounted) {
+                      setState(() {
+                        controller.text = selectedItem.data;
+                      });
+                    }
                   }
                 },
                 enableMultipleSelection: false,
@@ -1061,11 +1097,13 @@ class _CreatepodcastpageState extends State<Createpodcastpage> {
                         selectedItems.first as SelectedListItem<PlaylistItem>;
                     final playlistItem = selectedItem.data;
 
-                    setState(() {
-                      _selectedPlaylistId = playlistItem.id; // Stocke l'ID
-                      _playlistController.text =
-                          playlistItem.name; // Affiche le nom
-                    });
+                    if (mounted) {
+                      setState(() {
+                        _selectedPlaylistId = playlistItem.id; // Stocke l'ID
+                        _playlistController.text =
+                            playlistItem.name; // Affiche le nom
+                      });
+                    }
                   }
                 },
                 enableMultipleSelection: false,

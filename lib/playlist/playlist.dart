@@ -53,18 +53,22 @@ class _PlaylistpageState extends State<Playlistpage>
         if (mesPlayInfos.isNotEmpty) {
           _processMesPlayInfos(mesPlayInfos, idplay);
         } else {
-          setState(() {
-            mesplaylist = [];
-          });
+          if (mounted) {
+            setState(() {
+              mesplaylist = [];
+            });
+          }
         }
       });
 
       // Ajouter l'abonnement à la liste
       _subscriptions.add(subscription);
     } catch (e) {
-      setState(() {
-        mesplaylist = [];
-      });
+      if (mounted) {
+        setState(() {
+          mesplaylist = [];
+        });
+      }
     }
   }
 
@@ -135,9 +139,11 @@ class _PlaylistpageState extends State<Playlistpage>
               // Remove the podcast with the same id as idplay
               podcasts.removeWhere((podcast) => podcast['id'] == idplay);
 
-              setState(() {
-                userPodcasts = podcasts;
-              });
+              if (mounted) {
+                setState(() {
+                  userPodcasts = podcasts;
+                });
+              }
             }
           });
 
@@ -177,18 +183,22 @@ class _PlaylistpageState extends State<Playlistpage>
         if (podInfos.isNotEmpty) {
           _processPodInfos(podInfos);
         } else {
-          setState(() {
-            podcastPlaylists = [];
-          });
+          if (mounted) {
+            setState(() {
+              podcastPlaylists = [];
+            });
+          }
         }
       });
 
       // Ajouter l'abonnement à la liste
       _subscriptions.add(subscription);
     } catch (e) {
-      setState(() {
-        podcastPlaylists = [];
-      });
+      if (mounted) {
+        setState(() {
+          podcastPlaylists = [];
+        });
+      }
     }
   }
 
@@ -247,9 +257,11 @@ class _PlaylistpageState extends State<Playlistpage>
       return dateB.compareTo(dateA);
     });
 
-    setState(() {
-      podcastPlaylists = sortedPods;
-    });
+    if (mounted) {
+      setState(() {
+        podcastPlaylists = sortedPods;
+      });
+    }
   }
 
   void _finalizeMesPlaylistsProcessing(
@@ -269,9 +281,11 @@ class _PlaylistpageState extends State<Playlistpage>
     // Remove the playlist with the same ID as idplay
     allPlaylists.removeWhere((playlist) => playlist['id'] == idplay);
 
-    setState(() {
-      mesplaylist = allPlaylists;
-    });
+    if (mounted) {
+      setState(() {
+        mesplaylist = allPlaylists;
+      });
+    }
   }
 
   Future<void> fetchPlaylidtById(String idplay) async {
@@ -281,12 +295,14 @@ class _PlaylistpageState extends State<Playlistpage>
           .where('id', isEqualTo: idplay)
           .snapshots()
           .listen((querySnapshot) {
-        setState(() {
-          playlist = querySnapshot.docs
-              // ignore: unnecessary_cast
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            playlist = querySnapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
       });
 
       // Ajouter l'abonnement à la liste
@@ -336,12 +352,14 @@ class _PlaylistpageState extends State<Playlistpage>
               .snapshots()
               .listen((channelSnapshot) {
             if (channelSnapshot.docs.isNotEmpty) {
-              setState(() {
-                channel = channelSnapshot.docs
-                    // ignore: unnecessary_cast
-                    .map((doc) => doc.data() as Map<String, dynamic>)
-                    .toList();
-              });
+              if (mounted) {
+                setState(() {
+                  channel = channelSnapshot.docs
+                      // ignore: unnecessary_cast
+                      .map((doc) => doc.data() as Map<String, dynamic>)
+                      .toList();
+                });
+              }
             }
           });
 
@@ -361,7 +379,9 @@ class _PlaylistpageState extends State<Playlistpage>
     super.initState();
     _tabController1 = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
 
       final arguments =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
@@ -386,7 +406,9 @@ class _PlaylistpageState extends State<Playlistpage>
         }
       }
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 
@@ -422,9 +444,11 @@ class _PlaylistpageState extends State<Playlistpage>
           .where('idfollowing', isEqualTo: playUserId)
           .snapshots()
           .listen((followDoc) {
-        setState(() {
-          isFollowing = followDoc.docs.isNotEmpty;
-        });
+        if (mounted) {
+          setState(() {
+            isFollowing = followDoc.docs.isNotEmpty;
+          });
+        }
       });
 
       // Ajouter l'abonnement à la liste
@@ -444,10 +468,11 @@ class _PlaylistpageState extends State<Playlistpage>
       // Sauvegarder l'état précédent pour pouvoir revenir en arrière en cas d'erreur
       final previousFollowingState = isFollowing;
 
-      setState(() {
-        isFollowing = !isFollowing;
-      });
-
+      if (mounted) {
+        setState(() {
+          isFollowing = !isFollowing;
+        });
+      }
       if (isFollowing) {
         final QuerySnapshot userSnapshot = await FirebaseFirestore.instance
             .collection('users')
@@ -538,9 +563,11 @@ class _PlaylistpageState extends State<Playlistpage>
 
         // Si aucun document n'est trouvé, c'est une erreur ou une incohérence
         if (followDocs.docs.isEmpty) {
-          setState(() {
-            isFollowing = previousFollowingState;
-          });
+          if (mounted) {
+            setState(() {
+              isFollowing = previousFollowingState;
+            });
+          }
           return;
         }
 
@@ -588,9 +615,11 @@ class _PlaylistpageState extends State<Playlistpage>
       }
     } catch (e) {
       // En cas d'erreur, revenir à l'état précédent
-      setState(() {
-        isFollowing = !isFollowing;
-      });
+      if (mounted) {
+        setState(() {
+          isFollowing = !isFollowing;
+        });
+      }
     }
   }
 
@@ -605,9 +634,11 @@ class _PlaylistpageState extends State<Playlistpage>
           String idUser = querySnapshot.docs.first.data()['userId'];
           String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
-          setState(() {
-            isYourPlaylist = (currentUserId == idUser);
-          });
+          if (mounted) {
+            setState(() {
+              isYourPlaylist = (currentUserId == idUser);
+            });
+          }
         }
       });
 
@@ -633,9 +664,11 @@ class _PlaylistpageState extends State<Playlistpage>
         .where('idplay', isEqualTo: idplay)
         .snapshots()
         .listen((saveQuery) {
-      setState(() {
-        isSaved = saveQuery.docs.isNotEmpty;
-      });
+      if (mounted) {
+        setState(() {
+          isSaved = saveQuery.docs.isNotEmpty;
+        });
+      }
     });
 
     // Ajouter l'abonnement à la liste
@@ -691,9 +724,11 @@ class _PlaylistpageState extends State<Playlistpage>
         );
         // ignore: empty_catches
       } catch (e) {}
-      setState(() {
-        isSaved = true;
-      });
+      if (mounted) {
+        setState(() {
+          isSaved = true;
+        });
+      }
     } else {
       // Supprimer le like
       final saveQuery = await saveRef
@@ -709,9 +744,11 @@ class _PlaylistpageState extends State<Playlistpage>
           'save': FieldValue.increment(-1),
         });
       }
-      setState(() {
-        isSaved = false;
-      });
+      if (mounted) {
+        setState(() {
+          isSaved = false;
+        });
+      }
     }
   }
 

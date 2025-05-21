@@ -20,9 +20,13 @@ class _SignUppageState extends State<SignUppage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 
@@ -64,9 +68,11 @@ class _SignUppageState extends State<SignUppage> {
 
       // If email already exists with Google method, show error and return
       if (userDoc.docs.isNotEmpty) {
-        setState(() {
-          errorMessage = "This email is already in use";
-        });
+        if (mounted) {
+          setState(() {
+            errorMessage = "This email is already in use";
+          });
+        }
         return;
       }
 
@@ -113,9 +119,11 @@ class _SignUppageState extends State<SignUppage> {
       // ignore: use_build_context_synchronously
       Navigator.pushNamed(context, '/verif');
     } catch (e) {
-      setState(() {
-        errorMessage = "Google signin faild";
-      });
+      if (mounted) {
+        setState(() {
+          errorMessage = "Google signin faild";
+        });
+      }
     }
   }
 
@@ -340,9 +348,11 @@ class _SignUppageState extends State<SignUppage> {
                                   ),
                                   suffixIcon: GestureDetector(
                                     onTap: () {
-                                      setState(() {
-                                        _obscureText = !_obscureText;
-                                      });
+                                      if (mounted) {
+                                        setState(() {
+                                          _obscureText = !_obscureText;
+                                        });
+                                      }
                                     },
                                     child: Padding(
                                       padding:
@@ -440,9 +450,11 @@ class _SignUppageState extends State<SignUppage> {
                                   ),
                                   suffixIcon: GestureDetector(
                                     onTap: () {
-                                      setState(() {
-                                        __obscureText = !__obscureText;
-                                      });
+                                      if (mounted) {
+                                        setState(() {
+                                          __obscureText = !__obscureText;
+                                        });
+                                      }
                                     },
                                     child: Padding(
                                       padding:
@@ -510,9 +522,11 @@ class _SignUppageState extends State<SignUppage> {
                               width: sizee.width * 0.65,
                               child: MaterialButton(
                                 onPressed: () async {
-                                  setState(() {
-                                    errorMessage = null;
-                                  });
+                                  if (mounted) {
+                                    setState(() {
+                                      errorMessage = null;
+                                    });
+                                  }
                                   // Validate form
                                   if (_formKey.currentState!.validate()) {
                                     try {
@@ -526,10 +540,12 @@ class _SignUppageState extends State<SignUppage> {
 
                                       // Check if user already exists in Firestore
                                       if (userDoc.docs.isNotEmpty) {
-                                        setState(() {
-                                          errorMessage =
-                                              "This email is already in use";
-                                        });
+                                        if (mounted) {
+                                          setState(() {
+                                            errorMessage =
+                                                "This email is already in use";
+                                          });
+                                        }
                                         return;
                                       }
 
@@ -588,14 +604,19 @@ class _SignUppageState extends State<SignUppage> {
                                       // ignore: use_build_context_synchronously
                                       Navigator.pushNamed(context, '/verif');
                                     } on FirebaseAuthException catch (e) {
-                                      setState(() {
-                                        errorMessage = e.message ??
-                                            "An error has occurred";
-                                      });
+                                      if (mounted) {
+                                        setState(() {
+                                          errorMessage = e.message ??
+                                              "An error has occurred";
+                                        });
+                                      }
                                     } catch (e) {
-                                      setState(() {
-                                        errorMessage = "An error has occurred";
-                                      });
+                                      if (mounted) {
+                                        setState(() {
+                                          errorMessage =
+                                              "An error has occurred";
+                                        });
+                                      }
                                     }
                                   }
                                 },

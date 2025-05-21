@@ -40,9 +40,11 @@ class _ModifpageState extends State<Modifpage> {
     Navigator.of(contextFromDialog).pop();
 
     // Set deletion flag
-    setState(() {
-      _isDeleting = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isDeleting = true;
+      });
+    }
 
     // Show loading dialog - save the context
     final BuildContext loadingDialogContext = context;
@@ -257,18 +259,12 @@ class _ModifpageState extends State<Modifpage> {
     // Close the confirmation dialog first
     Navigator.of(contextFromDialog).pop();
 
-    Navigator.pushNamedAndRemoveUntil(context, '/podly', (route) => false);
-    // Afficher un message de confirmation
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Succesfull deleting channel"),
-        backgroundColor: Color(0xFF754CEF),
-      ),
-    );
     // Set deletion flag
-    setState(() {
-      _isDeleting = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isDeleting = true;
+      });
+    }
 
     // Show loading dialog - save the context
     final BuildContext loadingDialogContext = context;
@@ -411,9 +407,11 @@ class _ModifpageState extends State<Modifpage> {
     Navigator.of(contextFromDialog).pop();
 
     // Set deletion flag
-    setState(() {
-      _isDeleting = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isDeleting = true;
+      });
+    }
 
     // Show loading dialog - save the context
     final BuildContext loadingDialogContext = context;
@@ -697,14 +695,18 @@ class _ModifpageState extends State<Modifpage> {
       final subscription = stream.listen((querySnapshot) {
         // Ajout des logs pour déboguer
 
-        setState(() {
-          user = querySnapshot.docs
-              // ignore: unnecessary_cast
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            user = querySnapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
       }, onError: (e) {
-        setState(() {});
+        if (mounted) {
+          setState(() {});
+        }
       });
 
       _subscriptions.add(subscription);
@@ -720,12 +722,14 @@ class _ModifpageState extends State<Modifpage> {
           .snapshots();
 
       final subscription = stream.listen((querySnapshot) {
-        setState(() {
-          playlistt = querySnapshot.docs
-              // ignore: unnecessary_cast
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            playlistt = querySnapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
       }, onError: (e) {});
 
       _subscriptions.add(subscription);
@@ -748,14 +752,18 @@ class _ModifpageState extends State<Modifpage> {
       final subscription = stream.listen((querySnapshot) {
         // Ajout des logs pour déboguer
 
-        setState(() {
-          channels = querySnapshot.docs
-              // ignore: unnecessary_cast
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            channels = querySnapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
       }, onError: (e) {
-        setState(() {});
+        if (mounted) {
+          setState(() {});
+        }
       });
 
       _subscriptions.add(subscription);
@@ -843,21 +851,27 @@ class _ModifpageState extends State<Modifpage> {
               };
             }).toList();
 
-            setState(() {
-              playlist = loadedPlaylists;
-              playinpod = loadedPodcasts;
-            });
+            if (mounted) {
+              setState(() {
+                playlist = loadedPlaylists;
+                playinpod = loadedPodcasts;
+              });
+            }
           } else {
+            if (mounted) {
+              setState(() {
+                playlist = loadedPlaylists;
+                playinpod = [];
+              });
+            }
+          }
+        } else {
+          if (mounted) {
             setState(() {
-              playlist = loadedPlaylists;
+              playlist = [];
               playinpod = [];
             });
           }
-        } else {
-          setState(() {
-            playlist = [];
-            playinpod = [];
-          });
         }
       }, onError: (e) {});
 
@@ -949,7 +963,9 @@ class _ModifpageState extends State<Modifpage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
 
       final arguments =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
@@ -975,7 +991,9 @@ class _ModifpageState extends State<Modifpage> {
         await fetchChannels();
       }
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 
@@ -988,12 +1006,14 @@ class _ModifpageState extends State<Modifpage> {
           .snapshots();
 
       final subscription = stream.listen((querySnapshot) {
-        setState(() {
-          podcast = querySnapshot.docs
-              // ignore: unnecessary_cast
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            podcast = querySnapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
       }, onError: (e) {});
 
       _subscriptions.add(subscription);

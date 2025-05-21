@@ -61,9 +61,11 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
         );
 
         if (result != null && result.files.isNotEmpty) {
-          setState(() {
-            _selectedImageFile = File(result.files.single.path!);
-          });
+          if (mounted) {
+            setState(() {
+              _selectedImageFile = File(result.files.single.path!);
+            });
+          }
         }
         // ignore: empty_catches
       } catch (e) {}
@@ -106,9 +108,11 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
     final channelName = _nameController.text.trim();
 
     if (channelName.isEmpty) {
-      setState(() {
-        errorMessage = "channel name canot be empty";
-      });
+      if (mounted) {
+        setState(() {
+          errorMessage = "channel name canot be empty";
+        });
+      }
       return;
     }
 
@@ -150,9 +154,13 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 
@@ -240,9 +248,11 @@ class _CreateChannelPageState extends State<CreateChannelPage> {
                             return null;
                           },
                           onChanged: (value) {
-                            setState(() {
-                              errorMessage = null;
-                            });
+                            if (mounted) {
+                              setState(() {
+                                errorMessage = null;
+                              });
+                            }
                           },
                           style: const TextStyle(
                             color: Colors.black,

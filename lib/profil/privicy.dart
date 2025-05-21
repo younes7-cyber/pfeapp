@@ -21,9 +21,13 @@ class _PrivipageState extends State<Privipage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 
@@ -257,9 +261,11 @@ class _PrivipageState extends State<Privipage> {
     Navigator.of(contextFromDialog).pop();
 
     // Set deletion flag
-    setState(() {
-      _isDeleting = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isDeleting = true;
+      });
+    }
 
     // Show loading dialog - save the context
     final BuildContext loadingDialogContext = context;

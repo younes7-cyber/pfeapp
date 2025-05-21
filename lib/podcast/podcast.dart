@@ -85,9 +85,11 @@ class _PodcastpageState extends State<Podcastpage>
 
       relatedPodcastsSubscription = podcastStream.listen((snapshot) async {
         if (snapshot.docs.isEmpty) {
-          setState(() {
-            relatedPodcasts = [];
-          });
+          if (mounted) {
+            setState(() {
+              relatedPodcasts = [];
+            });
+          }
           return;
         }
 
@@ -110,17 +112,21 @@ class _PodcastpageState extends State<Podcastpage>
           String idpodASupprimer = idpod;
 
           related.removeWhere((podcast) => podcast['id'] == idpodASupprimer);
-          setState(() {
-            relatedPodcasts = related;
-          });
+          if (mounted) {
+            setState(() {
+              relatedPodcasts = related;
+            });
+          }
         });
 
         batchStreamSubscriptions?.add(relatedSubscription);
       });
     } catch (e) {
-      setState(() {
-        relatedPodcasts = [];
-      });
+      if (mounted) {
+        setState(() {
+          relatedPodcasts = [];
+        });
+      }
     }
   }
 
@@ -144,14 +150,18 @@ class _PodcastpageState extends State<Podcastpage>
             .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
 
-        setState(() {
-          fea = allPodcasts;
-        });
+        if (mounted) {
+          setState(() {
+            fea = allPodcasts;
+          });
+        }
       });
 
       batchStreamSubscriptions?.add(featuredSubscription);
     } catch (e) {
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -173,7 +183,9 @@ class _PodcastpageState extends State<Podcastpage>
             snapshot.docs.map((doc) => doc.data()['idpod'] as String).toSet();
 
         if (recentIdPods.isEmpty) {
-          setState(() => ress = []);
+          if (mounted) {
+            setState(() => ress = []);
+          }
           return;
         }
 
@@ -231,9 +243,11 @@ class _PodcastpageState extends State<Podcastpage>
                 top10
                     .removeWhere((podcast) => podcast['id'] == idpodASupprimer);
                 // 🔁 Mettre à jour l'état
-                setState(() {
-                  ress = top10;
-                });
+                if (mounted) {
+                  setState(() {
+                    ress = top10;
+                  });
+                }
               });
             }
           });
@@ -244,7 +258,9 @@ class _PodcastpageState extends State<Podcastpage>
 
       batchStreamSubscriptions?.add(trendingSubscription);
     } catch (e) {
-      setState(() => ress = []);
+      if (mounted) {
+        setState(() => ress = []);
+      }
     }
   }
 
@@ -290,10 +306,12 @@ class _PodcastpageState extends State<Podcastpage>
             }
 
             if (categories.isEmpty) {
-              setState(() {
-                viewedPodcasts = [];
-                recommendedPodcasts = [];
-              });
+              if (mounted) {
+                setState(() {
+                  viewedPodcasts = [];
+                  recommendedPodcasts = [];
+                });
+              }
 
               return;
             }
@@ -383,10 +401,12 @@ class _PodcastpageState extends State<Podcastpage>
                         tempRecommendedPodcasts.removeWhere(
                             (podcast) => podcast['id'] == idpodASupprimer);
                         // 8. Mettre à jour l'état
-                        setState(() {
-                          viewedPodcasts = tempViewedPodcasts;
-                          recommendedPodcasts = tempRecommendedPodcasts;
-                        });
+                        if (mounted) {
+                          setState(() {
+                            viewedPodcasts = tempViewedPodcasts;
+                            recommendedPodcasts = tempRecommendedPodcasts;
+                          });
+                        }
                       });
                     }
                   });
@@ -401,10 +421,12 @@ class _PodcastpageState extends State<Podcastpage>
 
       batchStreamSubscriptions?.add(recommendedSubscription);
     } catch (e) {
-      setState(() {
-        viewedPodcasts = [];
-        recommendedPodcasts = [];
-      });
+      if (mounted) {
+        setState(() {
+          viewedPodcasts = [];
+          recommendedPodcasts = [];
+        });
+      }
     }
   }
 
@@ -461,10 +483,16 @@ class _PodcastpageState extends State<Podcastpage>
 
               // Associer chaque podcast avec son timevue et le remettre dans l'ordre
               allPlaylists.sort((a, b) {
-                final aTime = orderedIdpods.firstWhere(
-                    (e) => e['idpod'] == a['id'])['timevue'] as Timestamp;
-                final bTime = orderedIdpods.firstWhere(
-                    (e) => e['idpod'] == b['id'])['timevue'] as Timestamp;
+                final aTime = orderedIdpods
+                            .firstWhere((e) => e['idpod'] == a['id'])['timevue']
+                        as Timestamp? ??
+                    Timestamp.fromMillisecondsSinceEpoch(0);
+
+                final bTime = orderedIdpods
+                            .firstWhere((e) => e['idpod'] == b['id'])['timevue']
+                        as Timestamp? ??
+                    Timestamp.fromMillisecondsSinceEpoch(0);
+
                 return bTime.compareTo(aTime);
               });
 
@@ -498,9 +526,11 @@ class _PodcastpageState extends State<Podcastpage>
                   enrichedPlaylists.removeWhere(
                       (podcast) => podcast['id'] == idpodASupprimer);
 
-                  setState(() {
-                    res = enrichedPlaylists;
-                  });
+                  if (mounted) {
+                    setState(() {
+                      res = enrichedPlaylists;
+                    });
+                  }
                 });
               }
             });
@@ -508,17 +538,21 @@ class _PodcastpageState extends State<Podcastpage>
             batchStreamSubscriptions?.add(playlistSubscription);
           }
         } else {
-          setState(() {
-            res = [];
-          });
+          if (mounted) {
+            setState(() {
+              res = [];
+            });
+          }
         }
       });
 
       batchStreamSubscriptions?.add(recentIdSubscription);
     } catch (e) {
-      setState(() {
-        res = [];
-      });
+      if (mounted) {
+        setState(() {
+          res = [];
+        });
+      }
     }
   }
 
@@ -590,26 +624,32 @@ class _PodcastpageState extends State<Podcastpage>
 
               allPodcasts
                   .removeWhere((podcast) => podcast['id'] == idpodASupprimer);
-              setState(() {
-                mesPodcasts = allPodcasts;
-                nbr = allPodcasts.length;
-              });
+              if (mounted) {
+                setState(() {
+                  mesPodcasts = allPodcasts;
+                  nbr = allPodcasts.length;
+                });
+              }
             });
 
             batchStreamSubscriptions?.add(podSubscription);
           }
         } else {
-          setState(() {
-            mesPodcasts = [];
-            nbr = 0;
-          });
+          if (mounted) {
+            setState(() {
+              mesPodcasts = [];
+              nbr = 0;
+            });
+          }
         }
       });
     } catch (e) {
-      setState(() {
-        mesPodcasts = [];
-        nbr = 0;
-      });
+      if (mounted) {
+        setState(() {
+          mesPodcasts = [];
+          nbr = 0;
+        });
+      }
     }
   }
 
@@ -655,12 +695,14 @@ class _PodcastpageState extends State<Podcastpage>
           .snapshots();
 
       podcastSubscription = queryStream.listen((snapshot) {
-        setState(() {
-          podcast = snapshot.docs
-              // ignore: unnecessary_cast
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            podcast = snapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
       });
     } catch (e) {}
   }
@@ -673,12 +715,14 @@ class _PodcastpageState extends State<Podcastpage>
           .snapshots();
 
       podvueSubscription = queryStream.listen((snapshot) {
-        setState(() {
-          podvue = snapshot.docs
-              // ignore: unnecessary_cast
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            podvue = snapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
       });
     } catch (e) {}
   }
@@ -728,12 +772,14 @@ class _PodcastpageState extends State<Podcastpage>
               .snapshots();
 
           channelSubscription = channelStream.listen((channelSnapshot) {
-            setState(() {
-              channel = channelSnapshot.docs
-                  // ignore: unnecessary_cast
-                  .map((doc) => doc.data() as Map<String, dynamic>)
-                  .toList();
-            });
+            if (mounted) {
+              setState(() {
+                channel = channelSnapshot.docs
+                    // ignore: unnecessary_cast
+                    .map((doc) => doc.data() as Map<String, dynamic>)
+                    .toList();
+              });
+            }
           });
         }
       });
@@ -767,9 +813,11 @@ class _PodcastpageState extends State<Podcastpage>
             // Supprimer le podcast avec le même idpod que l'argument
             podcasts.removeWhere((podcast) => podcast['id'] == idpod);
 
-            setState(() {
-              userPodcasts = podcasts;
-            });
+            if (mounted) {
+              setState(() {
+                userPodcasts = podcasts;
+              });
+            }
           });
         }
       });
@@ -829,23 +877,29 @@ class _PodcastpageState extends State<Podcastpage>
                 }
               }
 
-              setState(() {
-                podcastPlaylists = allPlaylists;
-              });
+              if (mounted) {
+                setState(() {
+                  podcastPlaylists = allPlaylists;
+                });
+              }
             });
 
             batchStreamSubscriptions?.add(playlistSubscription);
           }
         } else {
-          setState(() {
-            podcastPlaylists = [];
-          });
+          if (mounted) {
+            setState(() {
+              podcastPlaylists = [];
+            });
+          }
         }
       });
     } catch (e) {
-      setState(() {
-        podcastPlaylists = [];
-      });
+      if (mounted) {
+        setState(() {
+          podcastPlaylists = [];
+        });
+      }
     }
   }
 
@@ -861,9 +915,11 @@ class _PodcastpageState extends State<Podcastpage>
           String idUser = snapshot.docs.first.data()['idUser'];
           String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
-          setState(() {
-            isYourPodcast = (currentUserId == idUser);
-          });
+          if (mounted) {
+            setState(() {
+              isYourPodcast = (currentUserId == idUser);
+            });
+          }
         }
       });
     } catch (e) {}
@@ -920,9 +976,11 @@ class _PodcastpageState extends State<Podcastpage>
             enrichedPlaylists
                 .removeWhere((podcast) => podcast['id'] == idpodASupprimer);
 
-            setState(() {
-              topl = enrichedPlaylists;
-            });
+            if (mounted) {
+              setState(() {
+                topl = enrichedPlaylists;
+              });
+            }
           });
 
           batchStreamSubscriptions?.add(channelSubscription);
@@ -931,9 +989,11 @@ class _PodcastpageState extends State<Podcastpage>
 
       batchStreamSubscriptions?.add(topPodcastSubscription);
     } catch (e) {
-      setState(() {
-        topl = [];
-      });
+      if (mounted) {
+        setState(() {
+          topl = [];
+        });
+      }
     }
   }
 
@@ -988,9 +1048,11 @@ class _PodcastpageState extends State<Podcastpage>
             enrichedPlaylists
                 .removeWhere((podcast) => podcast['id'] == idpodASupprimer);
 
-            setState(() {
-              tops = enrichedPlaylists;
-            });
+            if (mounted) {
+              setState(() {
+                tops = enrichedPlaylists;
+              });
+            }
           });
 
           batchStreamSubscriptions?.add(channelSubscription);
@@ -999,7 +1061,9 @@ class _PodcastpageState extends State<Podcastpage>
 
       batchStreamSubscriptions?.add(topSeenSubscription);
     } catch (e) {
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -1037,9 +1101,11 @@ class _PodcastpageState extends State<Podcastpage>
           .snapshots();
 
       followSubscription = followStream.listen((snapshot) {
-        setState(() {
-          isFollowing = snapshot.docs.isNotEmpty;
-        });
+        if (mounted) {
+          setState(() {
+            isFollowing = snapshot.docs.isNotEmpty;
+          });
+        }
       });
     } catch (e) {}
   }
@@ -1056,9 +1122,11 @@ class _PodcastpageState extends State<Podcastpage>
       final previousFollowingState = isFollowing;
       if (mounted) {
         // Check if widget is still mounted
-        setState(() {
-          isFollowing = !isFollowing;
-        });
+        if (mounted) {
+          setState(() {
+            isFollowing = !isFollowing;
+          });
+        }
       }
 
       if (isFollowing) {
@@ -1149,9 +1217,11 @@ class _PodcastpageState extends State<Podcastpage>
 
         // Si aucun document n'est trouvé, c'est une erreur ou une incohérence
         if (followDocs.docs.isEmpty) {
-          setState(() {
-            isFollowing = previousFollowingState;
-          });
+          if (mounted) {
+            setState(() {
+              isFollowing = previousFollowingState;
+            });
+          }
           return;
         }
 
@@ -1200,9 +1270,11 @@ class _PodcastpageState extends State<Podcastpage>
     } catch (e) {
       if (mounted) {
         // Check if widget is still mounted
-        setState(() {
-          isFollowing = !isFollowing; // Revert on error
-        });
+        if (mounted) {
+          setState(() {
+            isFollowing = !isFollowing; // Revert on error
+          });
+        }
       }
     }
   }
@@ -1213,7 +1285,9 @@ class _PodcastpageState extends State<Podcastpage>
     _tabController1 = TabController(length: 2, vsync: this);
     _tabController2 = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
 
       final arguments =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
@@ -1246,7 +1320,9 @@ class _PodcastpageState extends State<Podcastpage>
         }
       }
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 
@@ -1860,8 +1936,12 @@ class _PodcastpageState extends State<Podcastpage>
                               maxLines: 3,
                             ),
                             Text(
-                              DateFormat('MMM d, yyyy • h:mm a')
-                                  .format(podcast[0]["dateCreation"].toDate()),
+                              podcast.isNotEmpty &&
+                                      podcast[0]["dateCreation"] != null
+                                  ? DateFormat('MMM d, yyyy • h:mm a').format(
+                                      podcast[0]["dateCreation"].toDate())
+                                  : '',
+
                               //podcast[0]["dateCreation"],
                               style: TextStyle(
                                 fontSize: w.width * 0.04,

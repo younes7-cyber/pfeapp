@@ -24,10 +24,14 @@ class _LoginPageState extends State<LoginPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
       await fetchuser();
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 
@@ -42,12 +46,14 @@ class _LoginPageState extends State<LoginPage> {
 
       // Ajout des logs pour déboguer
 
-      setState(() {
-        user = querySnapshot.docs
-            // ignore: unnecessary_cast
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
-      });
+      if (mounted) {
+        setState(() {
+          user = querySnapshot.docs
+              // ignore: unnecessary_cast
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList();
+        });
+      }
       // ignore: empty_catches
     } catch (e) {}
   }
@@ -59,9 +65,11 @@ class _LoginPageState extends State<LoginPage> {
   bool _rememberMe = false;
   Future<void> signInWithGoogle() async {
     try {
-      setState(() {
-        errorMessage = null;
-      });
+      if (mounted) {
+        setState(() {
+          errorMessage = null;
+        });
+      }
 
       // Initialiser Google Sign-In
       final GoogleSignIn googleSignIn = GoogleSignIn();
@@ -78,10 +86,12 @@ class _LoginPageState extends State<LoginPage> {
           await checkIfUserExistsWithGoogleMethod(googleUser.email);
 
       if (!userExistsInDatabase) {
-        setState(() {
-          errorMessage =
-              "Aucun compte n'existe avec cet email. Veuillez d'abord vous inscrire.";
-        });
+        if (mounted) {
+          setState(() {
+            errorMessage =
+                "Aucun compte n'existe avec cet email. Veuillez d'abord vous inscrire.";
+          });
+        }
         return;
       }
 
@@ -128,15 +138,19 @@ class _LoginPageState extends State<LoginPage> {
               Navigator.pushNamed(context, '/podly');
             }
           } else {
-            setState(() {
-              errorMessage = "Erreur de connexion: ";
-            }); // L'utilisateur n'existe pas dans la collection users
+            if (mounted) {
+              setState(() {
+                errorMessage = "Erreur de connexion: ";
+              });
+            } // L'utilisateur n'existe pas dans la collection users
           }
         }
       } on FirebaseAuthException catch (authError) {
-        setState(() {
-          errorMessage = "Erreur de connexion: ${authError.message}";
-        });
+        if (mounted) {
+          setState(() {
+            errorMessage = "Erreur de connexion: ${authError.message}";
+          });
+        }
 
         // Si l'authentification crée un utilisateur automatiquement, le supprimer
         try {
@@ -147,9 +161,11 @@ class _LoginPageState extends State<LoginPage> {
         await FirebaseAuth.instance.signOut();
       }
     } catch (e) {
-      setState(() {
-        errorMessage = "Une erreur inattendue est survenue.";
-      });
+      if (mounted) {
+        setState(() {
+          errorMessage = "Une erreur inattendue est survenue.";
+        });
+      }
     }
   }
 
@@ -403,9 +419,11 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                   suffixIcon: GestureDetector(
                                     onTap: () {
-                                      setState(() {
-                                        _obscureText = !_obscureText;
-                                      });
+                                      if (mounted) {
+                                        setState(() {
+                                          _obscureText = !_obscureText;
+                                        });
+                                      }
                                     },
                                     child: Padding(
                                       padding:
@@ -460,9 +478,11 @@ class _LoginPageState extends State<LoginPage> {
                                     Checkbox(
                                       value: _rememberMe,
                                       onChanged: (bool? value) {
-                                        setState(() {
-                                          _rememberMe = value ?? false;
-                                        });
+                                        if (mounted) {
+                                          setState(() {
+                                            _rememberMe = value ?? false;
+                                          });
+                                        }
                                       },
                                       activeColor: const Color(0xFF754CEF),
                                     ),
@@ -506,9 +526,11 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                               child: MaterialButton(
                                 onPressed: () async {
-                                  setState(() {
-                                    errorMessage = null;
-                                  });
+                                  if (mounted) {
+                                    setState(() {
+                                      errorMessage = null;
+                                    });
+                                  }
 
                                   // Validate form
                                   if (_formKey.currentState!.validate()) {
@@ -526,9 +548,12 @@ class _LoginPageState extends State<LoginPage> {
 
                                       // Si aucun document n'est trouvé, l'utilisateur n'existe pas
                                       if (userCheck.docs.isEmpty) {
-                                        setState(() {
-                                          errorMessage = "User does not exist";
-                                        });
+                                        if (mounted) {
+                                          setState(() {
+                                            errorMessage =
+                                                "User does not exist";
+                                          });
+                                        }
                                         return; // Arrêter l'exécution ici
                                       }
 
@@ -585,49 +610,55 @@ class _LoginPageState extends State<LoginPage> {
                                                 '/podly');
                                           }
                                         } else {
-                                          setState(() {
-                                            errorMessage =
-                                                "Erreur de connexion: ";
-                                          }); // L'utilisateur n'existe pas dans la collection users
+                                          if (mounted) {
+                                            setState(() {
+                                              errorMessage =
+                                                  "Erreur de connexion: ";
+                                            });
+                                          } // L'utilisateur n'existe pas dans la collection users
                                         }
                                       }
                                     } on FirebaseAuthException catch (e) {
-                                      setState(() {
-                                        switch (e.code) {
-                                          case 'wrong-password':
-                                            errorMessage =
-                                                "Incorrect password. Please try again.";
-                                            break;
-                                          case 'user-not-found':
-                                            errorMessage =
-                                                "No account found with this email.";
-                                            break;
-                                          case 'invalid-credential':
-                                            errorMessage =
-                                                "Invalid email or password.";
-                                            break;
-                                          case 'invalid-email':
-                                            errorMessage =
-                                                "Invalid email format.";
-                                            break;
-                                          case 'user-disabled':
-                                            errorMessage =
-                                                "This account has been disabled.";
-                                            break;
-                                          case 'too-many-requests':
-                                            errorMessage =
-                                                "Too many login attempts. Try again later.";
-                                            break;
-                                          default:
-                                            errorMessage =
-                                                "Login failed: ${e.message}";
-                                        }
-                                      });
+                                      if (mounted) {
+                                        setState(() {
+                                          switch (e.code) {
+                                            case 'wrong-password':
+                                              errorMessage =
+                                                  "Incorrect password. Please try again.";
+                                              break;
+                                            case 'user-not-found':
+                                              errorMessage =
+                                                  "No account found with this email.";
+                                              break;
+                                            case 'invalid-credential':
+                                              errorMessage =
+                                                  "Invalid email or password.";
+                                              break;
+                                            case 'invalid-email':
+                                              errorMessage =
+                                                  "Invalid email format.";
+                                              break;
+                                            case 'user-disabled':
+                                              errorMessage =
+                                                  "This account has been disabled.";
+                                              break;
+                                            case 'too-many-requests':
+                                              errorMessage =
+                                                  "Too many login attempts. Try again later.";
+                                              break;
+                                            default:
+                                              errorMessage =
+                                                  "Login failed: ${e.message}";
+                                          }
+                                        });
+                                      }
                                     } catch (e) {
-                                      setState(() {
-                                        errorMessage =
-                                            "An unexpected error occurred.";
-                                      });
+                                      if (mounted) {
+                                        setState(() {
+                                          errorMessage =
+                                              "An unexpected error occurred.";
+                                        });
+                                      }
                                     }
                                   }
                                 },

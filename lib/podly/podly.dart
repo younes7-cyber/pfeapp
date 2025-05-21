@@ -43,7 +43,9 @@ class _PodlypageState extends State<Podlypage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
       await fetchuser();
       await fetchfollowId();
       await nbrpodId();
@@ -62,13 +64,17 @@ class _PodlypageState extends State<Podlypage> {
       _pageController.addListener(() {
         int next = _pageController.page!.round();
         if (_currentIndex != next) {
-          setState(() {
-            _currentIndex = next;
-          });
+          if (mounted) {
+            setState(() {
+              _currentIndex = next;
+            });
+          }
         }
       });
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 
@@ -156,21 +162,27 @@ class _PodlypageState extends State<Podlypage> {
             return dateB.compareTo(dateA); // ⬅️ tri décroissant ici
           });
 
-          setState(() {
-            mesplaylist = allPlaylists;
-          });
+          if (mounted) {
+            setState(() {
+              mesplaylist = allPlaylists;
+            });
+          }
         } else {
-          setState(() {
-            mesplaylist = [];
-          });
+          if (mounted) {
+            setState(() {
+              mesplaylist = [];
+            });
+          }
         }
       });
 
       _subscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        mesplaylist = [];
-      });
+      if (mounted) {
+        setState(() {
+          mesplaylist = [];
+        });
+      }
     }
   }
 
@@ -215,10 +227,12 @@ class _PodlypageState extends State<Podlypage> {
         }
 
         if (categories.isEmpty) {
-          setState(() {
-            viewedPodcasts = [];
-            recommendedPodcasts = [];
-          });
+          if (mounted) {
+            setState(() {
+              viewedPodcasts = [];
+              recommendedPodcasts = [];
+            });
+          }
 
           return;
         }
@@ -307,18 +321,22 @@ class _PodlypageState extends State<Podlypage> {
         }
 
         // 8. Mettre à jour l'état
-        setState(() {
-          viewedPodcasts = tempViewedPodcasts;
-          recommendedPodcasts = tempRecommendedPodcasts;
-        });
+        if (mounted) {
+          setState(() {
+            viewedPodcasts = tempViewedPodcasts;
+            recommendedPodcasts = tempRecommendedPodcasts;
+          });
+        }
       });
 
       _subscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        viewedPodcasts = [];
-        recommendedPodcasts = [];
-      });
+      if (mounted) {
+        setState(() {
+          viewedPodcasts = [];
+          recommendedPodcasts = [];
+        });
+      }
     }
   }
 
@@ -342,7 +360,9 @@ class _PodlypageState extends State<Podlypage> {
             .toSet();
 
         if (recentIdPods.isEmpty) {
-          setState(() => ress = []);
+          if (mounted) {
+            setState(() => ress = []);
+          }
           return;
         }
 
@@ -395,14 +415,18 @@ class _PodlypageState extends State<Podlypage> {
         }
 
         // 🔁 Mettre à jour l'état
-        setState(() {
-          ress = top10;
-        });
+        if (mounted) {
+          setState(() {
+            ress = top10;
+          });
+        }
       });
 
       _subscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() => ress = []);
+      if (mounted) {
+        setState(() => ress = []);
+      }
     }
   }
 
@@ -427,7 +451,7 @@ class _PodlypageState extends State<Podlypage> {
         for (var doc in playinPodSnapshot.docs) {
           final data = doc.data();
           String idpod = data['idpod'];
-          Timestamp timevue = data['timevue'];
+         Timestamp timevue = data['timevue'] ?? Timestamp.fromMillisecondsSinceEpoch(0);
           double percent = (data['percent'] ?? 0).toDouble();
 
           // Évite les doublons (garde le premier car trié)
@@ -504,21 +528,27 @@ class _PodlypageState extends State<Podlypage> {
             return podcast;
           }).toList();
 
-          setState(() {
-            res = enrichedPlaylists;
-          });
+          if (mounted) {
+            setState(() {
+              res = enrichedPlaylists;
+            });
+          }
         } else {
-          setState(() {
-            res = [];
-          });
+          if (mounted) {
+            setState(() {
+              res = [];
+            });
+          }
         }
       });
 
       _subscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        res = [];
-      });
+      if (mounted) {
+        setState(() {
+          res = [];
+        });
+      }
     }
   }
 
@@ -531,17 +561,21 @@ class _PodlypageState extends State<Podlypage> {
           .listen((querySnapshot) {
         // Ajout des logs pour déboguer
 
-        setState(() {
-          topcha = querySnapshot.docs
-              // ignore: unnecessary_cast
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            topcha = querySnapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
       });
 
       _subscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -556,17 +590,21 @@ class _PodlypageState extends State<Podlypage> {
           .orderBy('dateCreation', descending: true)
           .snapshots()
           .listen((recentPodcasts) {
-        setState(() {
-          fea = recentPodcasts.docs
-              // ignore: unnecessary_cast
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            fea = recentPodcasts.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
       });
 
       _subscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -617,16 +655,20 @@ class _PodlypageState extends State<Podlypage> {
         }).toList();
 
         // (Optionnel) Mettre à jour l'état si tu es dans un widget Stateful
-        setState(() {
-          topl = enrichedPlaylists;
-        });
+        if (mounted) {
+          setState(() {
+            topl = enrichedPlaylists;
+          });
+        }
       });
 
       _subscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        topl = [];
-      });
+      if (mounted) {
+        setState(() {
+          topl = [];
+        });
+      }
     }
   }
 
@@ -677,14 +719,18 @@ class _PodlypageState extends State<Podlypage> {
         }).toList();
 
         // (Optionnel) Mettre à jour l'état si tu es dans un widget Stateful
-        setState(() {
-          tops = enrichedPlaylists;
-        });
+        if (mounted) {
+          setState(() {
+            tops = enrichedPlaylists;
+          });
+        }
       });
 
       _subscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -775,21 +821,27 @@ class _PodlypageState extends State<Podlypage> {
             return bTime.compareTo(aTime);
           });
 
-          setState(() {
-            followcha = enrichedChannels;
-          });
+          if (mounted) {
+            setState(() {
+              followcha = enrichedChannels;
+            });
+          }
         } else {
-          setState(() {
-            followcha = [];
-          });
+          if (mounted) {
+            setState(() {
+              followcha = [];
+            });
+          }
         }
       });
 
       _subscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        followcha = [];
-      });
+      if (mounted) {
+        setState(() {
+          followcha = [];
+        });
+      }
     }
   }
 
@@ -804,19 +856,23 @@ class _PodlypageState extends State<Podlypage> {
           .listen((querySnapshot) {
         // Ajout des logs pour déboguer
 
-        setState(() {
-          user = querySnapshot.docs
-              // ignore: unnecessary_cast
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            user = querySnapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
       });
 
       _subscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        user = [];
-      });
+      if (mounted) {
+        setState(() {
+          user = [];
+        });
+      }
     }
   }
 
@@ -831,19 +887,23 @@ class _PodlypageState extends State<Podlypage> {
           .listen((querySnapshot) {
         // Ajout des logs pour déboguer
 
-        setState(() {
-          channel111 = querySnapshot.docs
-              // ignore: unnecessary_cast
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            channel111 = querySnapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
       });
 
       _subscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        channel111 = [];
-      });
+      if (mounted) {
+        setState(() {
+          channel111 = [];
+        });
+      }
     }
   }
 
@@ -858,19 +918,23 @@ class _PodlypageState extends State<Podlypage> {
           .listen((querySnapshot) {
         // Ajout des logs pour déboguer
 
-        setState(() {
-          nof = querySnapshot.docs
-              // ignore: unnecessary_cast
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            nof = querySnapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
       });
 
       _subscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        nof = [];
-      });
+      if (mounted) {
+        setState(() {
+          nof = [];
+        });
+      }
     }
   }
 
@@ -885,19 +949,23 @@ class _PodlypageState extends State<Podlypage> {
           .listen((querySnapshot) {
         // Ajout des logs pour déboguer
 
-        setState(() {
-          repor = querySnapshot.docs
-              // ignore: unnecessary_cast
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            repor = querySnapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
       });
 
       _subscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        repor = [];
-      });
+      if (mounted) {
+        setState(() {
+          repor = [];
+        });
+      }
     }
   }
 
@@ -915,16 +983,20 @@ class _PodlypageState extends State<Podlypage> {
             .map((doc) => doc.data()['idpod'] as String)
             .toSet();
 
-        setState(() {
-          nbr = uniquePodIds.length;
-        });
+        if (mounted) {
+          setState(() {
+            nbr = uniquePodIds.length;
+          });
+        }
       });
 
       _subscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        nbr = 0;
-      });
+      if (mounted) {
+        setState(() {
+          nbr = 0;
+        });
+      }
     }
   }
 
@@ -950,9 +1022,11 @@ class _PodlypageState extends State<Podlypage> {
   late int feat = 1;
   bool isLoading = true;
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    if (mounted) {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
     if (index == 2) {
       _showBottomSheet();
     }
@@ -1081,9 +1155,11 @@ class _PodlypageState extends State<Podlypage> {
     super.didChangeDependencies();
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is Map<String, dynamic> && args.containsKey('selectedIndex')) {
-      setState(() {
-        _selectedIndex = args['selectedIndex'];
-      });
+      if (mounted) {
+        setState(() {
+          _selectedIndex = args['selectedIndex'];
+        });
+      }
     }
   }
 
@@ -3119,9 +3195,12 @@ class Search extends SearchDelegate<String> {
         recentSearches = querySnapshot.docs
             .map(
                 // ignore: unnecessary_cast
-                (doc) => (doc.data() as Map<String, dynamic>)['text'] as String)
+                (doc) =>
+                    // ignore: unnecessary_cast
+                    (doc.data() as Map<String, dynamic>)['text'] as String)
             .toList();
       });
+
       // ignore: empty_catches
     } catch (e) {
       // Add logging for debugging
@@ -3152,6 +3231,7 @@ class Search extends SearchDelegate<String> {
       });
     } catch (e) {
       // Add logging for debugging
+
       setState(() {
         // Initialize as empty list instead of null
         feae = [];
@@ -4393,9 +4473,11 @@ class _SearchResultsPageState extends State<SearchResultsPage>
                           _buildFilterChip(
                             '< 10 min',
                             () {
-                              setStateModal(() {
-                                _toggleFilter('duration', 'less10');
-                              });
+                              if (mounted) {
+                                setStateModal(() {
+                                  _toggleFilter('duration', 'less10');
+                                });
+                              }
                             },
                             isActive: activeFilters['duration'] == 'less10',
                           ),
@@ -4403,9 +4485,11 @@ class _SearchResultsPageState extends State<SearchResultsPage>
                           _buildFilterChip(
                             '10-20 min',
                             () {
-                              setStateModal(() {
-                                _toggleFilter('duration', '10to20');
-                              });
+                              if (mounted) {
+                                setStateModal(() {
+                                  _toggleFilter('duration', '10to20');
+                                });
+                              }
                             },
                             isActive: activeFilters['duration'] == '10to20',
                           ),
@@ -4413,9 +4497,11 @@ class _SearchResultsPageState extends State<SearchResultsPage>
                           _buildFilterChip(
                             '> 20 min',
                             () {
-                              setStateModal(() {
-                                _toggleFilter('duration', 'more20');
-                              });
+                              if (mounted) {
+                                setStateModal(() {
+                                  _toggleFilter('duration', 'more20');
+                                });
+                              }
                             },
                             isActive: activeFilters['duration'] == 'more20',
                           ),
@@ -4443,9 +4529,11 @@ class _SearchResultsPageState extends State<SearchResultsPage>
                           _buildFilterChip(
                             'Most Recent',
                             () {
-                              setStateModal(() {
-                                _toggleFilter('sort', 'recent');
-                              });
+                              if (mounted) {
+                                setStateModal(() {
+                                  _toggleFilter('sort', 'recent');
+                                });
+                              }
                             },
                             isActive: activeFilters['sort'] == 'recent',
                           ),
@@ -4453,9 +4541,11 @@ class _SearchResultsPageState extends State<SearchResultsPage>
                           _buildFilterChip(
                             'Older',
                             () {
-                              setStateModal(() {
-                                _toggleFilter('sort', 'oldest');
-                              });
+                              if (mounted) {
+                                setStateModal(() {
+                                  _toggleFilter('sort', 'oldest');
+                                });
+                              }
                             },
                             isActive: activeFilters['sort'] == 'oldest',
                           ),
@@ -4483,9 +4573,11 @@ class _SearchResultsPageState extends State<SearchResultsPage>
                           _buildFilterChip(
                             'Most Viewed',
                             () {
-                              setStateModal(() {
-                                _toggleFilter('popularity', 'views');
-                              });
+                              if (mounted) {
+                                setStateModal(() {
+                                  _toggleFilter('popularity', 'views');
+                                });
+                              }
                             },
                             isActive: activeFilters['popularity'] == 'views',
                           ),
@@ -4493,9 +4585,11 @@ class _SearchResultsPageState extends State<SearchResultsPage>
                           _buildFilterChip(
                             'Most Liked',
                             () {
-                              setStateModal(() {
-                                _toggleFilter('popularity', 'likes');
-                              });
+                              if (mounted) {
+                                setStateModal(() {
+                                  _toggleFilter('popularity', 'likes');
+                                });
+                              }
                             },
                             isActive: activeFilters['popularity'] == 'likes',
                           ),
@@ -4580,9 +4674,11 @@ class _SearchResultsPageState extends State<SearchResultsPage>
   void _applyFilters() {
     if (activeFilters.isEmpty) {
       // Si aucun filtre n'est actif, restaurer tous les résultats
-      setState(() {
-        filteredResults = List.from(widget.results);
-      });
+      if (mounted) {
+        setState(() {
+          filteredResults = List.from(widget.results);
+        });
+      }
       return;
     }
 
@@ -4667,16 +4763,20 @@ class _SearchResultsPageState extends State<SearchResultsPage>
     List<Map<String, dynamic>> nonPodcastResults =
         results.where((item) => item['type'] != 'podcast').toList();
 
-    setState(() {
-      filteredResults = [...filteredPodcasts, ...nonPodcastResults];
-    });
+    if (mounted) {
+      setState(() {
+        filteredResults = [...filteredPodcasts, ...nonPodcastResults];
+      });
+    }
   }
 
   void _resetFilters() {
-    setState(() {
-      activeFilters.clear();
-      filteredResults = List.from(widget.results);
-    });
+    if (mounted) {
+      setState(() {
+        activeFilters.clear();
+        filteredResults = List.from(widget.results);
+      });
+    }
   }
 
   final String userId = FirebaseAuth.instance.currentUser?.uid ?? "";

@@ -227,9 +227,11 @@ class _MyAppState extends State<MyApp> {
     final String? savedEmail = prefs.getString('email');
 
     if (savedEmail != null) {
-      setState(() {
-        _initialScreen = const Podlypage(); // Redirection automatique
-      });
+      if (mounted) {
+        setState(() {
+          _initialScreen = const Podlypage(); // Redirection automatique
+        });
+      }
     }
   }
 

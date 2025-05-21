@@ -17,9 +17,14 @@ class _Succes3pageState extends State<Succes3page> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 

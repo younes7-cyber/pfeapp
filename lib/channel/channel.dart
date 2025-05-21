@@ -279,9 +279,11 @@ class _ChannelpageState extends State<Channelpage>
       // Sauvegarder l'état précédent pour pouvoir revenir en arrière en cas d'erreur
       final previousFollowingState = isFollowing;
 
-      setState(() {
-        isFollowing = !isFollowing;
-      });
+      if (mounted) {
+        setState(() {
+          isFollowing = !isFollowing;
+        });
+      }
 
       if (isFollowing) {
         final QuerySnapshot userSnapshot = await FirebaseFirestore.instance
@@ -375,9 +377,11 @@ class _ChannelpageState extends State<Channelpage>
 
         // Si aucun document n'est trouvé, c'est une erreur ou une incohérence
         if (followSnapshot.docs.isEmpty) {
-          setState(() {
-            isFollowing = previousFollowingState;
-          });
+          if (mounted) {
+            setState(() {
+              isFollowing = previousFollowingState;
+            });
+          }
           return;
         }
 
@@ -428,9 +432,11 @@ class _ChannelpageState extends State<Channelpage>
       }
     } catch (e) {
       // En cas d'erreur, revenir à l'état précédent
-      setState(() {
-        isFollowing = !isFollowing;
-      });
+      if (mounted) {
+        setState(() {
+          isFollowing = !isFollowing;
+        });
+      }
     }
   }
 
@@ -440,7 +446,9 @@ class _ChannelpageState extends State<Channelpage>
     _tabController1 = TabController(length: 2, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
 
       final arguments =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
@@ -463,7 +471,9 @@ class _ChannelpageState extends State<Channelpage>
         }
       }
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 

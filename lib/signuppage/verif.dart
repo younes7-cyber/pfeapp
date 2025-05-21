@@ -25,10 +25,14 @@ class _VerifpageState extends State<Verifpage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
       _checkEmailVerification();
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 
@@ -40,9 +44,11 @@ class _VerifpageState extends State<Verifpage> {
     await user?.reload(); // Reload user information
 
     if (user != null && user.emailVerified) {
-      setState(() {
-        _isVerified = true;
-      });
+      if (mounted) {
+        setState(() {
+          _isVerified = true;
+        });
+      }
     }
   }
 
@@ -51,14 +57,16 @@ class _VerifpageState extends State<Verifpage> {
     _countdownTimer?.cancel();
 
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        if (_countdownSeconds > 0) {
-          _countdownSeconds--;
-        } else {
-          _isResendDisabled = false;
-          timer.cancel();
-        }
-      });
+      if (mounted) {
+        setState(() {
+          if (_countdownSeconds > 0) {
+            _countdownSeconds--;
+          } else {
+            _isResendDisabled = false;
+            timer.cancel();
+          }
+        });
+      }
     });
   }
 
@@ -73,15 +81,19 @@ class _VerifpageState extends State<Verifpage> {
       );
       if (user != null && !user.emailVerified) {
         await user.sendEmailVerification();
-        setState(() {
-          _isResendDisabled = true;
-        });
+        if (mounted) {
+          setState(() {
+            _isResendDisabled = true;
+          });
+        }
 
         // Start countdown and re-enable button after 30 seconds
         _startCountdown();
       }
     } catch (e) {
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -247,9 +259,11 @@ class _VerifpageState extends State<Verifpage> {
                                     User? user =
                                         FirebaseAuth.instance.currentUser;
                                     if (user != null && user.emailVerified) {
-                                      setState(() {
-                                        _isVerified = true;
-                                      });
+                                      if (mounted) {
+                                        setState(() {
+                                          _isVerified = true;
+                                        });
+                                      }
                                     }
                                   },
                                   child: Text(

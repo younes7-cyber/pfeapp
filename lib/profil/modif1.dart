@@ -35,7 +35,9 @@ class _Modif1pageState extends State<Modif1page> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
 
       final arguments =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
@@ -60,7 +62,9 @@ class _Modif1pageState extends State<Modif1page> {
         }
       }
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 
@@ -114,10 +118,12 @@ class _Modif1pageState extends State<Modif1page> {
           }).toList();
 
           // Mettre à jour l'état
-          setState(() {
-            play1.clear();
-            play1.addAll(fetchedPlaylists);
-          });
+          if (mounted) {
+            setState(() {
+              play1.clear();
+              play1.addAll(fetchedPlaylists);
+            });
+          }
         });
 
         _subscriptions.add(playlistSubscription);
@@ -167,10 +173,12 @@ class _Modif1pageState extends State<Modif1page> {
           }).toList();
 
           // Mettre à jour l'état
-          setState(() {
-            play.clear();
-            play.addAll(fetchedPlaylists);
-          });
+          if (mounted) {
+            setState(() {
+              play.clear();
+              play.addAll(fetchedPlaylists);
+            });
+          }
         });
 
         _subscriptions.add(playlistSubscription);
@@ -220,10 +228,12 @@ class _Modif1pageState extends State<Modif1page> {
           }).toList();
 
           // Mettre à jour l'état
-          setState(() {
-            play3.clear();
-            play3.addAll(fetchedPlaylists);
-          });
+          if (mounted) {
+            setState(() {
+              play3.clear();
+              play3.addAll(fetchedPlaylists);
+            });
+          }
         });
 
         _subscriptions.add(playlistSubscription);
@@ -276,10 +286,12 @@ class _Modif1pageState extends State<Modif1page> {
           }).toList();
 
           // Mettre à jour l'état
-          setState(() {
-            play2.clear();
-            play2.addAll(fetchedPlaylists);
-          });
+          if (mounted) {
+            setState(() {
+              play2.clear();
+              play2.addAll(fetchedPlaylists);
+            });
+          }
         });
 
         _subscriptions.add(podcastSubscription);
@@ -664,9 +676,11 @@ class _Modif1pageState extends State<Modif1page> {
                                   // Correction de la syntaxe du suffixIcon
                                   suffixIcon: GestureDetector(
                                     onTap: () {
-                                      setState(() {
-                                        _obscureText2 = !_obscureText2;
-                                      });
+                                      if (mounted) {
+                                        setState(() {
+                                          _obscureText2 = !_obscureText2;
+                                        });
+                                      }
                                     },
                                     child: Padding(
                                       padding: EdgeInsets.all(i.width * 0.028),
@@ -1525,11 +1539,13 @@ class _Modif1pageState extends State<Modif1page> {
                         selectedItems.first as SelectedListItem<PlaylistItem>;
                     final playlistItem = selectedItem.data;
 
-                    setState(() {
-                      _selectedPlaylistId = playlistItem.id; // Stocke l'ID
-                      _playlistController.text =
-                          playlistItem.name; // Affiche le nom
-                    });
+                    if (mounted) {
+                      setState(() {
+                        _selectedPlaylistId = playlistItem.id; // Stocke l'ID
+                        _playlistController.text =
+                            playlistItem.name; // Affiche le nom
+                      });
+                    }
                   }
                 },
                 enableMultipleSelection: false,

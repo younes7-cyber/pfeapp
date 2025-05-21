@@ -1616,101 +1616,124 @@ class _ListenpageState extends State<Listenpage>
     final likeRef = FirebaseFirestore.instance.collection('like');
     final unlikeRef = FirebaseFirestore.instance.collection('unlike');
 
-    if (!isLiked) {
-      // Ajouter le like
-      await likeRef.add({
-        'iduser': currentUser,
-        'idpod': idpod,
-        'dateCreation': FieldValue.serverTimestamp(),
-      });
-      await FirebaseFirestore.instance.collection('nofi').add({
-        'user1': currentUser,
-        'user2': podcast[0]["idUser"],
-        'text': 'Liked Your Podcast',
-        'date': Timestamp.now(),
-        'isviewed': false,
-      });
-      await FirebaseFirestore.instance
-          .collection('podcasts')
-          .doc(idpod)
-          .update({
-        'likes': FieldValue.increment(1),
-      });
-      final QuerySnapshot userSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .where('userId', isEqualTo: currentUser)
-          .get();
+    try {
+      if (!isLiked) {
+        try {
+          await likeRef.add({
+            'iduser': currentUser,
+            'idpod': idpod,
+            'dateCreation': FieldValue.serverTimestamp(),
+          });
+          // ignore: empty_catches
+        } catch (e) {}
 
-      if (userSnapshot.docs.isEmpty) {
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User information not found')),
-        );
-        return;
-      }
+        try {
+          await FirebaseFirestore.instance.collection('nofi').add({
+            'user1': currentUser,
+            'user2': podcast[0]["idUser"],
+            'text': 'Liked Your Podcast',
+            'date': Timestamp.now(),
+            'isviewed': false,
+          });
+          // ignore: empty_catches
+        } catch (e) {}
 
-      // Extraire firstName et lastName
-      final userData = userSnapshot.docs.first.data() as Map<String, dynamic>;
-      final String firstName = userData['firstName'] ?? '';
-      final String lastName = userData['lastName'] ?? '';
-      final String fullName = '$firstName $lastName';
-      try {
-        await FCMService.sendNotification(
-          topic: podcast[0]["idUser"],
-          title: 'New Like',
-          body: '$fullName has Liked to your podcast',
-        );
-        // ignore: empty_catches
-      } catch (e) {}
-
-      if (mounted) {
-        setState(() {
-          isLiked = true;
-        });
-      }
-
-      // Supprimer l'unlike s'il existe
-      if (isUnliked) {
-        final unlikeQuery = await unlikeRef
-            .where('iduser', isEqualTo: currentUser)
-            .where('idpod', isEqualTo: idpod)
-            .get();
-        for (var doc in unlikeQuery.docs) {
-          await doc.reference.delete();
+        try {
           await FirebaseFirestore.instance
               .collection('podcasts')
               .doc(idpod)
-              .update({
-            'unlikes': FieldValue.increment(-1),
-          });
+              .update({'likes': FieldValue.increment(1)});
+          // ignore: empty_catches
+        } catch (e) {}
+
+        final QuerySnapshot userSnapshot;
+        try {
+          userSnapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .where('userId', isEqualTo: currentUser)
+              .get();
+        } catch (e) {
+          return;
         }
+
+        if (userSnapshot.docs.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('User information not found')),
+            );
+          }
+          return;
+        }
+
+        final userData = userSnapshot.docs.first.data() as Map<String, dynamic>;
+        final String firstName = userData['firstName'] ?? '';
+        final String lastName = userData['lastName'] ?? '';
+        final String fullName = '$firstName $lastName';
+
+        try {
+          await FCMService.sendNotification(
+            topic: podcast[0]["idUser"],
+            title: 'New Like',
+            body: '$fullName has Liked your podcast',
+          );
+          // ignore: empty_catches
+        } catch (e) {}
+
         if (mounted) {
           setState(() {
-            isUnliked = false;
+            isLiked = true;
           });
         }
+
+        if (isUnliked) {
+          try {
+            final unlikeQuery = await unlikeRef
+                .where('iduser', isEqualTo: currentUser)
+                .where('idpod', isEqualTo: idpod)
+                .get();
+
+            for (var doc in unlikeQuery.docs) {
+              await doc.reference.delete();
+              await FirebaseFirestore.instance
+                  .collection('podcasts')
+                  .doc(idpod)
+                  .update({'unlikes': FieldValue.increment(-1)});
+            }
+
+            if (mounted) {
+              setState(() {
+                isUnliked = false;
+              });
+            }
+            // ignore: empty_catches
+          } catch (e) {}
+        }
+      } else {
+        // Supprimer le like
+        try {
+          final likeQuery = await likeRef
+              .where('iduser', isEqualTo: currentUser)
+              .where('idpod', isEqualTo: idpod)
+              .get();
+
+          for (var doc in likeQuery.docs) {
+            await doc.reference.delete();
+            await FirebaseFirestore.instance
+                .collection('podcasts')
+                .doc(idpod)
+                .update({'likes': FieldValue.increment(-1)});
+          }
+
+          if (mounted) {
+            setState(() {
+              isLiked = false;
+            });
+          }
+          // ignore: empty_catches
+        } catch (e) {}
       }
-    } else {
-      // Supprimer le like
-      final likeQuery = await likeRef
-          .where('iduser', isEqualTo: currentUser)
-          .where('idpod', isEqualTo: idpod)
-          .get();
-      for (var doc in likeQuery.docs) {
-        await doc.reference.delete();
-        await FirebaseFirestore.instance
-            .collection('podcasts')
-            .doc(idpod)
-            .update({
-          'likes': FieldValue.increment(-1),
-        });
-      }
-      if (mounted) {
-        setState(() {
-          isLiked = false;
-        });
-      }
-    }
+      // ignore: empty_catches
+    } catch (e) {}
   }
 
   void _toggleSave() async {

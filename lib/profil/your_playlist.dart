@@ -157,7 +157,9 @@ class _YourplaylistpageState extends State<Yourplaylistpage>
     super.initState();
     _tabController1 = TabController(length: 1, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
       await fetchuser();
       await nbrpodId();
     });
@@ -198,7 +200,9 @@ class _YourplaylistpageState extends State<Yourplaylistpage>
 
   // Méthode pour recharger les données
   Future<void> _onRefresh() async {
-    setState(() => isLoading = true);
+    if (mounted) {
+      setState(() => isLoading = true);
+    }
 
     try {
       // Réinitialiser les streams pour forcer la rafraîchissement

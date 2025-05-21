@@ -21,10 +21,14 @@ class _NotificationPageState extends State<NotificationPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
       _currentFilter = 'all';
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 
@@ -94,9 +98,11 @@ class _NotificationPageState extends State<NotificationPage> {
                                       ? Colors.black
                                       : Colors.white,
                                   onSelected: (String value) {
-                                    setState(() {
-                                      _currentFilter = value;
-                                    });
+                                    if (mounted) {
+                                      setState(() {
+                                        _currentFilter = value;
+                                      });
+                                    }
                                   },
                                   itemBuilder: (BuildContext context) =>
                                       <PopupMenuEntry<String>>[

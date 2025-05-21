@@ -33,10 +33,14 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
       _loadPlaylists();
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 
@@ -61,9 +65,11 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
         );
       }).toList();
 
-      setState(() {
-        play.addAll(fetchedPlaylists);
-      });
+      if (mounted) {
+        setState(() {
+          play.addAll(fetchedPlaylists);
+        });
+      }
       // ignore: empty_catches
     } catch (e) {}
   }
@@ -85,9 +91,11 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
     if (await _requestPermission()) {
       final result = await FilePicker.platform.pickFiles(type: FileType.image);
       if (result != null && result.files.isNotEmpty) {
-        setState(() {
-          _selectedImagePath = result.files.single.path;
-        });
+        if (mounted) {
+          setState(() {
+            _selectedImagePath = result.files.single.path;
+          });
+        }
       }
     }
   }
@@ -142,23 +150,29 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
     bool isValid = true;
 
     // Reset all errors first
-    setState(() {
-      nameError = null;
-      descError = null;
-    });
+    if (mounted) {
+      setState(() {
+        nameError = null;
+        descError = null;
+      });
+    }
 
     // Check each field
     if (_nameController.text.trim().isEmpty) {
-      setState(() {
-        nameError = "Name must not be empty";
-      });
+      if (mounted) {
+        setState(() {
+          nameError = "Name must not be empty";
+        });
+      }
       isValid = false;
     }
 
     if (_descriptionController.text.trim().isEmpty) {
-      setState(() {
-        descError = "Description must not be empty";
-      });
+      if (mounted) {
+        setState(() {
+          descError = "Description must not be empty";
+        });
+      }
       isValid = false;
     }
 
@@ -310,9 +324,11 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
                                   return null;
                                 },
                                 onChanged: (value) {
-                                  setState(() {
-                                    nameError = null;
-                                  });
+                                  if (mounted) {
+                                    setState(() {
+                                      nameError = null;
+                                    });
+                                  }
                                 },
                                 style: const TextStyle(
                                   color: Colors.black,
@@ -412,9 +428,11 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
                                   return null;
                                 },
                                 onChanged: (value) {
-                                  setState(() {
-                                    descError = null;
-                                  });
+                                  if (mounted) {
+                                    setState(() {
+                                      descError = null;
+                                    });
+                                  }
                                 },
                                 style: const TextStyle(
                                   color: Colors.black,
@@ -672,12 +690,14 @@ class _CreateplaylistpageState extends State<Createplaylistpage> {
                               as SelectedListItem<PlaylistItem>;
                           final playlistItem = selectedItem.data;
 
-                          setState(() {
-                            _selectedPlaylistId =
-                                playlistItem.id; // Stocke l'ID
-                            _playlistController.text =
-                                playlistItem.name; // Affiche le nom
-                          });
+                          if (mounted) {
+                            setState(() {
+                              _selectedPlaylistId =
+                                  playlistItem.id; // Stocke l'ID
+                              _playlistController.text =
+                                  playlistItem.name; // Affiche le nom
+                            });
+                          }
                         }
                       },
                       enableMultipleSelection: false,

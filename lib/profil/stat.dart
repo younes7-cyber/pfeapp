@@ -64,7 +64,9 @@ class _StatpageState extends State<Statpage> {
     if (!mounted) return;
 
     try {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
 
       final user = FirebaseAuth.instance.currentUser;
 
@@ -84,7 +86,9 @@ class _StatpageState extends State<Statpage> {
       if (mounted) {
         // Add a small delay to allow animation to complete
         await Future.delayed(const Duration(seconds: 1));
-        setState(() => isLoading = false);
+        if (mounted) {
+          setState(() => isLoading = false);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -99,10 +103,12 @@ class _StatpageState extends State<Statpage> {
   void _previousWeek() {
     if (!mounted) return;
 
-    setState(() {
-      weekOffset -= 1;
-      isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        weekOffset -= 1;
+        isLoading = true;
+      });
+    }
     // Cancel existing subscription before creating a new one
     _subscription?.cancel();
     _fetchWeeklyStats();
@@ -113,10 +119,12 @@ class _StatpageState extends State<Statpage> {
     if (!mounted) return;
 
     if (weekOffset < 0) {
-      setState(() {
-        weekOffset += 1;
-        isLoading = true;
-      });
+      if (mounted) {
+        setState(() {
+          weekOffset += 1;
+          isLoading = true;
+        });
+      }
       // Cancel existing subscription before creating a new one
       _subscription?.cancel();
       _fetchWeeklyStats();
@@ -127,10 +135,12 @@ class _StatpageState extends State<Statpage> {
   void _currentWeek() {
     if (!mounted) return;
 
-    setState(() {
-      weekOffset = 0;
-      isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        weekOffset = 0;
+        isLoading = true;
+      });
+    }
     // Cancel existing subscription before creating a new one
     _subscription?.cancel();
     _fetchWeeklyStats();
@@ -155,9 +165,11 @@ class _StatpageState extends State<Statpage> {
     try {
       if (currentUserID.isEmpty) {
         if (mounted) {
-          setState(() {
-            isLoading = false;
-          });
+          if (mounted) {
+            setState(() {
+              isLoading = false;
+            });
+          }
         }
         return;
       }
@@ -182,9 +194,11 @@ class _StatpageState extends State<Statpage> {
       });
     } catch (e) {
       if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
       }
     }
   }
@@ -238,10 +252,12 @@ class _StatpageState extends State<Statpage> {
     if (!mounted) return;
 
     // Update the UI with the new data
-    setState(() {
-      weeklyViews = newWeeklyViews;
-      isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        weeklyViews = newWeeklyViews;
+        isLoading = false;
+      });
+    }
   }
 
   // Get the title for the current week view

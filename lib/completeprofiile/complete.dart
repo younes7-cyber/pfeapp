@@ -36,9 +36,13 @@ class _CompletepageState extends State<Completepage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 
@@ -221,10 +225,12 @@ class _CompletepageState extends State<Completepage> {
       );
 
       if (result != null && result.files.isNotEmpty) {
-        setState(() {
-          _selectedImagePath = result.files.single.path;
-          _selectedImageFile = File(_selectedImagePath!);
-        });
+        if (mounted) {
+          setState(() {
+            _selectedImagePath = result.files.single.path;
+            _selectedImageFile = File(_selectedImagePath!);
+          });
+        }
       }
     }
   }
@@ -234,55 +240,73 @@ class _CompletepageState extends State<Completepage> {
 
     // Validate first name
     if (_firstNameController.text.trim().isEmpty) {
-      setState(() {
-        _firstNameError = "First name must not be empty";
-      });
+      if (mounted) {
+        setState(() {
+          _firstNameError = "First name must not be empty";
+        });
+      }
       isValid = false;
     } else {
-      setState(() {
-        _firstNameError = null;
-      });
+      if (mounted) {
+        setState(() {
+          _firstNameError = null;
+        });
+      }
     }
 
     // Validate last name
     if (_lastNameController.text.trim().isEmpty) {
-      setState(() {
-        _lastNameError = "Last name must not be empty";
-      });
+      if (mounted) {
+        setState(() {
+          _lastNameError = "Last name must not be empty";
+        });
+      }
       isValid = false;
     } else {
-      setState(() {
-        _lastNameError = null;
-      });
+      if (mounted) {
+        setState(() {
+          _lastNameError = null;
+        });
+      }
     }
 
     // Validate age
     if (_ageController.text.trim().isEmpty) {
-      setState(() {
-        _ageError = "Age must not be empty";
-      });
+      if (mounted) {
+        setState(() {
+          _ageError = "Age must not be empty";
+        });
+      }
       isValid = false;
     } else if (int.tryParse(_ageController.text.trim()) == null) {
-      setState(() {
-        _ageError = "Age must be numeric";
-      });
+      if (mounted) {
+        setState(() {
+          _ageError = "Age must be numeric";
+        });
+      }
       isValid = false;
     } else {
-      setState(() {
-        _ageError = null;
-      });
+      if (mounted) {
+        setState(() {
+          _ageError = null;
+        });
+      }
     }
 
     // Validate country
     if (_countryController.text.trim().isEmpty) {
-      setState(() {
-        _countryError = "Country must not be empty";
-      });
+      if (mounted) {
+        setState(() {
+          _countryError = "Country must not be empty";
+        });
+      }
       isValid = false;
     } else {
-      setState(() {
-        _countryError = null;
-      });
+      if (mounted) {
+        setState(() {
+          _countryError = null;
+        });
+      }
     }
     return isValid;
   }
@@ -318,7 +342,9 @@ class _CompletepageState extends State<Completepage> {
   }
 
   Future<void> _saveUserData() async {
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
 
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -327,7 +353,9 @@ class _CompletepageState extends State<Completepage> {
       if (userId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("No authenticated user found")));
-        setState(() {});
+        if (mounted) {
+          setState(() {});
+        }
         return;
       }
 
@@ -380,7 +408,9 @@ class _CompletepageState extends State<Completepage> {
             .showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
       }
     } finally {
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -489,9 +519,11 @@ class _CompletepageState extends State<Completepage> {
                                   return null;
                                 },
                                 onChanged: (value) {
-                                  setState(() {
-                                    _firstNameError = null;
-                                  });
+                                  if (mounted) {
+                                    setState(() {
+                                      _firstNameError = null;
+                                    });
+                                  }
                                 },
                                 style: const TextStyle(
                                   color: Colors.black,
@@ -590,9 +622,11 @@ class _CompletepageState extends State<Completepage> {
                                   return null;
                                 },
                                 onChanged: (value) {
-                                  setState(() {
-                                    _lastNameError = null;
-                                  });
+                                  if (mounted) {
+                                    setState(() {
+                                      _lastNameError = null;
+                                    });
+                                  }
                                 },
                                 style: const TextStyle(
                                   color: Colors.black,
@@ -693,16 +727,20 @@ class _CompletepageState extends State<Completepage> {
                                       null) {
                                     return "Age must be numeric";
                                   } else {
-                                    setState(() {
-                                      _ageError = null;
-                                    });
+                                    if (mounted) {
+                                      setState(() {
+                                        _ageError = null;
+                                      });
+                                    }
                                   }
                                   return null;
                                 },
                                 onChanged: (value) {
-                                  setState(() {
-                                    _ageError = null;
-                                  });
+                                  if (mounted) {
+                                    setState(() {
+                                      _ageError = null;
+                                    });
+                                  }
                                 },
                                 style: const TextStyle(
                                   color: Colors.black,
@@ -883,7 +921,9 @@ class _CompletepageState extends State<Completepage> {
                                 onPressed: () {
                                   bool isValid = _validateForm();
                                   // Force a rebuild to show validation errors
-                                  setState(() {});
+                                  if (mounted) {
+                                    setState(() {});
+                                  }
                                   if (isValid) {
                                     _saveUserData();
                                   }
@@ -925,9 +965,11 @@ class _CompletepageState extends State<Completepage> {
             return null;
           },
           onChanged: (value) {
-            setState(() {
-              _countryError = null;
-            });
+            if (mounted) {
+              setState(() {
+                _countryError = null;
+              });
+            }
           },
           style: const TextStyle(
             color: Colors.black,
@@ -985,9 +1027,11 @@ class _CompletepageState extends State<Completepage> {
                   if (selectedItems.isNotEmpty) {
                     final selectedItem =
                         selectedItems.first as SelectedListItem<String>;
-                    setState(() {
-                      controller.text = selectedItem.data;
-                    });
+                    if (mounted) {
+                      setState(() {
+                        controller.text = selectedItem.data;
+                      });
+                    }
                   }
                 },
                 enableMultipleSelection: false,

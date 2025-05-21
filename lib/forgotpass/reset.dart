@@ -32,14 +32,16 @@ class _ResetpageState extends State<Resetpage> {
     _countdownTimer?.cancel();
 
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        if (_countdownSeconds > 0) {
-          _countdownSeconds--;
-        } else {
-          _isResendDisabled = false;
-          timer.cancel();
-        }
-      });
+      if (mounted) {
+        setState(() {
+          if (_countdownSeconds > 0) {
+            _countdownSeconds--;
+          } else {
+            _isResendDisabled = false;
+            timer.cancel();
+          }
+        });
+      }
     });
   }
 
@@ -47,10 +49,14 @@ class _ResetpageState extends State<Resetpage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
 
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 
@@ -67,9 +73,11 @@ class _ResetpageState extends State<Resetpage> {
       // either pass it from the previous page or store it temporarily
       if (email.isEmpty) {
         // This is a fallback - in real implementation, you should handle this better
-        setState(() {
-          _message = "No email found. Please go back and try again.";
-        });
+        if (mounted) {
+          setState(() {
+            _message = "No email found. Please go back and try again.";
+          });
+        }
         return;
       }
 
@@ -82,17 +90,22 @@ class _ResetpageState extends State<Resetpage> {
           backgroundColor: Color(0xFF754CEF),
         ),
       );
-      setState(() {
-        _isResendDisabled = true;
-        _message = "Reset password email sent again! Please check your inbox.";
-      });
+      if (mounted) {
+        setState(() {
+          _isResendDisabled = true;
+          _message =
+              "Reset password email sent again! Please check your inbox.";
+        });
+      }
 
       // Start countdown and re-enable button after 30 seconds
       _startCountdown();
     } catch (e) {
-      setState(() {
-        _message = "An error occurred: ${e.toString()}. Please try again.";
-      });
+      if (mounted) {
+        setState(() {
+          _message = "An error occurred: ${e.toString()}. Please try again.";
+        });
+      }
     }
   }
 

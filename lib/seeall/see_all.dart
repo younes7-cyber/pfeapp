@@ -31,14 +31,18 @@ class _SeeAllpagepageState extends State<SeeAllpage>
           .listen((querySnapshot) {
         // Ajout des logs pour déboguer
 
-        setState(() {
-          podcast = querySnapshot.docs
-              // ignore: unnecessary_cast
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            podcast = querySnapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
       }, onError: (e) {
-        setState(() {});
+        if (mounted) {
+          setState(() {});
+        }
       });
 
       _streamSubscriptions.add(streamSubscription);
@@ -80,12 +84,14 @@ class _SeeAllpagepageState extends State<SeeAllpage>
           .listen((querySnapshot) {
         // Ajout des logs pour déboguer
 
-        setState(() {
-          user = querySnapshot.docs
-              // ignore: unnecessary_cast
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            user = querySnapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
       }, onError: (e) {});
 
       _streamSubscriptions.add(streamSubscription);
@@ -106,14 +112,18 @@ class _SeeAllpagepageState extends State<SeeAllpage>
           .listen((querySnapshot) {
         // Ajout des logs pour déboguer
 
-        setState(() {
-          playlist = querySnapshot.docs
-              // ignore: unnecessary_cast
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            playlist = querySnapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
       }, onError: (e) {
-        setState(() {});
+        if (mounted) {
+          setState(() {});
+        }
       });
 
       _streamSubscriptions.add(streamSubscription);
@@ -183,25 +193,33 @@ class _SeeAllpagepageState extends State<SeeAllpage>
             return bTime.compareTo(aTime);
           });
 
-          setState(() {
-            followcha = enrichedChannels;
-          });
+          if (mounted) {
+            setState(() {
+              followcha = enrichedChannels;
+            });
+          }
         } else {
+          if (mounted) {
+            setState(() {
+              followcha = [];
+            });
+          }
+        }
+      }, onError: (e) {
+        if (mounted) {
           setState(() {
             followcha = [];
           });
         }
-      }, onError: (e) {
-        setState(() {
-          followcha = [];
-        });
       });
 
       _streamSubscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        followcha = [];
-      });
+      if (mounted) {
+        setState(() {
+          followcha = [];
+        });
+      }
     }
   }
 
@@ -246,10 +264,12 @@ class _SeeAllpagepageState extends State<SeeAllpage>
         }
 
         if (categories.isEmpty) {
-          setState(() {
-            viewedPodcasts = [];
-            recommendedPodcasts = [];
-          });
+          if (mounted) {
+            setState(() {
+              viewedPodcasts = [];
+              recommendedPodcasts = [];
+            });
+          }
 
           return;
         }
@@ -338,23 +358,29 @@ class _SeeAllpagepageState extends State<SeeAllpage>
         }
 
         // 8. Mettre à jour l'état
-        setState(() {
-          viewedPodcasts = tempViewedPodcasts;
-          recommendedPodcasts = tempRecommendedPodcasts;
-        });
+        if (mounted) {
+          setState(() {
+            viewedPodcasts = tempViewedPodcasts;
+            recommendedPodcasts = tempRecommendedPodcasts;
+          });
+        }
       }, onError: (e) {
-        setState(() {
-          viewedPodcasts = [];
-          recommendedPodcasts = [];
-        });
+        if (mounted) {
+          setState(() {
+            viewedPodcasts = [];
+            recommendedPodcasts = [];
+          });
+        }
       });
 
       _streamSubscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        viewedPodcasts = [];
-        recommendedPodcasts = [];
-      });
+      if (mounted) {
+        setState(() {
+          viewedPodcasts = [];
+          recommendedPodcasts = [];
+        });
+      }
     }
   }
 
@@ -406,20 +432,26 @@ class _SeeAllpagepageState extends State<SeeAllpage>
         }).toList();
 
         // (Optionnel) Mettre à jour l'état si tu es dans un widget Stateful
-        setState(() {
-          topl = enrichedPlaylists;
-        });
+        if (mounted) {
+          setState(() {
+            topl = enrichedPlaylists;
+          });
+        }
       }, onError: (e) {
-        setState(() {
-          topl = [];
-        });
+        if (mounted) {
+          setState(() {
+            topl = [];
+          });
+        }
       });
 
       _streamSubscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        topl = [];
-      });
+      if (mounted) {
+        setState(() {
+          topl = [];
+        });
+      }
     }
   }
 
@@ -432,19 +464,25 @@ class _SeeAllpagepageState extends State<SeeAllpage>
           .listen((querySnapshot) {
         // Ajout des logs pour déboguer
 
-        setState(() {
-          topcha = querySnapshot.docs
-              // ignore: unnecessary_cast
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            topcha = querySnapshot.docs
+                // ignore: unnecessary_cast
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
+          });
+        }
       }, onError: (e) {
-        setState(() {});
+        if (mounted) {
+          setState(() {});
+        }
       });
 
       _streamSubscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -495,16 +533,22 @@ class _SeeAllpagepageState extends State<SeeAllpage>
         }).toList();
 
         // (Optionnel) Mettre à jour l'état si tu es dans un widget Stateful
-        setState(() {
-          tops = enrichedPlaylists;
-        });
+        if (mounted) {
+          setState(() {
+            tops = enrichedPlaylists;
+          });
+        }
       }, onError: (e) {
-        setState(() {});
+        if (mounted) {
+          setState(() {});
+        }
       });
 
       _streamSubscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -601,25 +645,33 @@ class _SeeAllpagepageState extends State<SeeAllpage>
             return podcast;
           }).toList();
 
-          setState(() {
-            res = enrichedPlaylists;
-          });
+          if (mounted) {
+            setState(() {
+              res = enrichedPlaylists;
+            });
+          }
         } else {
+          if (mounted) {
+            setState(() {
+              res = [];
+            });
+          }
+        }
+      }, onError: (e) {
+        if (mounted) {
           setState(() {
             res = [];
           });
         }
-      }, onError: (e) {
-        setState(() {
-          res = [];
-        });
       });
 
       _streamSubscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        res = [];
-      });
+      if (mounted) {
+        setState(() {
+          res = [];
+        });
+      }
     }
   }
 
@@ -645,7 +697,9 @@ class _SeeAllpagepageState extends State<SeeAllpage>
             .toSet();
 
         if (recentIdPods.isEmpty) {
-          setState(() => ress = []);
+          if (mounted) {
+            setState(() => ress = []);
+          }
           return;
         }
 
@@ -698,16 +752,22 @@ class _SeeAllpagepageState extends State<SeeAllpage>
         }
 
         // 🔁 Mettre à jour l'état
-        setState(() {
-          ress = top10;
-        });
+        if (mounted) {
+          setState(() {
+            ress = top10;
+          });
+        }
       }, onError: (e) {
-        setState(() => ress = []);
+        if (mounted) {
+          setState(() => ress = []);
+        }
       });
 
       _streamSubscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() => ress = []);
+      if (mounted) {
+        setState(() => ress = []);
+      }
     }
   }
 
@@ -761,20 +821,26 @@ class _SeeAllpagepageState extends State<SeeAllpage>
         }
 
         // Mettre à jour l'état
-        setState(() {
-          podd = podcasts;
-        });
+        if (mounted) {
+          setState(() {
+            podd = podcasts;
+          });
+        }
       }, onError: (e) {
-        setState(() {
-          podd = [];
-        });
+        if (mounted) {
+          setState(() {
+            podd = [];
+          });
+        }
       });
 
       _streamSubscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        podd = [];
-      });
+      if (mounted) {
+        setState(() {
+          podd = [];
+        });
+      }
     }
   }
 
@@ -814,20 +880,26 @@ class _SeeAllpagepageState extends State<SeeAllpage>
         }
 
         // Mettre à jour l'état avec les chaînes sans doublons
-        setState(() {
-          craa = channelsMap.values.toList();
-        });
+        if (mounted) {
+          setState(() {
+            craa = channelsMap.values.toList();
+          });
+        }
       }, onError: (e) {
-        setState(() {
-          craa = [];
-        });
+        if (mounted) {
+          setState(() {
+            craa = [];
+          });
+        }
       });
 
       _streamSubscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        craa = [];
-      });
+      if (mounted) {
+        setState(() {
+          craa = [];
+        });
+      }
     }
   }
 
@@ -847,9 +919,11 @@ class _SeeAllpagepageState extends State<SeeAllpage>
             .toList();
 
         if (podcastIds.isEmpty) {
-          setState(() {
-            play = [];
-          });
+          if (mounted) {
+            setState(() {
+              play = [];
+            });
+          }
 
           return;
         }
@@ -883,9 +957,11 @@ class _SeeAllpagepageState extends State<SeeAllpage>
         }
 
         if (orderedPlaylistIds.isEmpty) {
-          setState(() {
-            play = [];
-          });
+          if (mounted) {
+            setState(() {
+              play = [];
+            });
+          }
 
           return;
         }
@@ -915,20 +991,26 @@ class _SeeAllpagepageState extends State<SeeAllpage>
             .map((id) => playlistsMap[id]!)
             .toList();
 
-        setState(() {
-          play = finalPlaylists;
-        });
+        if (mounted) {
+          setState(() {
+            play = finalPlaylists;
+          });
+        }
       }, onError: (e) {
-        setState(() {
-          play = [];
-        });
+        if (mounted) {
+          setState(() {
+            play = [];
+          });
+        }
       });
 
       _streamSubscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        play = [];
-      });
+      if (mounted) {
+        setState(() {
+          play = [];
+        });
+      }
     }
   }
 
@@ -996,25 +1078,33 @@ class _SeeAllpagepageState extends State<SeeAllpage>
             return dateB.compareTo(dateA);
           });
 
-          setState(() {
-            mesplaylist = allPlaylists;
-          });
+          if (mounted) {
+            setState(() {
+              mesplaylist = allPlaylists;
+            });
+          }
         } else {
+          if (mounted) {
+            setState(() {
+              mesplaylist = [];
+            });
+          }
+        }
+      }, onError: (e) {
+        if (mounted) {
           setState(() {
             mesplaylist = [];
           });
         }
-      }, onError: (e) {
-        setState(() {
-          mesplaylist = [];
-        });
       });
 
       _streamSubscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        mesplaylist = [];
-      });
+      if (mounted) {
+        setState(() {
+          mesplaylist = [];
+        });
+      }
     }
   }
 
@@ -1041,16 +1131,22 @@ class _SeeAllpagepageState extends State<SeeAllpage>
           }
         }
 
-        setState(() {
-          nbr = tempNbr;
-        });
+        if (mounted) {
+          setState(() {
+            nbr = tempNbr;
+          });
+        }
       }, onError: (e) {
-        setState(() {});
+        if (mounted) {
+          setState(() {});
+        }
       });
 
       _streamSubscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -1067,7 +1163,9 @@ class _SeeAllpagepageState extends State<SeeAllpage>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
 
       final arguments =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
@@ -1107,7 +1205,9 @@ class _SeeAllpagepageState extends State<SeeAllpage>
         await fetchplaylists();
       }
       await Future.delayed(const Duration(seconds: 1));
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     });
   }
 
@@ -1119,9 +1219,11 @@ class _SeeAllpagepageState extends State<SeeAllpage>
           .snapshots()
           .listen((channelSnapshot) async {
         if (channelSnapshot.docs.isEmpty) {
-          setState(() {
-            playlists1 = [];
-          });
+          if (mounted) {
+            setState(() {
+              playlists1 = [];
+            });
+          }
           return;
         }
 
@@ -1144,27 +1246,35 @@ class _SeeAllpagepageState extends State<SeeAllpage>
           // Debug
 
           // Met à jour l'état
-          setState(() {
-            playlists1 = fetchedPodcasts;
-          });
+          if (mounted) {
+            setState(() {
+              playlists1 = fetchedPodcasts;
+            });
+          }
         }, onError: (e) {
-          setState(() {
-            playlists1 = [];
-          });
+          if (mounted) {
+            setState(() {
+              playlists1 = [];
+            });
+          }
         });
 
         _streamSubscriptions.add(playlistStreamSubscription);
       }, onError: (e) {
-        setState(() {
-          playlists1 = [];
-        });
+        if (mounted) {
+          setState(() {
+            playlists1 = [];
+          });
+        }
       });
 
       _streamSubscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        playlists1 = [];
-      });
+      if (mounted) {
+        setState(() {
+          playlists1 = [];
+        });
+      }
     }
   }
 
@@ -1176,9 +1286,11 @@ class _SeeAllpagepageState extends State<SeeAllpage>
           .snapshots()
           .listen((channelSnapshot) async {
         if (channelSnapshot.docs.isEmpty) {
-          setState(() {
-            podcasts1 = [];
-          });
+          if (mounted) {
+            setState(() {
+              podcasts1 = [];
+            });
+          }
           return;
         }
 
@@ -1201,27 +1313,35 @@ class _SeeAllpagepageState extends State<SeeAllpage>
           // Debug
 
           // Met à jour l'état
-          setState(() {
-            podcasts1 = fetchedPodcasts;
-          });
+          if (mounted) {
+            setState(() {
+              podcasts1 = fetchedPodcasts;
+            });
+          }
         }, onError: (e) {
-          setState(() {
-            podcasts1 = [];
-          });
+          if (mounted) {
+            setState(() {
+              podcasts1 = [];
+            });
+          }
         });
 
         _streamSubscriptions.add(podcastStreamSubscription);
       }, onError: (e) {
-        setState(() {
-          podcasts1 = [];
-        });
+        if (mounted) {
+          setState(() {
+            podcasts1 = [];
+          });
+        }
       });
 
       _streamSubscriptions.add(streamSubscription);
     } catch (e) {
-      setState(() {
-        podcasts1 = [];
-      });
+      if (mounted) {
+        setState(() {
+          podcasts1 = [];
+        });
+      }
     }
   }
 
