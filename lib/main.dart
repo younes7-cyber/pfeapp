@@ -142,8 +142,10 @@ class _MyAppState extends State<MyApp> {
 
   // Initialiser les notifications locales
   Future<void> _initializeNotifications() async {
+    // Dans _initializeNotifications()
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('notification_icon');
+    // Utiliser votre nouvelle icône
 
     // Correction ici - nous utilisons la nouvelle façon de configurer iOS
     final DarwinInitializationSettings initializationSettingsIOS =
@@ -159,13 +161,8 @@ class _MyAppState extends State<MyApp> {
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
     );
-
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Naviguer vers la page de notifications quand on clique sur la notification
-        Navigator.pushNamed(navigatorKey.currentContext!, '/nofi');
-      },
     );
   }
 
@@ -176,7 +173,7 @@ class _MyAppState extends State<MyApp> {
       RemoteNotification? notification = message.notification;
       AndroidNotification? android = message.notification?.android;
 
-      // Afficher une notification locale lorsqu'une notification est reçue en premier plan
+      // Dans la méthode _setupNotificationHandlers()
       if (notification != null && android != null) {
         flutterLocalNotificationsPlugin.show(
           notification.hashCode,
@@ -187,7 +184,8 @@ class _MyAppState extends State<MyApp> {
               channel.id,
               channel.name,
               channelDescription: channel.description,
-              icon: android.smallIcon,
+              icon:
+                  '@drawable/notification_icon', // Utilisez l'icône spécifique aux notifications
             ),
           ),
           payload: message.data['route'],
@@ -328,21 +326,23 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-// Service FCM pour l'envoi de notifications
+// Service FCM pour l'envoi de notifications avec le bon chemin (assests)
 class FCMService {
   static Future<String> _getAccessToken() async {
     try {
-      // Utilisation correcte de rootBundle nécessite l'import de 'package:flutter/services.dart'
+      // Utilisation du chemin correct avec "assests" comme vous l'avez créé
       final serviceAccountJson = await rootBundle
-          .loadString('assests/noficationkeys/fir-317ff-06a0b45e2f26.json');
+          .loadString('assests/noficationkeys/fir-317ff-567540b6f5c4.json');
+
       final credentials =
-          ServiceAccountCredentials.fromJson(serviceAccountJson);
-
+          ServiceAccountCredentials.fromJson(json.decode(serviceAccountJson));
       final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
-      final client = await clientViaServiceAccount(credentials, scopes);
 
+      final client = await clientViaServiceAccount(credentials, scopes);
       return client.credentials.accessToken.data;
     } catch (e) {
+      if (e.toString().contains('FileSystemException')) {
+      } else if (e.toString().contains('FormatException')) {}
       rethrow;
     }
   }
@@ -355,6 +355,11 @@ class FCMService {
   }) async {
     try {
       final accessToken = await _getAccessToken();
+
+      if (accessToken.isEmpty) {
+        return false;
+      }
+
       final url = Uri.parse(
           'https://fcm.googleapis.com/v1/projects/fir-317ff/messages:send');
 
@@ -376,6 +381,7 @@ class FCMService {
               'notification': {
                 'click_action': 'FLUTTER_NOTIFICATION_CLICK',
                 'channel_id': 'high_importance_channel',
+                'icon': '@drawable/notification_icon',
               },
             },
             'apns': {

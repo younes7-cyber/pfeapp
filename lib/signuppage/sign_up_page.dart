@@ -96,7 +96,7 @@ class _SignUppageState extends State<SignUppage> {
         'age': 0,
         'country': '',
         'photoUrl':
-            'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/ano.jpg', // Utilise l'URL finale
+            'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/output-onlinejpgtools%20(2).jpg', // Utilise l'URL finale
         'createdAt': FieldValue.serverTimestamp(),
         'fcmToken': fcmToken, // Store FCM token
         'notificationTopic': currentUserId,
@@ -579,7 +579,7 @@ class _SignUppageState extends State<SignUppage> {
                                         'age': 0,
                                         'country': '',
                                         'photoUrl':
-                                            'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/ano.jpg', // Utilise l'URL finale
+                                            'https://migwbqbtfzszopvhdzre.supabase.co/storage/v1/object/public/pfeapp/profile/output-onlinejpgtools%20(2).jpg', // Utilise l'URL finale
                                         'createdAt':
                                             FieldValue.serverTimestamp(),
                                         'fcmToken': fcmToken, // Store FCM token

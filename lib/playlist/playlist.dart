@@ -1168,156 +1168,149 @@ class _PlaylistpageState extends State<Playlistpage>
                         ),
                       ),
                     ),
+                    Stack(
+                      children: [
+                        Positioned(
+                          top: w.height * 0.57,
+                          left: w.width * 0.02,
+                          child: GestureDetector(
+                            onTap: () {
+                              if (userId == channel[0]["userId"]) {
+                                Navigator.pushNamed(context, '/your',
+                                    arguments: {'your': 4});
+                              }
+                              if (userId != channel[0]["userId"]) {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/channel',
+                                  arguments: {
+                                    'id': channel[0]["id"],
+                                    'chaine': 5,
+                                  },
+                                );
+                              }
+                            },
+                            child: Row(children: [
+                              Container(
+                                width: w.width * 0.2,
+                                height: w.width * 0.2,
+                                decoration: BoxDecoration(
+                                    borderRadius:
+                                        BorderRadius.circular(w.width * 0.2)),
+                                child: ClipOval(
+                                  child: Image.network(
+                                    channel[0]["photoUrl"],
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(
+                                width: w.width * 0.01,
+                              ),
+                              Column(
+                                children: [
+                                  Text(
+                                    channel[0]["name"],
+                                    style: TextStyle(
+                                        fontSize: w.width * 0.045,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                  Row(
+                                    children: [
+                                      Text(formatLikes(channel[0]["followers"]),
+                                          style: TextStyle(
+                                            fontSize: w.width * 0.035,
+                                          )),
+                                      const Text(" "),
+                                      Text("Followers",
+                                          style: TextStyle(
+                                            fontSize: w.width * 0.035,
+                                          ))
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              SizedBox(
+                                width: w.width * 0.01,
+                              ),
+                            ]),
+                          ),
+                        ),
 
-                    Positioned(
-                      top: w.height * 0.57,
-                      left: w.width * 0.02,
-                      // ignore: avoid_unnecessary_containers
-                      child: Container(
-                        child: GestureDetector(
-                          onTap: () {
-                            if (userId == channel[0]["userId"]) {
-                              Navigator.pushNamed(context, '/your',
-                                  arguments: {'your': 4});
-                            }
-                            if (userId != channel[0]["userId"]) {
-                              Navigator.pushNamed(
-                                context,
-                                '/channel',
-                                arguments: {
-                                  'id': channel[0]["id"],
-                                  'chaine': 5,
-                                },
-                              );
-                            }
-                          },
-                          child: Row(children: [
-                            Container(
-                              width: w.width * 0.2,
-                              height: w.width * 0.2,
-                              decoration: BoxDecoration(
-                                  borderRadius:
-                                      BorderRadius.circular(w.width * 0.2)),
-                              child: ClipOval(
-                                child: Image.network(
-                                  channel[0]["photoUrl"],
-                                  fit: BoxFit.cover,
+                        // Second Positioned widget for the Follow button
+                        if (isYourPlaylist == false)
+                          Positioned(
+                            top: w.height * 0.6,
+                            right: w.width * 0.01,
+                            child: SizedBox(
+                              height: w.height * 0.05,
+                              width: w.width * 0.32,
+                              child: MaterialButton(
+                                onPressed: toggleFollow,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  height: w.height * 0.05,
+                                  width: w.width * 0.3,
+                                  decoration: BoxDecoration(
+                                    color: isFollowing
+                                        ? themeProvider.isDarkMode
+                                            ? Colors.black
+                                            : Colors.white
+                                        : const Color(0xFF754CEF),
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(w.width * 0.05),
+                                    ),
+                                    border: isFollowing
+                                        ? Border.all(
+                                            color: const Color(0xFF754CEF))
+                                        : null,
+                                  ),
+                                  child: Stack(
+                                    children: [
+                                      if (!isFollowing)
+                                        Positioned(
+                                          top: w.height * 0.014,
+                                          left: w.width * 0.03,
+                                          child: Text(
+                                            "Follow Now",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: w.width * 0.035,
+                                            ),
+                                          ),
+                                        ),
+                                      if (isFollowing)
+                                        Positioned(
+                                          top: w.height * 0.014,
+                                          left: w.width * 0.012,
+                                          child: Row(
+                                            children: [
+                                              Image.network(
+                                                themeProvider.isDarkMode
+                                                    ? s119
+                                                    : s51,
+                                                width: w.width * 0.05,
+                                                height: w.width * 0.05,
+                                              ),
+                                              SizedBox(width: w.width * 0.01),
+                                              Text(
+                                                "Following",
+                                                style: TextStyle(
+                                                  color:
+                                                      const Color(0xFF754CEF),
+                                                  fontSize: w.width * 0.03,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                            SizedBox(
-                              width: w.width * 0.01,
-                            ),
-                            Column(
-                              children: [
-                                Text(
-                                  channel[0]["name"],
-                                  style: TextStyle(
-                                      fontSize: w.width * 0.045,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                                Row(
-                                  children: [
-                                    Text(formatLikes(channel[0]["followers"]),
-                                        style: TextStyle(
-                                          fontSize: w.width * 0.035,
-
-                                          //   fontWeight: FontWeight.bold),
-                                        )),
-                                    const Text(" "),
-                                    Text("Followers",
-                                        style: TextStyle(
-                                          fontSize: w.width * 0.035,
-
-                                          //   fontWeight: FontWeight.bold),
-                                        ))
-                                  ],
-                                ),
-                              ],
-                            ),
-                            SizedBox(
-                              width: w.width * 0.01,
-                            ),
-                            if (isYourPlaylist == false) ...[
-                              Positioned(
-                                top: w.height * 0.68,
-                                right: w.width * 0.01,
-                                child: SizedBox(
-                                  height: w.height * 0.05,
-                                  width: w.width * 0.32,
-                                  child: MaterialButton(
-                                    onPressed:
-                                        toggleFollow, // Utiliser la fonction toggleFollow
-                                    child: AnimatedContainer(
-                                      duration:
-                                          const Duration(milliseconds: 300),
-                                      height: w.height * 0.05,
-                                      width: w.width * 0.3,
-                                      decoration: BoxDecoration(
-                                        color: isFollowing
-                                            ? themeProvider.isDarkMode
-                                                ? Colors.black
-                                                : Colors.white
-                                            : const Color(0xFF754CEF),
-                                        borderRadius: BorderRadius.all(
-                                          Radius.circular(w.width * 0.05),
-                                        ),
-                                        border: isFollowing
-                                            ? Border.all(
-                                                color: const Color(0xFF754CEF))
-                                            : null,
-                                      ),
-                                      child: Stack(
-                                        children: [
-                                          if (!isFollowing)
-                                            Positioned(
-                                              top: w.height * 0.014,
-                                              left: w.width *
-                                                  0.03, // Centrer un peu plus
-                                              child: Text(
-                                                "Follow Now",
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: w.width * 0.035,
-                                                ),
-                                              ),
-                                            ),
-                                          if (isFollowing)
-                                            Positioned(
-                                              top: w.height * 0.014,
-                                              left: w.width * 0.012,
-                                              child: Row(
-                                                children: [
-                                                  Image.network(
-                                                    themeProvider.isDarkMode
-                                                        ? s119
-                                                        : s51,
-                                                    width: w.width * 0.05,
-                                                    height: w.width * 0.05,
-                                                  ),
-                                                  SizedBox(
-                                                      width: w.width * 0.01),
-                                                  Text(
-                                                    "Following",
-                                                    style: TextStyle(
-                                                      color: const Color(
-                                                          0xFF754CEF),
-                                                      fontSize: w.width * 0.03,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              )
-                            ],
-                          ]),
-                        ),
-                      ),
+                          ),
+                      ],
                     ),
                     Positioned(
                       top: w.height * 0.67,

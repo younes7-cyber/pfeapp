@@ -99,6 +99,7 @@ flutter:
     - images/
     - audio/
     - assests/noficationkeys/fir-317ff-06a0b45e2f26.json
+    - assests/noficationkeys/fir-317ff-567540b6f5c4.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
