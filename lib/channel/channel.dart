@@ -624,7 +624,9 @@ class _ChannelpageState extends State<Channelpage>
                                 showDialog(
                                   context: context,
                                   barrierColor: themeProvider.isDarkMode
+                                      // ignore: deprecated_member_use
                                       ? Colors.white.withOpacity(0.9)
+                                      // ignore: deprecated_member_use
                                       : Colors.black.withOpacity(
                                           0.9), // fond sombre comme TikTok
                                   builder: (context) {

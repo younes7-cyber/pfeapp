@@ -494,6 +494,7 @@ class BarChartWidget extends StatelessWidget {
               show: true,
               drawVerticalLine: false,
               getDrawingHorizontalLine: (value) => FlLine(
+                // ignore: deprecated_member_use
                 color: Colors.grey.withOpacity(0.2),
                 strokeWidth: 1,
               ),
@@ -502,6 +503,7 @@ class BarChartWidget extends StatelessWidget {
             barTouchData: BarTouchData(
               enabled: true,
               touchTooltipData: BarTouchTooltipData(
+                // ignore: deprecated_member_use
                 tooltipBgColor: Colors.blueGrey.withOpacity(0.8),
                 tooltipPadding: const EdgeInsets.all(8),
                 tooltipMargin: 8,

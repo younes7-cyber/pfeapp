@@ -41,6 +41,7 @@ class _NoConnectionWidgetState extends State<NoConnectionWidget>
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Container(
+      // ignore: deprecated_member_use
       color: Colors.black.withOpacity(0.01),
       child: Center(
         child: SizedBox(
@@ -63,6 +64,7 @@ class _NoConnectionWidgetState extends State<NoConnectionWidget>
                         borderRadius: BorderRadius.circular(5),
                         boxShadow: [
                           BoxShadow(
+                            // ignore: deprecated_member_use
                             color: Colors.white.withOpacity(0.5),
                             blurRadius: 8,
                             spreadRadius: 1,

@@ -1088,7 +1088,9 @@ class _ModifpageState extends State<Modifpage> {
                                     showDialog(
                                       context: context,
                                       barrierColor: themeProvider.isDarkMode
+                                          // ignore: deprecated_member_use
                                           ? Colors.white.withOpacity(0.9)
+                                          // ignore: deprecated_member_use
                                           : Colors.black.withOpacity(
                                               0.9), // fond sombre comme TikTok
                                       builder: (context) {
@@ -1465,7 +1467,9 @@ class _ModifpageState extends State<Modifpage> {
                                     showDialog(
                                       context: context,
                                       barrierColor: themeProvider.isDarkMode
+                                          // ignore: deprecated_member_use
                                           ? Colors.white.withOpacity(0.9)
+                                          // ignore: deprecated_member_use
                                           : Colors.black.withOpacity(
                                               0.9), // fond sombre comme TikTok
                                       builder: (context) {

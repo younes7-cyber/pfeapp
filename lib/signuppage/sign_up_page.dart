@@ -196,7 +196,9 @@ class _SignUppageState extends State<SignUppage> {
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: themeProvider.isDarkMode
+                                      // ignore: deprecated_member_use
                                       ? Colors.red.withOpacity(0.2)
+                                      // ignore: deprecated_member_use
                                       : Colors.red.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),

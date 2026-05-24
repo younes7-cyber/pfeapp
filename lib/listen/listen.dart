@@ -3450,9 +3450,10 @@ class _ListenpageState extends State<Listenpage>
                                             inactiveTrackColor:
                                                 Colors.grey[300],
                                             thumbColor: const Color(0xFF754CEF),
-                                            overlayColor:
-                                                const Color(0xFF754CEF)
-                                                    .withOpacity(0.2),
+                                            overlayColor: const Color(
+                                                    0xFF754CEF)
+                                                // ignore: deprecated_member_use
+                                                .withOpacity(0.2),
                                           ),
                                           child: Slider(
                                             value:

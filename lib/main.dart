@@ -84,7 +84,8 @@ void main() async {
   // Créer le canal de notification pour Android
   await flutterLocalNotificationsPlugin
       .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
+        AndroidFlutterLocalNotificationsPlugin
+      >()
       ?.createNotificationChannel(channel);
 
   // Configurer les paramètres d'initialisation pour iOS
@@ -121,9 +122,9 @@ class _MyAppState extends State<MyApp> {
     super.initState();
 
     // Surveiller l'état d'authentification
-    firebase_auth.FirebaseAuth.instance
-        .authStateChanges()
-        .listen((firebase_auth.User? user) {
+    firebase_auth.FirebaseAuth.instance.authStateChanges().listen((
+      firebase_auth.User? user,
+    ) {
       if (user == null) {
       } else {
         // L'utilisateur est connecté, nous pouvons configurer ses sujets FCM
@@ -148,8 +149,8 @@ class _MyAppState extends State<MyApp> {
     // Utiliser votre nouvelle icône
 
     // Correction ici - nous utilisons la nouvelle façon de configurer iOS
-    final DarwinInitializationSettings initializationSettingsIOS =
-        DarwinInitializationSettings(
+    final DarwinInitializationSettings
+    initializationSettingsIOS = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
@@ -158,12 +159,10 @@ class _MyAppState extends State<MyApp> {
 
     final InitializationSettings initializationSettings =
         InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-    );
-    await flutterLocalNotificationsPlugin.initialize(
-      initializationSettings,
-    );
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsIOS,
+        );
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
   // Configurer la gestion des notifications
@@ -208,12 +207,8 @@ class _MyAppState extends State<MyApp> {
     if (currentUser != null) {
       // Demander l'autorisation pour les notifications
       // ignore: unused_local_variable
-      NotificationSettings settings =
-          await FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+      NotificationSettings settings = await FirebaseMessaging.instance
+          .requestPermission(alert: true, badge: true, sound: true);
 
       // S'abonner au sujet correspondant à l'ID de l'utilisateur
       await FirebaseMessaging.instance.subscribeToTopic(currentUser.uid);
@@ -288,8 +283,9 @@ class _MyAppState extends State<MyApp> {
               unselectedItemColor: Colors.grey,
             ),
           ),
-          themeMode:
-              themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+          themeMode: themeProvider.isDarkMode
+              ? ThemeMode.dark
+              : ThemeMode.light,
           routes: {
             '/home': (context) => const Homepage(),
             '/SignUp': (context) => const SignUppage(),
@@ -331,11 +327,13 @@ class FCMService {
   static Future<String> _getAccessToken() async {
     try {
       // Utilisation du chemin correct avec "assests" comme vous l'avez créé
-      final serviceAccountJson = await rootBundle
-          .loadString('assests/noficationkeys/fir-317ff-567540b6f5c4.json');
+      final serviceAccountJson = await rootBundle.loadString(
+        'assests/noficationkeys/fir-317ff-bddc4e40627e.json',
+      );
 
-      final credentials =
-          ServiceAccountCredentials.fromJson(json.decode(serviceAccountJson));
+      final credentials = ServiceAccountCredentials.fromJson(
+        json.decode(serviceAccountJson),
+      );
       final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
 
       final client = await clientViaServiceAccount(credentials, scopes);
@@ -361,7 +359,8 @@ class FCMService {
       }
 
       final url = Uri.parse(
-          'https://fcm.googleapis.com/v1/projects/fir-317ff/messages:send');
+        'https://fcm.googleapis.com/v1/projects/fir-317ff/messages:send',
+      );
 
       final response = await http.post(
         url,
@@ -372,10 +371,7 @@ class FCMService {
         body: jsonEncode({
           'message': {
             'topic': topic,
-            'notification': {
-              'title': title,
-              'body': body,
-            },
+            'notification': {'title': title, 'body': body},
             'data': data ?? {'route': '/nofi'},
             'android': {
               'notification': {
@@ -386,9 +382,7 @@ class FCMService {
             },
             'apns': {
               'payload': {
-                'aps': {
-                  'category': 'NEW_MESSAGE_CATEGORY',
-                },
+                'aps': {'category': 'NEW_MESSAGE_CATEGORY'},
               },
             },
           },

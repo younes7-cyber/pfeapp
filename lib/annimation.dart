@@ -46,7 +46,9 @@ class _AnnimationwidjetState extends State<Annimationwidjet>
     return Consumer<ThemeProvider>(builder: (context, themeProvider, child) {
       return Container(
         color: themeProvider.isDarkMode
+            // ignore: deprecated_member_use
             ? Colors.black.withOpacity(0.01)
+            // ignore: deprecated_member_use
             : Colors.white.withOpacity(0.01),
         child: Center(
           child: SizedBox(
@@ -75,7 +77,9 @@ class _AnnimationwidjetState extends State<Annimationwidjet>
                               boxShadow: [
                                 BoxShadow(
                                   color: themeProvider.isDarkMode
+                                      // ignore: deprecated_member_use
                                       ? Colors.white.withOpacity(0.5)
+                                      // ignore: deprecated_member_use
                                       : Colors.black.withOpacity(0.5),
                                   blurRadius: 8,
                                   spreadRadius: 1,
